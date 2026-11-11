@@ -150,7 +150,17 @@ class LancadorLinuxTest extends TestCase
         $this->assertSame('', $abertura);
     }
 
-    private function executarComProgramasFalsos(string $cenario): array
+    public function test_porta_informada_na_linha_de_comando_vence_o_arquivo_de_configuracao(): void
+    {
+        // O arquivo do notebook guarda a porta padrão (8080). Quem informa outra porta na linha de comando
+        // precisa que o lançador use essa porta, e não a do arquivo.
+        [$codigo, $saida, $abertura] = $this->executarComProgramasFalsos('inicia', '8080', ['MODO_IGREJA_PORTA' => '8081']);
+
+        $this->assertSame(0, $codigo, $saida);
+        $this->assertSame("http://localhost:8081\n", $abertura);
+    }
+
+    private function executarComProgramasFalsos(string $cenario, string $portaNoArquivo = '8081', array $ambienteExtra = []): array
     {
         $diretorio = sys_get_temp_dir() . '/lancador-' . bin2hex(random_bytes(8));
         mkdir("$diretorio/bin", 0700, true);
@@ -158,7 +168,7 @@ class LancadorLinuxTest extends TestCase
         mkdir("$diretorio/pacote/mysql/bin", 0700, true);
         mkdir("$diretorio/app", 0700, true);
         mkdir("$diretorio/dados", 0700, true);
-        file_put_contents("$diretorio/dados/modo-igreja.env", "MODO_IGREJA_PORTA=8081\n");
+        file_put_contents("$diretorio/dados/modo-igreja.env", "MODO_IGREJA_PORTA=$portaNoArquivo\n");
         file_put_contents("$diretorio/dados/mysql-administrador.cnf", '');
         file_put_contents("$diretorio/ambiente.sh", "kill() { :; }\n");
         $programas = [
@@ -184,6 +194,7 @@ class LancadorLinuxTest extends TestCase
                 'TEMP_TESTE' => $diretorio,
                 'CENARIO' => $cenario,
                 'BASH_ENV' => "$diretorio/ambiente.sh",
+                ...$ambienteExtra,
             ]);
             $processo->run();
 

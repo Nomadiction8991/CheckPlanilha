@@ -43,7 +43,9 @@ fi
 DB_DATABASE="${DB_DATABASE:-check_planilha}"
 DB_USERNAME="${DB_USERNAME:-check_planilha}"
 DB_PASSWORD="${DB_PASSWORD:-senha-da-simulacao}"
-MODO_IGREJA_PORTA="${MODO_IGREJA_PORTA:-8080}"
+# Porta informada na linha de comando (MODO_IGREJA_PORTA=8081 check-planilha-igreja). Ela vence o arquivo.
+PORTA_INFORMADA="${MODO_IGREJA_PORTA:-}"
+MODO_IGREJA_PORTA="${PORTA_INFORMADA:-8080}"
 
 erro() {
     echo "Erro: $*" >&2
@@ -149,6 +151,11 @@ if (( ! simular )); then
     # shellcheck disable=SC1090
     . "$CP_AMBIENTE"
     set +a
+    # A porta informada na linha de comando vence a do arquivo, que guarda a porta padrão.
+    if [[ -n "$PORTA_INFORMADA" ]]; then
+        MODO_IGREJA_PORTA="$PORTA_INFORMADA"
+        export MODO_IGREJA_PORTA
+    fi
     # O socket é do lançador: o sistema conecta por ele, mesmo que o arquivo de ambiente seja antigo.
     export DB_SOCKET="$CP_SOCKET"
 fi
@@ -225,7 +232,7 @@ rodar "$CP_PHP" "$CP_APP/artisan" sincronizacao:gatilhos
 if (( ! simular )); then
     command -v ss >/dev/null 2>&1 || erro "não foi possível verificar a porta: o programa ss não foi encontrado"
     if ss -ltn | grep -qE ":${MODO_IGREJA_PORTA}[[:space:]]"; then
-        erro "outro programa está usando a porta $MODO_IGREJA_PORTA, como o sistema de teste do Docker. Feche esse programa ou defina MODO_IGREJA_PORTA com outra porta, por exemplo 8081."
+        erro "outro programa está usando a porta $MODO_IGREJA_PORTA (por exemplo, o sistema de teste do Docker). Feche esse programa, ou troque a porta no arquivo $CP_AMBIENTE (linha MODO_IGREJA_PORTA), por exemplo 8081."
     fi
 fi
 # Quatro processos: um pedido lento não trava os outros celulares. A variável é lida pelo próprio PHP.
