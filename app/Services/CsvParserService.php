@@ -203,8 +203,18 @@ class CsvParserService
         // Busca todas as comuns de uma vez usando Eloquent/Query Builder se disponível
         // para aproveitar o ConnectionManager do Laravel
         $placeholders = implode(',', array_fill(0, count($codigos), '?'));
-        $stmt = $this->conexao->prepare("SELECT id, codigo FROM comums WHERE codigo IN ($placeholders)");
-        $stmt->execute($codigos);
+        $sql = "SELECT id, codigo FROM comums WHERE codigo IN ($placeholders)";
+        $parametros = $codigos;
+
+        if ($this->administrationId !== null) {
+            $sql .= ' AND (administracao_id = ? OR administracao_id IS NULL)'
+                . ' ORDER BY CASE WHEN administracao_id = ? THEN 0 ELSE 1 END';
+            $parametros[] = $this->administrationId;
+            $parametros[] = $this->administrationId;
+        }
+
+        $stmt = $this->conexao->prepare($sql);
+        $stmt->execute($parametros);
         $comunsDb = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $mapa = array_fill_keys($codigos, 0);

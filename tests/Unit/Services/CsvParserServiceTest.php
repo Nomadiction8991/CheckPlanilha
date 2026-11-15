@@ -15,6 +15,20 @@ use Tests\TestCase;
 #[AllowMockObjectsWithoutExpectations]
 final class CsvParserServiceTest extends TestCase
 {
+    public function testDetectarComunsNoCsvRestringeMesmoCodigoAoEscopoAdministrativo(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $pdo->exec('CREATE TABLE comums (id INTEGER, codigo TEXT, administracao_id INTEGER)');
+        $pdo->exec("INSERT INTO comums (id, codigo, administracao_id) VALUES (10, '09-0001', 1), (20, '09-0001', 2)");
+
+        $service = new CsvParserService($pdo, 1);
+        $method = new ReflectionMethod($service, 'detectarComunsNoCsv');
+
+        self::assertSame(['09-0001' => 10], $method->invoke($service, [
+            ['codigo_comum' => '09-0001'],
+        ]));
+    }
+
     public function testParsearNomePreservesOriginalComplementoWhileIdentifyingAssetType(): void
     {
         $pdo = $this->createMock(PDO::class);
