@@ -196,9 +196,9 @@ final class BrazilLocalityController extends Controller
             $nome,
         ) ?? $nome;
 
-        // Apóstrofo dentro de palavra com sílaba antes ("Sant'Ana") mantém a letra seguinte maiúscula.
+        // Apóstrofo dentro de palavra ("Sant'Ana", "D'Ávila") mantém a letra seguinte maiúscula.
         return preg_replace_callback(
-            '/(\p{L}{2})\'(\p{L})/u',
+            '/(\p{L})\'(\p{L})/u',
             static fn (array $m): string => $m[1] . "'" . mb_strtoupper($m[2], 'UTF-8'),
             $nome,
         ) ?? $nome;

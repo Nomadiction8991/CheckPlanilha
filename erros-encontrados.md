@@ -318,6 +318,17 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Padrão Recorrente**: Sim — mesma família de LOC-003: fronteira de palavra precisa considerar hífen além do espaço.
 **Prioridade de Correção**: ✅ Resolvido
 
+### LOC-007 - "D'" no início do nome saía com a letra seguinte minúscula (ex.: D'ávila)
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A regra de apóstrofo exigia duas letras antes dele, então "D'ÁVILA" saía como "D'ávila". Uma sílaba só antes do apóstrofo ficava sem a letra seguinte maiúscula.
+**Risco/Impacto**: Cidades com "D'" ou "O'" no início do nome apareciam com grafia diferente da oficial na lista de cidades.
+**Recomendação**: Letra depois de qualquer apóstrofo entre letras fica maiúscula ("D'Ávila", "Sant'Ana"). Coberto por `testCitiesCapitalizesLetterAfterApostropheAtNameStart` em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Sim — regras de capitalização precisam ser conferidas para todo tipo de fronteira de palavra (espaço, hífen e apóstrofo).
+**Prioridade de Correção**: ✅ Resolvido
+
 ### IMP-011 - CSV com vírgulas dentro de aspas era separado pela vírgula
 **Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readCsv`)
 **Severidade**: 🟡 MÉDIO

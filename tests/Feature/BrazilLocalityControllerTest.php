@@ -223,6 +223,23 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testCitiesCapitalizesLetterAfterApostropheAtNameStart(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/PR/municipios' => Http::response([
+                ['nome' => "D'ÁVILA"],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'PR']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ["D'Ávila"],
+        ]);
+    }
+
     public function testCitiesRejectsInvalidState(): void
     {
         Http::fake();
