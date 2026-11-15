@@ -158,6 +158,30 @@ final class UniversalSpreadsheetReader
             }
         }
 
+        $zeroFormatWidths = [];
+        $stylesXml = $zip->getFromName('xl/styles.xml');
+        if ($stylesXml !== false) {
+            $styles = @simplexml_load_string($stylesXml);
+            if ($styles !== false) {
+                $customFormats = [];
+                foreach ($styles->numFmts->numFmt ?? [] as $format) {
+                    $formatCode = (string) $format['formatCode'];
+                    if (preg_match('/^0+$/', $formatCode) === 1) {
+                        $customFormats[(int) $format['numFmtId']] = strlen($formatCode);
+                    }
+                }
+
+                $styleIndex = 0;
+                foreach ($styles->cellXfs->xf ?? [] as $style) {
+                    $formatId = (int) $style['numFmtId'];
+                    if (isset($customFormats[$formatId])) {
+                        $zeroFormatWidths[$styleIndex] = $customFormats[$formatId];
+                    }
+                    $styleIndex++;
+                }
+            }
+        }
+
         $sheetXml = false;
         $workbookXml = $zip->getFromName('xl/workbook.xml');
         $relationshipsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
@@ -239,6 +263,10 @@ final class UniversalSpreadsheetReader
                             }
                         } elseif (isset($cell->v)) {
                             $val = (string) $cell->v;
+                            $styleIndex = (int) ($cell['s'] ?? 0);
+                            if (isset($zeroFormatWidths[$styleIndex])) {
+                                $val = self::applyZeroFormat($val, $zeroFormatWidths[$styleIndex]);
+                            }
                         }
                         $rowCells[$colIdx] = trim($val, " \t\n\r\0\x0B");
                     }
@@ -425,5 +453,14 @@ final class UniversalSpreadsheetReader
             $col = $col * 26 + (ord($letters[$i]) - ord('A') + 1);
         }
         return max(0, $col - 1);
+    }
+
+    private static function applyZeroFormat(string $value, int $width): string
+    {
+        if (preg_match('/^(-?)(\d+)$/', $value, $matches) !== 1) {
+            return $value;
+        }
+
+        return $matches[1] . str_pad($matches[2], $width, '0', STR_PAD_LEFT);
     }
 }

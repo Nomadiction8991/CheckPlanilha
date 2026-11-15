@@ -284,3 +284,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Normalizar apóstrofos introduzidos pela transliteração antes de comparar rótulos. Coberto pelo teste de diagnóstico de CSV válido.
 **Padrão Recorrente**: Sim — normalização de texto para comparação deve tolerar diferenças de transliteração entre ambientes.
 **Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### IMP-010 - XLSX descartava zeros à esquerda indicados pelo formato numérico
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readXlsx`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: O leitor ignorava formatos numéricos personalizados como `00000` e retornava o valor interno da célula. Um código `42` exibido na planilha como `00042` era importado sem os zeros.
+**Risco/Impacto**: Códigos patrimoniais que usam zeros à esquerda podiam deixar de corresponder ao cadastro existente ou perder a identificação original.
+**Recomendação**: Aplicar formatos compostos somente por zeros aos valores inteiros das células numéricas. Coberto por `test_le_xlsx_preservando_zeros_a_esquerda_definidos_no_formato_da_celula`.
+**Padrão Recorrente**: Sim — a importação deve preservar a representação exibida dos identificadores numéricos.
+**Prioridade de Correção**: ✅ Resolvido

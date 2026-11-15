@@ -95,6 +95,34 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         }
     }
 
+    public function test_le_xlsx_preservando_zeros_a_esquerda_definidos_no_formato_da_celula(): void
+    {
+        $caminho = sys_get_temp_dir() . '/planilha-com-codigo-formatado-' . uniqid('', true) . '.xlsx';
+        $zip = new ZipArchive();
+
+        self::assertSame(true, $zip->open($caminho, ZipArchive::CREATE | ZipArchive::OVERWRITE));
+        $zip->addFromString('xl/styles.xml', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <numFmts count="1"><numFmt numFmtId="164" formatCode="00000"/></numFmts>
+              <cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="164"/></cellXfs>
+            </styleSheet>
+            XML);
+        $zip->addFromString('xl/worksheets/sheet1.xml', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData><row r="1"><c r="A1" s="1" t="n"><v>42</v></c></row></sheetData>
+            </worksheet>
+            XML);
+        $zip->close();
+
+        try {
+            self::assertSame([['00042']], UniversalSpreadsheetReader::read($caminho));
+        } finally {
+            @unlink($caminho);
+        }
+    }
+
     public function test_le_xlsx_preservando_linhas_vazias_para_numero_da_linha_original(): void
     {
         $caminho = sys_get_temp_dir() . '/planilha-com-linha-vazia-' . uniqid('', true) . '.xlsx';
