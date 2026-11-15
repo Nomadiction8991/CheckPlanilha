@@ -201,12 +201,16 @@ final class UniversalSpreadsheetReader
         $zip->close();
 
         if ($sheetXml === false) {
-            return [];
+            throw new RuntimeException(
+                'O arquivo XLSX não contém uma aba legível. Abra a planilha no Excel, salve de novo como .xlsx e envie outra vez.'
+            );
         }
 
         $xml = @simplexml_load_string($sheetXml);
         if ($xml === false || !isset($xml->sheetData)) {
-            return [];
+            throw new RuntimeException(
+                'A aba do arquivo XLSX está inválida ou incompleta. Abra a planilha no Excel, salve de novo como .xlsx e envie outra vez.'
+            );
         }
 
         $rows = [];

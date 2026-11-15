@@ -47,6 +47,25 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         }
     }
 
+    public function test_xlsx_zip_sem_aba_legivel_gera_erro_acionavel(): void
+    {
+        $caminho = sys_get_temp_dir() . '/planilha-sem-aba-' . uniqid('', true) . '.xlsx';
+        $zip = new ZipArchive();
+
+        self::assertSame(true, $zip->open($caminho, ZipArchive::CREATE | ZipArchive::OVERWRITE));
+        $zip->addFromString('xl/workbook.xml', '<workbook/>');
+        $zip->close();
+
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('aba legível');
+
+            UniversalSpreadsheetReader::read($caminho);
+        } finally {
+            @unlink($caminho);
+        }
+    }
+
     public function test_le_xlsx_preservando_linhas_vazias_para_numero_da_linha_original(): void
     {
         $caminho = sys_get_temp_dir() . '/planilha-com-linha-vazia-' . uniqid('', true) . '.xlsx';

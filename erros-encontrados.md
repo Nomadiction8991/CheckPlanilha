@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 6
-- Médios: 3
+- Médios: 8
 - Baixos: 0
 
 ## Erros por Categoria
-### Segurança (0)
-### Lógica (7)
+### Segurança (2)
+### Lógica (14)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -227,5 +227,16 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Descrição**: A capitalização em modo título transformava `OLHO D'ÁGUA` em `Olho D'água` e `SANTA BÁRBARA D'OESTE` em `Santa Bárbara D'oeste`. A grafia oficial é `Olho d'Água` e `Santa Bárbara d'Oeste`.
 **Risco/Impacto**: Nomes de cidade com grafia errada na lista de localidades, visível ao escolher a cidade no cadastro.
 **Recomendação**: Após a capitalização, manter `d'` minúsculo e a letra seguinte em maiúscula, quando precedido de espaço. Coberto por `testCitiesKeepsApostropheParticleFormatting` em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Não
+**Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### IMP-007 - XLSX com ZIP válido, mas sem aba legível, era tratado como planilha vazia
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readXlsx`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: Quando o arquivo tinha uma assinatura XLSX e um contêiner ZIP válido, mas não continha uma aba XML legível, o leitor retornava uma lista vazia. O fluxo não diferenciava uma planilha realmente vazia de uma estrutura inválida e podia exibir um erro genérico de dados ausentes.
+**Risco/Impacto**: O operador recebia uma orientação pouco útil e não sabia que precisava reparar ou reenviar o arquivo.
+**Recomendação**: Informar que a aba está ausente ou inválida e orientar a salvar novamente como `.xlsx`. Coberto por `test_xlsx_zip_sem_aba_legivel_gera_erro_acionavel`.
 **Padrão Recorrente**: Não
 **Prioridade de Correção**: ⚠️ Próxima Sprint
