@@ -119,6 +119,15 @@ class ImportacaoService
         return $this->importacaoRepo->criar($dados);
     }
 
+    public function marcarImportacaoComErro(int $importacaoId, string $mensagem): void
+    {
+        $this->importacaoRepo->atualizar($importacaoId, [
+            'status' => 'erro',
+            'mensagem_erro' => $mensagem,
+            'concluida_em' => date('Y-m-d H:i:s'),
+        ]);
+    }
+
     /**
      * PASSO 4: Processa APENAS os registros selecionados pelo usuário.
      *

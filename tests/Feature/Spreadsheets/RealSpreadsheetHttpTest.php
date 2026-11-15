@@ -119,6 +119,7 @@ final class RealSpreadsheetHttpTest extends TestCase
         self::assertTrue(copy(base_path('tests/Fixtures/importacao/relatorio-ficticio.xls'), $origem));
         $caminho = null;
         $id = null;
+        $caminhoFalha = null;
         try {
             $resposta = $this->withSession(['usuario_id' => 1, 'administracao_id' => 1])
                 ->post(route('migration.spreadsheets.store'), [
@@ -147,12 +148,32 @@ final class RealSpreadsheetHttpTest extends TestCase
             self::assertSame(2, DB::table('produtos')->count());
             self::assertSame(['99-9999 / 0001', '99-9999 / 0002'], DB::table('produtos')->orderBy('codigo')->pluck('codigo')->all());
             self::assertSame('concluida', DB::table('importacoes')->where('id', $id)->value('status'));
+
+            $respostaFalha = $this->withSession(['usuario_id' => 1, 'administracao_id' => 1])
+                ->post(route('migration.spreadsheets.store'), [
+                    'administracao_id' => 1,
+                    'arquivo_csv' => UploadedFile::fake()->createWithContent(
+                        'planilha-sem-colunas.csv',
+                        "Código;Descrição\n09-0001;Cadeira\n",
+                    ),
+                ]);
+            $respostaFalha->assertRedirect(route('migration.spreadsheets.create'));
+            $importacaoFalha = DB::table('importacoes')
+                ->where('arquivo_nome', 'planilha-sem-colunas.csv')
+                ->first();
+            self::assertNotNull($importacaoFalha);
+            $caminhoFalha = $importacaoFalha->arquivo_caminho;
+            self::assertSame('erro', $importacaoFalha->status);
+            self::assertNotEmpty($importacaoFalha->mensagem_erro);
         } finally {
             if ($id !== null) {
                 (new AnalysisPersistenceService())->limparAnalise($id);
             }
             if (is_string($caminho) && is_file($caminho)) {
                 unlink($caminho);
+            }
+            if (is_string($caminhoFalha) && is_file($caminhoFalha)) {
+                unlink($caminhoFalha);
             }
             if (is_file($origem)) {
                 unlink($origem);

@@ -88,6 +88,9 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
 
     public function uploadAndAnalyze(SpreadsheetImportUploadData $data, UploadedFile $file): int
     {
+        $importacaoService = null;
+        $importacaoId = null;
+
         try {
             $fallbackChurchId = (int) ($data->churchId ?? 0);
 
@@ -133,7 +136,17 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
 
             return $importacaoId;
         } catch (Throwable $throwable) {
-            throw new RuntimeException($this->friendlyErrorMessage($throwable->getMessage()), previous: $throwable);
+            $mensagem = $this->friendlyErrorMessage($throwable->getMessage());
+
+            if ($importacaoService !== null && $importacaoId !== null) {
+                try {
+                    $importacaoService->marcarImportacaoComErro($importacaoId, $mensagem);
+                } catch (Throwable $statusThrowable) {
+                    error_log('Não foi possível registrar a falha da importação #' . $importacaoId . ': ' . $statusThrowable->getMessage());
+                }
+            }
+
+            throw new RuntimeException($mensagem, previous: $throwable);
         }
     }
 
