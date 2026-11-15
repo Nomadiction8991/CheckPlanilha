@@ -154,6 +154,23 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testCitiesKeepsApostropheParticleLowercaseAfterHyphen(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/MT/municipios' => Http::response([
+                ['nome' => "OLHOS-D'ÁGUA"],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'MT']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ["Olhos-d'Água"],
+        ]);
+    }
+
     public function testCitiesRejectsInvalidState(): void
     {
         Http::fake();

@@ -219,6 +219,17 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Padrão Recorrente**: Não
 **Prioridade de Correção**: ⚠️ Próxima Sprint
 
+### LOC-003 - "d'" depois de hífen saía com "D" maiúsculo (ex.: Olhos-D'água)
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A regra que mantém `d'` minúsculo só olhava para espaço antes da partícula. `OLHOS-D'ÁGUA` saía como `Olhos-D'água`, grafia que foge do padrão `Olhos-d'Água` usado pela regra de `d'`.
+**Risco/Impacto**: Nome de cidade com grafia errada na lista de localidades, visível ao escolher a cidade no cadastro.
+**Recomendação**: Aceitar hífen como fronteira antes de `d'` na regra de capitalização. Coberto por `testCitiesKeepsApostropheParticleLowercaseAfterHyphen` em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Sim — regras de capitalização por fronteira de palavra precisam considerar hífen além do espaço.
+**Prioridade de Correção**: ⚠️ Próxima Sprint
+
 ### LOC-002 - Nomes com "d'" (apóstrofo) saíam com "D" e "A/O" minúsculos
 **Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
 **Severidade**: 🟡 MÉDIO

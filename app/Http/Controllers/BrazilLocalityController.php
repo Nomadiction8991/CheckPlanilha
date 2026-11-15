@@ -176,11 +176,12 @@ final class BrazilLocalityController extends Controller
             }
         }
 
-        // "d'" com apóstrofo segue a grafia oficial: "d'Oeste", "d'Água" (não "D'oeste").
+        // "d'" com apóstrofo segue a grafia oficial: "d'Oeste", "d'Água" (não "D'oeste"),
+        // inclusive depois de hífen: "Olhos-d'Água".
         $nome = implode(' ', $palavras);
 
         return preg_replace_callback(
-            '/(?<=\s)D\'(\p{L})/u',
+            '/(?<=[\s-])D\'(\p{L})/u',
             static fn (array $m): string => "d'" . mb_strtoupper($m[1], 'UTF-8'),
             $nome,
         ) ?? $nome;
