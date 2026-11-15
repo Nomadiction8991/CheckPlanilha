@@ -539,20 +539,32 @@ final class UniversalSpreadsheetReader
                 $row = $uR ? (int) $uR[1] : 0;
                 $col = $uC ? (int) $uC[1] : 0;
                 $numVal = $uNum ? (float) $uNum[1] : 0.0;
-
-                // Detectar se é data serial do Excel (ex: 41274 = 31/12/2012)
-                if ($numVal >= 10000 && $numVal <= 70000 && floor($numVal) == $numVal && $col == 19) {
-                    $ts = (int) (($numVal - 25569) * 86400);
-                    $val = gmdate('d/m/Y', $ts);
-                } elseif (floor($numVal) == $numVal && abs($numVal) < 1e15) {
-                    $val = (string) (int) $numVal;
-                } else {
-                    $val = (string) $numVal;
-                }
-
-                $cells[$row][$col] = $val;
+                $cells[$row][$col] = self::formatarNumeroXls($numVal, $col);
                 $maxRow = max($maxRow, $row);
                 $maxCol = max($maxCol, $col);
+            } elseif ($code === 0x027E && strlen($rec) >= 10) { // RK: número compactado em 4 bytes
+                $uR = unpack('v', substr($rec, 0, 2));
+                $uC = unpack('v', substr($rec, 2, 2));
+                $row = $uR ? (int) $uR[1] : 0;
+                $col = $uC ? (int) $uC[1] : 0;
+                $cells[$row][$col] = self::formatarNumeroXls(self::decodificarRk(substr($rec, 6, 4)), $col);
+                $maxRow = max($maxRow, $row);
+                $maxCol = max($maxCol, $col);
+            } elseif ($code === 0x00BD && strlen($rec) >= 10) { // MULRK: vários RK consecutivos na mesma linha
+                $uR = unpack('v', substr($rec, 0, 2));
+                $uFirst = unpack('v', substr($rec, 2, 2));
+                $row = $uR ? (int) $uR[1] : 0;
+                $firstCol = $uFirst ? (int) $uFirst[1] : 0;
+                $cellCount = intdiv(strlen($rec) - 6, 6);
+                for ($i = 0; $i < $cellCount; $i++) {
+                    $col = $firstCol + $i;
+                    $cells[$row][$col] = self::formatarNumeroXls(
+                        self::decodificarRk(substr($rec, 4 + $i * 6 + 2, 4)),
+                        $col
+                    );
+                    $maxRow = max($maxRow, $row);
+                    $maxCol = max($maxCol, $col);
+                }
             }
 
             $pos += 4 + $length;
@@ -568,6 +580,42 @@ final class UniversalSpreadsheetReader
         }
 
         return $rows;
+    }
+
+    /**
+     * Decodifica o campo RK do BIFF (4 bytes): bit 0 = divide por 100, bit 1 = inteiro de 30 bits;
+     * caso contrário, os 30 bits altos de um double IEEE 754.
+     */
+    private static function decodificarRk(string $bytes): float
+    {
+        $rk = unpack('V', $bytes)[1];
+        $dividirPor100 = ($rk & 0x01) !== 0;
+
+        if (($rk & 0x02) !== 0) {
+            $valor = (float) ($rk >> 2 & 0x3FFFFFFF);
+            if ($rk & 0x80000000) {
+                $valor -= 0x40000000;
+            }
+        } else {
+            $valor = (float) unpack('d', pack('V2', 0, $rk & 0xFFFFFFFC))[1];
+        }
+
+        return $dividirPor100 ? $valor / 100 : $valor;
+    }
+
+    /** Formata número de célula XLS: data serial na coluna de data, inteiro sem casas decimais, ou valor cru. */
+    private static function formatarNumeroXls(float $numVal, int $col): string
+    {
+        // Detectar se é data serial do Excel (ex: 41274 = 31/12/2012)
+        if ($numVal >= 10000 && $numVal <= 70000 && floor($numVal) == $numVal && $col == 19) {
+            return gmdate('d/m/Y', (int) (($numVal - 25569) * 86400));
+        }
+
+        if (floor($numVal) == $numVal && abs($numVal) < 1e15) {
+            return (string) (int) $numVal;
+        }
+
+        return (string) $numVal;
     }
 
     private static function lettersToColumnIndex(string $letters): int

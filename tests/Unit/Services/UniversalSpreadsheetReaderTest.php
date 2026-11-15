@@ -44,6 +44,16 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         self::assertSame(['09-0565 / 000499', 'Banco 0499', 'Templo 0499'], $linhas[500]);
     }
 
+    public function test_le_xls_real_com_numeros_inteiros_em_registros_rk_e_multrk(): void
+    {
+        self::assertSame([
+            ['Código', 'Nome', 'Valor', 'Qtd', 'Peso'],
+            ['12345', 'Cadeira', '7', '8', '2.5'],
+            ['67890', 'Mesa', '250', '1', '0.75'],
+            ['11111', 'Templo', '-3', '0', '-1.5'],
+        ], UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/xls-numeros-rk.xls')));
+    }
+
     public function test_le_csv_com_dados_ficticios_e_preserva_celulas(): void
     {
         $caminho = base_path('tests/Fixtures/importacao/exemplo-leitor.csv');

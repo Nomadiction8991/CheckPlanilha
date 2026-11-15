@@ -361,3 +361,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Interpretar os fluxos CFB pequenos, a tabela `SST`, os blocos `CONTINUE` e os índices das células `LABELSST`. Coberto por amostras `.xls` reais exportadas pelo LibreOffice para fluxos curtos e longos.
 **Padrão Recorrente**: Sim — o leitor deve cobrir os tipos de célula usados pelos arquivos BIFF comuns.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-014 - XLS BIFF ignorava números armazenados em registros RK e MULRK
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readXls`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: O leitor reconhecia `LABEL`, `LABELSST` e `NUMBER`, mas ignorava `RK` e `MULRK`, formas compactadas que o Excel e o LibreOffice usam para gravar números inteiros e decimais. Células numéricas nesses registros ficavam vazias na leitura.
+**Risco/Impacto**: Valores numéricos de planilhas `.xls` (códigos, quantidades, valores) sumiam em silêncio durante a análise, gerando importação incompleta sem aviso.
+**Recomendação**: Decodificar `RK` (inteiro de 30 bits ou double truncado, com divisão por 100 quando indicado) e `MULRK` (várias células consecutivas na mesma linha). Coberto pelo arquivo `tests/Fixtures/importacao/xls-numeros-rk.xls`, gerado pelo LibreOffice com inteiros, decimais negativos e células adjacentes.
+**Padrão Recorrente**: Sim — o leitor deve cobrir os tipos de célula usados pelos arquivos BIFF comuns.
+**Prioridade de Correção**: ✅ Resolvido
