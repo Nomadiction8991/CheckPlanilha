@@ -218,12 +218,24 @@ final class UniversalSpreadsheetReader
                         $denseRow[$c] = $rowCells[$c] ?? '';
                     }
                     $rows[$rIndex] = $denseRow;
+                } else {
+                    $rows[$rIndex] = [];
                 }
             }
         }
 
         ksort($rows);
-        return array_values($rows);
+        if ($rows === []) {
+            return [];
+        }
+
+        $linhasComVazias = [];
+        $ultimaLinha = max(array_keys($rows));
+        for ($indice = 0; $indice <= $ultimaLinha; $indice++) {
+            $linhasComVazias[] = $rows[$indice] ?? [];
+        }
+
+        return $linhasComVazias;
     }
 
     /**

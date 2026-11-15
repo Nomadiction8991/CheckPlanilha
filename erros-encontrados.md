@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 6
-- Médios: 2
+- Médios: 3
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (0)
-### Lógica (6)
+### Lógica (7)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -165,3 +165,18 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 
 **Padrão Recorrente**: Sim — qualquer normalização de texto com acento precisa ser multibyte (`mb_strtoupper`), nunca `strtoupper`.
 **Prioridade de Correção**: 🚨 Imediata
+
+### IMP-004 - Linhas vazias do XLSX alteravam os números das linhas importadas
+
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readXlsx`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: O leitor descartava linhas sem células e compactava os índices restantes. Se a planilha tivesse dados nas linhas 1 e 3, a terceira linha era apresentada como segunda durante a conversão para CSV, fazendo os erros apontarem para uma linha diferente da planilha original.
+
+**Risco/Impacto**: O operador podia corrigir a linha errada ao seguir o número indicado no erro de importação.
+
+**Recomendação**: Preservar os intervalos vazios entre os índices de linha do XLSX durante a leitura e a conversão para CSV.
+
+**Padrão Recorrente**: Sim — ao converter planilhas, preservar a posição original das linhas para manter mensagens de erro acionáveis.
+**Prioridade de Correção**: ⚠️ Próxima Sprint
