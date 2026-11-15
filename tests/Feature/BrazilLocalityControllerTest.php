@@ -171,6 +171,23 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testCitiesKeepsConjunctionELowercase(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/RN/municipios' => Http::response([
+                ['nome' => 'PASSA E FICA'],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'RN']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ['Passa e Fica'],
+        ]);
+    }
+
     public function testCitiesRejectsInvalidState(): void
     {
         Http::fake();

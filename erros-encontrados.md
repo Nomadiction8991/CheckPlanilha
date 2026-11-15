@@ -3,7 +3,7 @@
 ## Resumo
 - Críticos: 0
 - Altos: 6
-- Médios: 10
+- Médios: 11
 - Baixos: 0
 
 ## Erros por Categoria
@@ -239,6 +239,17 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Nomes de cidade com grafia errada na lista de localidades, visível ao escolher a cidade no cadastro.
 **Recomendação**: Após a capitalização, manter `d'` minúsculo e a letra seguinte em maiúscula, quando precedido de espaço. Coberto por `testCitiesKeepsApostropheParticleFormatting` em `tests/Feature/BrazilLocalityControllerTest.php`.
 **Padrão Recorrente**: Não
+**Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### LOC-004 - Conjunção "e" em nomes de cidade saía com "E" maiúsculo (ex.: Passa e Fica)
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`PARTICULAS`, usado por `normalizeCityName`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A lista de partículas minúsculas tinha `de`, `da`, `do`, `das` e `dos`, mas não `e`. `PASSA E FICA` saía como `Passa E Fica`, enquanto a grafia oficial do IBGE (código 2409100) é `Passa e Fica`.
+**Risco/Impacto**: Nome de cidade com grafia errada na lista de localidades, visível ao escolher a cidade no cadastro.
+**Recomendação**: Incluir `e` em `PARTICULAS`. Coberto por `testCitiesKeepsConjunctionELowercase` em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Sim — listas de palavras minúsculas em nomes próprios precisam ser conferidas contra a grafia oficial do IBGE, não só contra as partículas mais comuns.
 **Prioridade de Correção**: ⚠️ Próxima Sprint
 
 ### IMP-007 - XLSX com ZIP válido, mas sem aba legível, era tratado como planilha vazia

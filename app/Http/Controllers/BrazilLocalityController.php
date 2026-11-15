@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Http;
 
 final class BrazilLocalityController extends Controller
 {
-    private const PARTICULAS = ['de', 'da', 'do', 'das', 'dos'];
+    private const PARTICULAS = ['de', 'da', 'do', 'das', 'dos', 'e'];
 
     public function states(Request $request): JsonResponse
     {
