@@ -218,3 +218,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Manter em minúsculas as partículas `de`, `da`, `do`, `das`, `dos` quando não forem a primeira palavra. Coberto por testes de estado e de cidade em `tests/Feature/BrazilLocalityControllerTest.php`.
 **Padrão Recorrente**: Não
 **Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### LOC-002 - Nomes com "d'" (apóstrofo) saíam com "D" e "A/O" minúsculos
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A capitalização em modo título transformava `OLHO D'ÁGUA` em `Olho D'água` e `SANTA BÁRBARA D'OESTE` em `Santa Bárbara D'oeste`. A grafia oficial é `Olho d'Água` e `Santa Bárbara d'Oeste`.
+**Risco/Impacto**: Nomes de cidade com grafia errada na lista de localidades, visível ao escolher a cidade no cadastro.
+**Recomendação**: Após a capitalização, manter `d'` minúsculo e a letra seguinte em maiúscula, quando precedido de espaço. Coberto por `testCitiesKeepsApostropheParticleFormatting` em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Não
+**Prioridade de Correção**: ⚠️ Próxima Sprint

@@ -136,6 +136,24 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testCitiesKeepsApostropheParticleFormatting(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/MT/municipios' => Http::response([
+                ['nome' => "OLHO D'ÁGUA"],
+                ['nome' => 'SANTA BÁRBARA D\'OESTE'],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'MT']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ["Olho d'Água", "Santa Bárbara d'Oeste"],
+        ]);
+    }
+
     public function testCitiesRejectsInvalidState(): void
     {
         Http::fake();
