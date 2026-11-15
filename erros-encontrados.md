@@ -405,3 +405,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Ler o resultado numérico direto do `FORMULA`; quando o resultado for texto (marcador `0xFFFF` com tipo `0`), usar o `STRING` logo seguinte. Coberto por `tests/Fixtures/importacao/xls-formulas.xls`, gerado a partir de um XLSX com fórmulas convertido pelo LibreOffice.
 **Padrão Recorrente**: Sim — o leitor deve cobrir todos os registros que carregam valor de célula, não só os de valor direto.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-018 - Uploads da mesma congregação podiam sobrescrever o arquivo uns dos outros
+**Arquivo**: `app/Services/LegacySpreadsheetImportService.php` (`moveUploadedFile`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: O nome do arquivo armazenado era composto pela congregação e pelo segundo atual. Dois uploads da mesma congregação no mesmo segundo usavam o mesmo caminho; o segundo podia substituir a planilha ainda referenciada pela primeira importação.
+**Risco/Impacto**: Uma prévia ou processamento podia ler o conteúdo de outro upload, causando importação de dados errados ou inconsistência entre análise e arquivo salvo.
+**Recomendação**: Gerar um identificador aleatório por upload e cobrir o fluxo HTTP garantindo que um arquivo já existente não seja substituído. Coberto por `test_upload_http_persiste_importacao_e_analise_reais` com arquivos sentinela no padrão antigo de nome.
+**Padrão Recorrente**: Sim — arquivos de importação precisam de nomes exclusivos, mesmo quando enviados no mesmo instante.
+**Prioridade de Correção**: ✅ Resolvido

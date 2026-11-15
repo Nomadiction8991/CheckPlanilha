@@ -1135,7 +1135,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
     {
         $directory = $this->resolveImportDirectory();
         $extension = strtolower($file->getClientOriginalExtension() ?: 'csv');
-        $filename = 'importacao_' . $churchId . '_' . time() . '.' . $extension;
+        $filename = 'importacao_' . $churchId . '_' . bin2hex(random_bytes(16)) . '.' . $extension;
         $destination = $directory . DIRECTORY_SEPARATOR . $filename;
 
         $file->move($directory, $filename);

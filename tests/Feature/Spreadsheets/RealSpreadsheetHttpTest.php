@@ -120,7 +120,18 @@ final class RealSpreadsheetHttpTest extends TestCase
         $caminho = null;
         $id = null;
         $caminhoFalha = null;
+        $arquivosSentinela = [];
         try {
+            $diretorioImportacao = storage_path('importacao');
+            if (!is_dir($diretorioImportacao)) {
+                self::assertTrue(mkdir($diretorioImportacao, 0775, true));
+            }
+            for ($segundo = time(); $segundo <= time() + 5; $segundo++) {
+                $sentinela = $diretorioImportacao . '/importacao_0_' . $segundo . '.csv';
+                file_put_contents($sentinela, 'arquivo de outra importação');
+                $arquivosSentinela[] = $sentinela;
+            }
+
             $resposta = $this->withSession(['usuario_id' => 1, 'administracao_id' => 1])
                 ->post(route('migration.spreadsheets.store'), [
                     'administracao_id' => 1,
@@ -136,6 +147,10 @@ final class RealSpreadsheetHttpTest extends TestCase
             self::assertSame('aguardando', $importacao->status);
             self::assertSame('planilha.csv', $importacao->arquivo_nome);
             self::assertFileExists($caminho);
+            self::assertNotContains($caminho, $arquivosSentinela, (string) $caminho);
+            foreach ($arquivosSentinela as $sentinela) {
+                self::assertSame('arquivo de outra importação', file_get_contents($sentinela));
+            }
             $analise = (new AnalysisPersistenceService())->carregarAnalise($id);
             self::assertIsArray($analise);
             self::assertSame(2, $analise['resumo']['total']);
@@ -177,6 +192,11 @@ final class RealSpreadsheetHttpTest extends TestCase
             }
             if (is_file($origem)) {
                 unlink($origem);
+            }
+            foreach ($arquivosSentinela as $sentinela) {
+                if (is_file($sentinela)) {
+                    unlink($sentinela);
+                }
             }
             $convertido = $origem . '_converted.csv';
             if (is_file($convertido)) {
