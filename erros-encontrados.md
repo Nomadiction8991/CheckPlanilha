@@ -317,3 +317,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Tratar hífen como fronteira de palavra também para as partículas, mantendo a primeira palavra do nome em maiúscula. Coberto por `testCitiesKeepsParticlesLowercaseWhenJoinedByHyphen` em `tests/Feature/BrazilLocalityControllerTest.php`.
 **Padrão Recorrente**: Sim — mesma família de LOC-003: fronteira de palavra precisa considerar hífen além do espaço.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-011 - CSV com vírgulas dentro de aspas era separado pela vírgula
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readCsv`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: A detecção do separador contava vírgulas e ponto e vírgula sem considerar campos entre aspas. Em um CSV separado por ponto e vírgula, descrições com várias vírgulas faziam o leitor escolher o separador errado e dividir as colunas incorretamente.
+**Risco/Impacto**: Dados de descrição e dependência podiam ser deslocados na análise da planilha sem uma mensagem de erro clara.
+**Recomendação**: Comparar a consistência da quantidade de colunas nas primeiras linhas usando o próprio parser CSV, que respeita aspas. Coberto por `test_universal_reader_ignores_delimiters_inside_quoted_values` com amostra de CSV.
+**Padrão Recorrente**: Sim — a detecção de estrutura CSV deve respeitar o encapsulamento de campos.
+**Prioridade de Correção**: ✅ Resolvido

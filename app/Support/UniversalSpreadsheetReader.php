@@ -104,8 +104,7 @@ final class UniversalSpreadsheetReader
             $content = (string) mb_convert_encoding($content, 'UTF-8', $encoding);
         }
 
-        $sample = substr($content, 0, 4096);
-        $delimiter = substr_count($sample, ';') > substr_count($sample, ',') ? ';' : ',';
+        $delimiter = self::detectCsvDelimiter($content);
 
         $stream = fopen('php://memory', 'r+');
         if ($stream === false) {
@@ -121,6 +120,41 @@ final class UniversalSpreadsheetReader
         fclose($stream);
 
         return $rows;
+    }
+
+    private static function detectCsvDelimiter(string $content): string
+    {
+        $bestDelimiter = ',';
+        $bestFrequency = 0;
+        $bestColumnCount = 1;
+
+        foreach ([',', ';'] as $candidate) {
+            $stream = fopen('php://memory', 'r+');
+            if ($stream === false) {
+                continue;
+            }
+            fwrite($stream, $content);
+            rewind($stream);
+
+            $columnFrequencies = [];
+            for ($line = 0; $line < 20 && ($row = fgetcsv($stream, 0, $candidate, '"', '\\')) !== false; $line++) {
+                $columnCount = count($row);
+                if ($columnCount > 1) {
+                    $columnFrequencies[$columnCount] = ($columnFrequencies[$columnCount] ?? 0) + 1;
+                }
+            }
+            fclose($stream);
+
+            foreach ($columnFrequencies as $columnCount => $frequency) {
+                if ($frequency > $bestFrequency || ($frequency === $bestFrequency && $columnCount > $bestColumnCount)) {
+                    $bestDelimiter = $candidate;
+                    $bestFrequency = $frequency;
+                    $bestColumnCount = $columnCount;
+                }
+            }
+        }
+
+        return $bestDelimiter;
     }
 
     /**

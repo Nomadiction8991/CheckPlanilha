@@ -36,6 +36,16 @@ class UniversalSpreadsheetImportTest extends TestCase
         @unlink($tmp);
     }
 
+    public function test_universal_reader_ignores_delimiters_inside_quoted_values(): void
+    {
+        $fixture = base_path('tests/Fixtures/importacao/csv-delimitadores-entre-aspas.csv');
+
+        self::assertSame([
+            ['Código', 'Descrição', 'Dependência'],
+            ['09-0565 / 000001', 'Mesa, redonda, madeira, tampo amplo, quatro pés', 'Templo'],
+        ], UniversalSpreadsheetReader::read($fixture));
+    }
+
     public function test_universal_reader_preserves_rich_inline_text_in_xlsx_cells(): void
     {
         $path = tempnam(sys_get_temp_dir(), 'test_xlsx_');
