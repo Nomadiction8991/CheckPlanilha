@@ -122,13 +122,19 @@ final class UniversalSpreadsheetReader
         return $rows;
     }
 
-    private static function detectCsvDelimiter(string $content): string
+    /**
+     * Escolhe o separador pelo CSV parseado (respeita campos entre aspas), não pela
+     * contagem de caracteres crus.
+     *
+     * @param array<int, string> $candidates
+     */
+    public static function detectCsvDelimiter(string $content, array $candidates = [',', ';']): string
     {
         $bestDelimiter = ',';
         $bestFrequency = 0;
         $bestColumnCount = 1;
 
-        foreach ([',', ';'] as $candidate) {
+        foreach ($candidates as $candidate) {
             $stream = fopen('php://memory', 'r+');
             if ($stream === false) {
                 continue;

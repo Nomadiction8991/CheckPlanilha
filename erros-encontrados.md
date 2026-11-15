@@ -328,3 +328,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Comparar a consistência da quantidade de colunas nas primeiras linhas usando o próprio parser CSV, que respeita aspas. Coberto por `test_universal_reader_ignores_delimiters_inside_quoted_values` com amostra de CSV.
 **Padrão Recorrente**: Sim — a detecção de estrutura CSV deve respeitar o encapsulamento de campos.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-012 - Pipeline de importação ainda escolhia o separador CSV contando caracteres crus
+**Arquivo**: `app/Services/CsvParserService.php` (`detectarDelimitador`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: A correção IMP-011 foi aplicada só ao leitor de prévia (`UniversalSpreadsheetReader`). O parser que de fato grava a importação ainda contava todas as vírgulas e ponto e vírgulas do arquivo. Em um CSV separado por ponto e vírgula com descrições que têm mais vírgulas do que separadores, o parser escolhia a vírgula e as colunas saíam deslocadas.
+**Risco/Impacto**: Os registros importados ficavam com código, descrição e localidade trocados, sem mensagem de erro.
+**Recomendação**: Usar a mesma detecção por CSV parseado (campos entre aspas ignorados) nos dois caminhos. Coberto por `testLerCsvDetectaPontoVirgulaMesmoQuandoDescricaoTemMaisVirgulasQueSeparadores`.
+**Padrão Recorrente**: Sim — a mesma lógica de detecção deve ser compartilhada entre leitores.
+**Prioridade de Correção**: ✅ Resolvido

@@ -247,6 +247,37 @@ final class CsvParserServiceTest extends TestCase
         self::assertStringContainsString('AÇÃO', serialize($linhas), 'Acento cortado pela amostra foi corrompido.');
     }
 
+    public function testLerCsvDetectaPontoVirgulaMesmoQuandoDescricaoTemMaisVirgulasQueSeparadores(): void
+    {
+        // Cada descrição entre aspas tem 25 vírgulas; no arquivo há 60 ';' e 75 ','.
+        // Contar caracteres crus escolheria ',' e quebraria as colunas.
+        $descricao = 'Cadeira, de madeira, cor marrom, assento, encosto, braço, pé, parafuso, prego, verniz, lixa, cola, tinta, pincel, fita, pano, bucha, fio, tomada, lâmpada, vidro, espelho, gaveta, porta, trinco, dobradiça';
+        self::assertSame(25, substr_count($descricao, ','));
+
+        $cabecalho = implode(';', ['Código', ...array_fill(0, 15, 'X')]);
+        $linha = static function (string $codigo) use ($descricao): string {
+            $campos = array_fill(0, 16, '');
+            $campos[0] = $codigo;
+            $campos[3] = '"' . $descricao . '"';
+            $campos[10] = 'CONGREGAÇÃO CENTRAL';
+            $campos[15] = 'SALAO 1';
+
+            return implode(';', $campos);
+        };
+        $conteudo = implode("\n", [
+            $cabecalho,
+            $linha('09-0565 / 0001'),
+            $linha('09-0565 / 0002'),
+            $linha('09-0565 / 0003'),
+        ]) . "\n";
+
+        $linhas = $this->lerCsvComParser($conteudo);
+
+        self::assertCount(3, $linhas, 'Cada registro deve virar uma linha de dados.');
+        self::assertStringContainsString($descricao, serialize($linhas), 'A descrição não pode ser partida pelas vírgulas.');
+        self::assertStringContainsString('CONGREGAÇÃO CENTRAL', serialize($linhas));
+    }
+
     /**
      * Monta CSV UTF-8 (separador ';', 16 colunas) cuja primeira linha tem "AÇÃO"
      * começando exatamente no byte $posicaoDoAcento, com linhas válidas até $tamanhoMinimo.

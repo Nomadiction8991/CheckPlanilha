@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Core\ConnectionManager;
 use App\Core\QueryCache;
+use App\Support\UniversalSpreadsheetReader;
 use League\Csv\Reader;
 use League\Csv\CharsetConverter;
 use Illuminate\Support\Facades\Schema;
@@ -706,18 +707,9 @@ class CsvParserService
 
     private function detectarDelimitador(string $amostra): string
     {
-        $contVirgula = substr_count($amostra, ',');
-        $contPontoVirgula = substr_count($amostra, ';');
-        $contTab = substr_count($amostra, "\t");
-
-        if ($contPontoVirgula > $contVirgula && $contPontoVirgula > $contTab) {
-            return ';';
-        }
-        if ($contTab > $contVirgula && $contTab > $contPontoVirgula) {
-            return "\t";
-        }
-
-        return ',';
+        // Compara o que o parser CSV enxerga (campos entre aspas não contam), para que
+        // vírgulas dentro de uma descrição não escolham o separador errado.
+        return UniversalSpreadsheetReader::detectCsvDelimiter($amostra, [',', ';', "\t"]);
     }
 
     /**
