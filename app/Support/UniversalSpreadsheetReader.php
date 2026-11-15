@@ -104,6 +104,8 @@ final class UniversalSpreadsheetReader
             $content = (string) mb_convert_encoding($content, 'UTF-8', $encoding);
         }
 
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content) ?? $content;
+
         $delimiter = self::detectCsvDelimiter($content);
 
         $stream = fopen('php://memory', 'r+');

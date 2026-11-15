@@ -416,3 +416,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Gerar um identificador aleatório por upload e cobrir o fluxo HTTP garantindo que um arquivo já existente não seja substituído. Coberto por `test_upload_http_persiste_importacao_e_analise_reais` com arquivos sentinela no padrão antigo de nome.
 **Padrão Recorrente**: Sim — arquivos de importação precisam de nomes exclusivos, mesmo quando enviados no mesmo instante.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-019 - CSV UTF-8 com BOM alterava o nome da primeira coluna
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readCsv`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: O leitor preservava o marcador BOM (`EF BB BF`) no início do primeiro campo de um CSV UTF-8. Com isso, o cabeçalho `Código` chegava como `﻿Código` e podia deixar de ser reconhecido durante a importação.
+**Risco/Impacto**: Planilhas CSV exportadas com BOM podiam falhar no reconhecimento das colunas sem indicar que o conteúdo estava correto.
+**Recomendação**: Remover o BOM somente do início do conteúdo antes de detectar o separador e interpretar os campos. Coberto por `tests/Fixtures/importacao/csv-utf8-bom.csv`.
+**Padrão Recorrente**: Sim — marcadores de codificação devem ser tratados antes da leitura dos cabeçalhos.
+**Prioridade de Correção**: ✅ Resolvido

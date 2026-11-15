@@ -99,6 +99,13 @@ final class UniversalSpreadsheetReaderTest extends TestCase
             ['002', 'Mesa branca', 'Escritório de teste'],
         ], UniversalSpreadsheetReader::read($caminho));
     }
+    public function test_le_csv_utf8_com_bom_sem_anexar_bom_a_primeira_coluna(): void
+    {
+        self::assertSame([
+            ['Código', 'Descrição', 'Localidade'],
+            ['001', 'Cadeira azul', 'Sala de teste'],
+        ], UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/csv-utf8-bom.csv')));
+    }
 
     public function test_le_csv_rfc4180_preservando_barra_invertida_antes_da_aspas_final(): void
     {
