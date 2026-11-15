@@ -32,6 +32,21 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         ], UniversalSpreadsheetReader::read($caminho));
     }
 
+    public function test_xlsx_corrompido_gera_erro_acionavel_em_vez_de_ler_binario_como_csv(): void
+    {
+        $caminho = sys_get_temp_dir() . '/planilha-corrompida-' . uniqid('', true) . '.xlsx';
+        file_put_contents($caminho, "PK\x03\x04\x14\x00\x00\x00conteudo-truncado\x00\x01\x02");
+
+        try {
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('corrompido');
+
+            UniversalSpreadsheetReader::read($caminho);
+        } finally {
+            @unlink($caminho);
+        }
+    }
+
     public function test_le_xlsx_preservando_linhas_vazias_para_numero_da_linha_original(): void
     {
         $caminho = sys_get_temp_dir() . '/planilha-com-linha-vazia-' . uniqid('', true) . '.xlsx';

@@ -541,6 +541,33 @@ final class LegacySpreadsheetImportTest extends TestCase
         $response->assertRedirect(route('migration.spreadsheets.preview', ['importacao' => 15]));
     }
 
+    public function testStoreMostraErroAcionavelParaXlsxCorrompido(): void
+    {
+        Session::put('usuario_id', 9);
+
+        $this->mock(
+            LegacySpreadsheetImportServiceInterface::class,
+            function (MockInterface $mock): void {
+                $mock->shouldNotReceive('uploadAndAnalyze');
+            }
+        );
+
+        $response = $this->post(route('migration.spreadsheets.store'), [
+                'administracao_id' => 3,
+                'arquivo_csv' => UploadedFile::fake()->createWithContent(
+                    'bens.xlsx',
+                    "PK\x03\x04\x14\x00\x00\x00conteudo-truncado\x00\x01\x02"
+                ),
+            ]);
+
+        $response->assertRedirect(route('migration.spreadsheets.create'));
+        $response->assertSessionHas('status_type', 'error');
+        $response->assertSessionHas(
+            'status',
+            fn (string $status): bool => str_contains($status, 'corrompido')
+        );
+    }
+
     public function testPreviewPageRendersSummary(): void
     {
         $response = $this->get(route('migration.spreadsheets.preview', ['importacao' => 15]));

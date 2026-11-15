@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use Exception;
+use RuntimeException;
 use ZipArchive;
 
 final class UniversalSpreadsheetReader
@@ -132,7 +133,11 @@ final class UniversalSpreadsheetReader
     {
         $zip = new ZipArchive();
         if ($zip->open($filePath) !== true) {
-            return self::readCsv($filePath);
+            // Arquivo com assinatura ZIP mas sem estrutura válida (upload truncado ou
+            // corrompido). Lê-lo como CSV despejaria bytes binários como linhas.
+            throw new RuntimeException(
+                'O arquivo XLSX parece corrompido ou incompleto. Abra a planilha no Excel, salve de novo como .xlsx e envie outra vez.'
+            );
         }
 
         $sharedStrings = [];

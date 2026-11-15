@@ -195,3 +195,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 
 **Padrão Recorrente**: Sim — em arquivos OpenXML, a ordem declarada no workbook deve prevalecer sobre o nome físico do arquivo da aba.
 **Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### IMP-006 - XLSX corrompido era lido como CSV
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readXlsx`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: Arquivo com assinatura ZIP mas estrutura inválida (upload truncado ou corrompido) caía no leitor de CSV e virava linhas com bytes binários.
+**Risco/Impacto**: A análise prévia mostrava dados sem sentido ou um erro genérico de coluna faltando, em vez de orientar o usuário a reenviar a planilha.
+**Recomendação**: Lançar `RuntimeException` com mensagem acionável no ponto do fallback. Coberto por teste de unidade e de feature no fluxo de upload.
+**Padrão Recorrente**: Não
+**Prioridade de Correção**: ⚠️ Próxima Sprint
