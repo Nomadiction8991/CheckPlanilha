@@ -796,16 +796,17 @@ final class UniversalSpreadsheetReader
                 if ($part === null) {
                     break;
                 }
-                $text .= $part;
+                // Cada trecho usa a codificação do seu próprio registro (CONTINUE pode trocar 8 bits por UTF-16).
+                $text .= $bytesPerCharacter === 2
+                    ? (string) @iconv('UTF-16LE', 'UTF-8//IGNORE', $part)
+                    : (string) @iconv('Windows-1252', 'UTF-8//IGNORE', $part);
                 $remainingCharacters -= $takeCharacters;
             }
 
             if ($remainingCharacters > 0) {
                 break;
             }
-            $strings[] = $bytesPerCharacter === 2
-                ? (string) @iconv('UTF-16LE', 'UTF-8//IGNORE', $text)
-                : (string) @iconv('Windows-1252', 'UTF-8//IGNORE', $text);
+            $strings[] = $text;
             if ($readBytes($richRunCount * 4 + $extensionLength) === null) {
                 break;
             }

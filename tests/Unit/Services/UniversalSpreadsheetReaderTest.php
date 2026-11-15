@@ -44,6 +44,23 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         self::assertSame(['09-0565 / 000499', 'Banco 0499', 'Templo 0499'], $linhas[500]);
     }
 
+    public function test_sst_com_troca_de_codificacao_no_meio_da_string_preserva_cada_trecho(): void
+    {
+        // Uma única string com 4 caracteres: "Açã" (8 bits, Latin-1) e "€" (UTF-16),
+        // dividida entre um registro SST e um registro CONTINUE que muda a codificação.
+        $cabecalho = pack('VV', 1, 1);
+        $primeiroRegistro = $cabecalho . pack('v', 4) . "\x00" . "A\xE7\xE3";
+        $continueComUtf16 = "\x01" . "\xAC\x20";
+
+        $strings = new \ReflectionMethod(UniversalSpreadsheetReader::class, 'parseBiffSharedStrings');
+        $strings->setAccessible(true);
+
+        self::assertSame(
+            ["A\u{00E7}\u{00E3}\u{20AC}"],
+            $strings->invoke(null, [$primeiroRegistro, $continueComUtf16])
+        );
+    }
+
     public function test_le_xls_real_com_numeros_inteiros_em_registros_rk_e_multrk(): void
     {
         self::assertSame([
