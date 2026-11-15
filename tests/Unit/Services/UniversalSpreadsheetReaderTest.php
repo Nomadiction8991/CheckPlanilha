@@ -30,4 +30,12 @@ final class UniversalSpreadsheetReaderTest extends TestCase
             ['002', 'Mesa branca', 'Escritório de teste'],
         ], UniversalSpreadsheetReader::read($caminho));
     }
+
+    public function test_remove_bom_utf8_do_primeiro_cabecalho_csv(): void
+    {
+        $linhas = UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/exemplo-leitor-bom.csv'));
+
+        self::assertSame(['Código', 'Descrição', 'Localidade'], $linhas[0]);
+        self::assertSame('09-0565 / 000001', $linhas[1][0]);
+    }
 }
