@@ -196,8 +196,14 @@ final class UniversalSpreadsheetReader
                         if ($type === 's' && isset($cell->v)) {
                             $sIndex = (int) $cell->v;
                             $val = $sharedStrings[$sIndex] ?? '';
-                        } elseif ($type === 'inlineStr' && isset($cell->is->t)) {
-                            $val = (string) $cell->is->t;
+                        } elseif ($type === 'inlineStr' && isset($cell->is)) {
+                            if (isset($cell->is->t)) {
+                                $val = (string) $cell->is->t;
+                            } elseif (isset($cell->is->r)) {
+                                foreach ($cell->is->r as $run) {
+                                    $val .= (string) ($run->t ?? '');
+                                }
+                            }
                         } elseif (isset($cell->v)) {
                             $val = (string) $cell->v;
                         }

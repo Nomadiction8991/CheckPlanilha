@@ -36,6 +36,32 @@ class UniversalSpreadsheetImportTest extends TestCase
         @unlink($tmp);
     }
 
+    public function test_universal_reader_preserves_rich_inline_text_in_xlsx_cells(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'test_xlsx_');
+        if ($path === false) {
+            $this->fail('Falha ao criar arquivo temporário.');
+        }
+
+        $zip = new \ZipArchive();
+        self::assertSame(true, $zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE));
+        $zip->addFromString('xl/worksheets/sheet1.xml', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData><row r="1"><c r="A1" t="inlineStr"><is>
+                <r><t>CADEIRA </t></r><r><t>ALMOFADADA</t></r>
+              </is></c></row></sheetData>
+            </worksheet>
+            XML);
+        $zip->close();
+
+        try {
+            self::assertSame([['CADEIRA ALMOFADADA']], UniversalSpreadsheetReader::read($path));
+        } finally {
+            @unlink($path);
+        }
+    }
+
     public function test_universal_reader_ensure_csv_preserves_csv(): void
     {
         $tmp = tempnam(sys_get_temp_dir(), 'test_csv_');
