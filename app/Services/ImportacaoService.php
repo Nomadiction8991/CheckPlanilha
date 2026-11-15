@@ -154,7 +154,7 @@ class ImportacaoService
 
         // Pre-load caches para evitar N+1
         $this->preCarregarTiposBens($administracaoId > 0 ? $administracaoId : null);
-        $this->preCarregarComuns();
+        $this->preCarregarComuns($administracaoId > 0 ? $administracaoId : null);
 
         $resultado = ProcessingResult::criar();
 
@@ -443,11 +443,23 @@ class ImportacaoService
         }
     }
 
-    private function preCarregarComuns(): void
+    private function preCarregarComuns(?int $administracaoId = null): void
     {
-        $stmt = $this->conexao->query("SELECT id, codigo FROM comums");
+        if ($administracaoId !== null && Schema::hasColumn('comums', 'administracao_id')) {
+            $stmt = $this->conexao->prepare(
+                "SELECT id, codigo
+                 FROM comums
+                 WHERE administracao_id = :administracao_id OR administracao_id IS NULL
+                 ORDER BY administracao_id IS NULL ASC, id ASC"
+            );
+            $stmt->execute([':administracao_id' => $administracaoId]);
+        } else {
+            $stmt = $this->conexao->query("SELECT id, codigo FROM comums ORDER BY id ASC");
+        }
+
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $this->cacheComuns[strtoupper(trim((string) $row['codigo']))] = (int) $row['id'];
+            $codigo = strtoupper(trim((string) $row['codigo']));
+            $this->cacheComuns[$codigo] ??= (int) $row['id'];
         }
     }
 
@@ -573,29 +585,39 @@ class ImportacaoService
         if (isset($this->cacheComuns[$codigoUpper])) {
             $comumId = $this->cacheComuns[$codigoUpper];
             
-            // Garantir administração (lógica original)
-            if ($administracaoId !== null) {
-                $stmt = $this->conexao->prepare("SELECT administracao_id FROM comums WHERE id = :id");
-                $stmt->execute([':id' => $comumId]);
-                $res = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($res && (int) ($res['administracao_id'] ?? 0) !== $administracaoId) {
-                    $stmtUpdate = $this->conexao->prepare("UPDATE comums SET administracao_id = :adm WHERE id = :id");
-                    $stmtUpdate->execute([':adm' => $administracaoId, ':id' => $comumId]);
-                }
-            }
-            
             return $comumId;
         }
 
         // Buscar comum pelo código (fallback caso não esteja no cache inicial)
-        $stmt = $this->conexao->prepare("SELECT id, administracao_id FROM comums WHERE codigo = :codigo LIMIT 1");
-        $stmt->execute([':codigo' => $codigoComum]);
+        $supportsCommonAdministrationScope = Schema::hasColumn('comums', 'administracao_id');
+        if ($administracaoId !== null && $supportsCommonAdministrationScope) {
+            $stmt = $this->conexao->prepare(
+                "SELECT id, administracao_id FROM comums
+                 WHERE codigo = :codigo
+                   AND (administracao_id = :administracao_id OR administracao_id IS NULL)
+                 ORDER BY administracao_id IS NULL ASC, id ASC
+                 LIMIT 1"
+            );
+            $stmt->execute([
+                ':codigo' => $codigoComum,
+                ':administracao_id' => $administracaoId,
+            ]);
+        } else {
+            $stmt = $this->conexao->prepare("SELECT id, administracao_id FROM comums WHERE codigo = :codigo ORDER BY id ASC LIMIT 1");
+            $stmt->execute([':codigo' => $codigoComum]);
+        }
+
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($resultado) {
-            if ($administracaoId !== null && (int) ($resultado['administracao_id'] ?? 0) !== $administracaoId) {
+            if (
+                $administracaoId !== null
+                && $supportsCommonAdministrationScope
+                && $resultado['administracao_id'] === null
+            ) {
                 $stmtUpdate = $this->conexao->prepare(
-                    "UPDATE comums SET administracao_id = :administracao_id WHERE id = :id"
+                    "UPDATE comums SET administracao_id = :administracao_id
+                     WHERE id = :id AND administracao_id IS NULL"
                 );
                 $stmtUpdate->execute([
                     ':administracao_id' => $administracaoId,
