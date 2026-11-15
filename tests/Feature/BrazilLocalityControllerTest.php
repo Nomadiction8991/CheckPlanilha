@@ -188,6 +188,23 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testCitiesCapitalizesLetterAfterApostropheInsideWord(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/RS/municipios' => Http::response([
+                ['nome' => "SANT'ANA DO LIVRAMENTO"],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'RS']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ["Sant'Ana do Livramento"],
+        ]);
+    }
+
     public function testCitiesRejectsInvalidState(): void
     {
         Http::fake();

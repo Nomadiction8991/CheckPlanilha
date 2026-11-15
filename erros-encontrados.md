@@ -295,3 +295,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Aplicar formatos compostos somente por zeros aos valores inteiros das células numéricas. Coberto por `test_le_xlsx_preservando_zeros_a_esquerda_definidos_no_formato_da_celula`.
 **Padrão Recorrente**: Sim — a importação deve preservar a representação exibida dos identificadores numéricos.
 **Prioridade de Correção**: ✅ Resolvido
+
+### LOC-005 - "Sant'Ana" saía com "a" minúsculo após o apóstrofo
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A capitalização em modo título gerava "Sant'ana do Livramento". A regra de apóstrofo só cobria "D'" depois de espaço ou hífen, então nomes com apóstrofo no meio da palavra ficavam com a letra seguinte minúscula.
+**Risco/Impacto**: Cidades com apóstrofo no meio do nome apareciam com grafia diferente da oficial na lista de cidades.
+**Recomendação**: Letra depois de apóstrofo precedido de duas letras fica maiúscula ("Sant'Ana"). Coberto por `testCitiesCapitalizesLetterAfterApostropheInsideWord` em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Sim — regras de capitalização precisam ser conferidas para todo tipo de fronteira de palavra (espaço, hífen e apóstrofo).
+**Prioridade de Correção**: ✅ Resolvido
