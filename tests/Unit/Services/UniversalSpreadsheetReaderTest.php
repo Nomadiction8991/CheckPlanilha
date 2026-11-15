@@ -29,6 +29,21 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         self::assertSame(['09-0565 / 000099', 'Banco 0099', 'Templo 0099'], $linhas[100]);
     }
 
+    public function test_le_xls_real_com_fluxo_em_mini_stream(): void
+    {
+        self::assertSame([
+            ['Código', 'Nome', 'Dependência'],
+            ['09-0565 / 000001', 'Banco', 'Templo'],
+        ], UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/xls-mini-stream.xls')));
+    }
+
+    public function test_le_xls_real_com_sst_fragmentada_em_registros_continue(): void
+    {
+        $linhas = UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/xls-sst-continua.xls'));
+
+        self::assertSame(['09-0565 / 000499', 'Banco 0499', 'Templo 0499'], $linhas[500]);
+    }
+
     public function test_le_csv_com_dados_ficticios_e_preserva_celulas(): void
     {
         $caminho = base_path('tests/Fixtures/importacao/exemplo-leitor.csv');

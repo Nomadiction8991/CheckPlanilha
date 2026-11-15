@@ -345,8 +345,8 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Severidade**: 🟠 ALTO
 **Categoria**: Importação de planilhas
 **Status**: Corrigido nesta rodada.
-**Descrição**: O leitor reconhecia células `LABEL` e `NUMBER`, mas ignorava `LABELSST`, que referencia os textos da tabela de strings compartilhadas (`SST`) usada por planilhas BIFF8 reais. Com isso, cabeçalhos e dados de arquivos `.xls` eram lidos como vazios.
+**Descrição**: O leitor reconhecia células `LABEL` e `NUMBER`, mas ignorava `LABELSST`, que referencia os textos da tabela de strings compartilhadas (`SST`) usada por planilhas BIFF8 reais. Também não acessava fluxos CFB armazenados em mini-streams nem juntava blocos `CONTINUE` de tabelas SST grandes. Com isso, cabeçalhos e dados de arquivos `.xls` eram lidos como vazios ou incompletos.
 **Risco/Impacto**: Planilhas `.xls` válidas podiam perder nomes, códigos e outros campos durante a análise, causando importação vazia ou dados incorretos.
-**Recomendação**: Interpretar a tabela `SST` e resolver os índices das células `LABELSST`. Coberto por uma amostra `.xls` real exportada pelo LibreOffice, com verificação do primeiro e do último registro.
+**Recomendação**: Interpretar os fluxos CFB pequenos, a tabela `SST`, os blocos `CONTINUE` e os índices das células `LABELSST`. Coberto por amostras `.xls` reais exportadas pelo LibreOffice para fluxos curtos e longos.
 **Padrão Recorrente**: Sim — o leitor deve cobrir os tipos de célula usados pelos arquivos BIFF comuns.
 **Prioridade de Correção**: ✅ Resolvido

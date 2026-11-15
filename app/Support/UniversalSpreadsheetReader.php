@@ -377,8 +377,24 @@ final class UniversalSpreadsheetReader
             $curr = $fat[$curr];
         }
 
+        $miniFat = [];
+        $miniFatStart = unpack('V', substr($data, 60, 4));
+        $miniFatSectorCount = unpack('V', substr($data, 64, 4));
+        $miniFatSector = $miniFatStart ? (int) $miniFatStart[1] : 0xFFFFFFFE;
+        $miniFatCount = $miniFatSectorCount ? min((int) $miniFatSectorCount[1], count($fat)) : 0;
+        for ($sector = 0; $sector < $miniFatCount && $miniFatSector < 0xFFFFFFFE && isset($fat[$miniFatSector]); $sector++) {
+            $miniFatData = substr($data, $secSize + $miniFatSector * $secSize, $secSize);
+            for ($offset = 0; $offset + 4 <= strlen($miniFatData); $offset += 4) {
+                $entry = unpack('V', substr($miniFatData, $offset, 4));
+                $miniFat[] = $entry ? (int) $entry[1] : 0xFFFFFFFE;
+            }
+            $miniFatSector = $fat[$miniFatSector];
+        }
+
         $wbStartSec = null;
         $wbSize = 0;
+        $rootStartSec = null;
+        $rootSize = 0;
         $totalEntries = (int) (strlen($dirData) / 128);
         for ($i = 0; $i < $totalEntries; $i++) {
             $chunk = substr($dirData, $i * 128, 128);
@@ -390,6 +406,14 @@ final class UniversalSpreadsheetReader
             $nameRaw = substr($chunk, 0, $nameLen);
             $name = (string) @iconv('UTF-16LE', 'UTF-8//IGNORE', $nameRaw);
             $name = trim($name, "\x00");
+
+            $entryType = ord($chunk[66]);
+            if ($entryType === 0x05) {
+                $uSec = unpack('V', substr($chunk, 116, 4));
+                $uSize = unpack('V', substr($chunk, 120, 4));
+                $rootStartSec = $uSec ? (int) $uSec[1] : null;
+                $rootSize = $uSize ? (int) $uSize[1] : 0;
+            }
 
             if ($name === 'Workbook' || $name === 'Book') {
                 $uSec = unpack('V', substr($chunk, 116, 4));
@@ -404,11 +428,29 @@ final class UniversalSpreadsheetReader
             return [];
         }
 
+        $miniStreamCutoff = unpack('V', substr($data, 56, 4));
+        $miniStreamCutoff = $miniStreamCutoff ? (int) $miniStreamCutoff[1] : 4096;
         $wbData = '';
-        $curr = $wbStartSec;
-        while ($curr < 0xFFFFFFFE && isset($fat[$curr])) {
-            $wbData .= substr($data, $secSize + $curr * $secSize, $secSize);
-            $curr = $fat[$curr];
+        if ($wbSize < $miniStreamCutoff && $rootStartSec !== null) {
+            $miniStream = '';
+            $curr = $rootStartSec;
+            while ($curr < 0xFFFFFFFE && isset($fat[$curr])) {
+                $miniStream .= substr($data, $secSize + $curr * $secSize, $secSize);
+                $curr = $fat[$curr];
+            }
+            $miniStream = substr($miniStream, 0, $rootSize);
+            $miniSectorSize = 1 << ((unpack('v', substr($data, 32, 2))[1] ?? 6));
+            $curr = $wbStartSec;
+            while ($curr < 0xFFFFFFFE && isset($miniFat[$curr])) {
+                $wbData .= substr($miniStream, $curr * $miniSectorSize, $miniSectorSize);
+                $curr = $miniFat[$curr];
+            }
+        } else {
+            $curr = $wbStartSec;
+            while ($curr < 0xFFFFFFFE && isset($fat[$curr])) {
+                $wbData .= substr($data, $secSize + $curr * $secSize, $secSize);
+                $curr = $fat[$curr];
+            }
         }
         $wbData = substr($wbData, 0, $wbSize);
 
@@ -426,7 +468,22 @@ final class UniversalSpreadsheetReader
             }
 
             if ($code === 0x00FC) { // SST: Shared String Table
-                $sharedStrings = self::parseBiffSharedStrings(substr($wbData, $recordPos + 4, $length));
+                $segments = [substr($wbData, $recordPos + 4, $length)];
+                $nextPos = $recordPos + 4 + $length;
+                while ($nextPos <= $dataLen - 4) {
+                    $nextCode = unpack('v', substr($wbData, $nextPos, 2));
+                    $nextLength = unpack('v', substr($wbData, $nextPos + 2, 2));
+                    if (($nextCode ? (int) $nextCode[1] : 0) !== 0x003C) {
+                        break;
+                    }
+                    $continueLength = $nextLength ? (int) $nextLength[1] : 0;
+                    if ($nextPos + 4 + $continueLength > $dataLen) {
+                        break;
+                    }
+                    $segments[] = substr($wbData, $nextPos + 4, $continueLength);
+                    $nextPos += 4 + $continueLength;
+                }
+                $sharedStrings = self::parseBiffSharedStrings($segments);
                 break;
             }
 
@@ -534,55 +591,108 @@ final class UniversalSpreadsheetReader
     }
 
     /** @return array<int, string> */
-    private static function parseBiffSharedStrings(string $record): array
+    private static function parseBiffSharedStrings(array $segments): array
     {
-        if (strlen($record) < 8) {
+        if ($segments === [] || strlen($segments[0]) < 8) {
             return [];
         }
 
-        $counts = unpack('Vtotal/Vunique', substr($record, 0, 8));
+        $counts = unpack('Vtotal/Vunique', substr($segments[0], 0, 8));
         $stringCount = min((int) ($counts['unique'] ?? 0), 100000);
-        $offset = 8;
+        $segmentIndex = 0;
+        $segmentOffset = 8;
+        $readBytes = static function (int $length) use (&$segments, &$segmentIndex, &$segmentOffset): ?string {
+            $result = '';
+            while ($length > 0) {
+                while (isset($segments[$segmentIndex]) && $segmentOffset >= strlen($segments[$segmentIndex])) {
+                    $segmentIndex++;
+                    $segmentOffset = 0;
+                }
+                if (!isset($segments[$segmentIndex])) {
+                    return null;
+                }
+                $available = strlen($segments[$segmentIndex]) - $segmentOffset;
+                $take = min($length, $available);
+                $result .= substr($segments[$segmentIndex], $segmentOffset, $take);
+                $segmentOffset += $take;
+                $length -= $take;
+            }
+
+            return $result;
+        };
         $strings = [];
 
-        for ($index = 0; $index < $stringCount && $offset + 3 <= strlen($record); $index++) {
-            $length = unpack('v', substr($record, $offset, 2));
-            $offset += 2;
-            $characterCount = $length ? (int) $length[1] : 0;
-            $flags = ord($record[$offset]);
-            $offset++;
+        for ($index = 0; $index < $stringCount; $index++) {
+            $length = $readBytes(2);
+            $flagByte = $readBytes(1);
+            if ($length === null || $flagByte === null) {
+                break;
+            }
+            $lengthValue = unpack('v', $length);
+            $characterCount = $lengthValue ? (int) $lengthValue[1] : 0;
+            $flags = ord($flagByte);
 
             $richRunCount = 0;
             if (($flags & 0x08) !== 0) {
-                if ($offset + 2 > strlen($record)) {
+                $runs = $readBytes(2);
+                if ($runs === null) {
                     break;
                 }
-                $runs = unpack('v', substr($record, $offset, 2));
-                $richRunCount = $runs ? (int) $runs[1] : 0;
-                $offset += 2;
+                $runCount = unpack('v', $runs);
+                $richRunCount = $runCount ? (int) $runCount[1] : 0;
             }
 
             $extensionLength = 0;
             if (($flags & 0x04) !== 0) {
-                if ($offset + 4 > strlen($record)) {
+                $extension = $readBytes(4);
+                if ($extension === null) {
                     break;
                 }
-                $extension = unpack('V', substr($record, $offset, 4));
-                $extensionLength = $extension ? (int) $extension[1] : 0;
-                $offset += 4;
+                $extensionSize = unpack('V', $extension);
+                $extensionLength = $extensionSize ? (int) $extensionSize[1] : 0;
             }
 
             $bytesPerCharacter = ($flags & 0x01) !== 0 ? 2 : 1;
-            $textLength = $characterCount * $bytesPerCharacter;
-            if ($offset + $textLength + $richRunCount * 4 + $extensionLength > strlen($record)) {
+            $text = '';
+            $remainingCharacters = $characterCount;
+            while ($remainingCharacters > 0) {
+                while (isset($segments[$segmentIndex]) && $segmentOffset >= strlen($segments[$segmentIndex])) {
+                    $segmentIndex++;
+                    $segmentOffset = 0;
+                    if (!isset($segments[$segmentIndex])) {
+                        break 2;
+                    }
+                    $continuationFlags = $readBytes(1);
+                    if ($continuationFlags === null) {
+                        break 2;
+                    }
+                    $bytesPerCharacter = (ord($continuationFlags) & 0x01) !== 0 ? 2 : 1;
+                }
+
+                $availableBytes = strlen($segments[$segmentIndex]) - $segmentOffset;
+                $availableCharacters = intdiv($availableBytes, $bytesPerCharacter);
+                if ($availableCharacters === 0) {
+                    $segmentOffset = strlen($segments[$segmentIndex]);
+                    continue;
+                }
+                $takeCharacters = min($remainingCharacters, $availableCharacters);
+                $part = $readBytes($takeCharacters * $bytesPerCharacter);
+                if ($part === null) {
+                    break;
+                }
+                $text .= $part;
+                $remainingCharacters -= $takeCharacters;
+            }
+
+            if ($remainingCharacters > 0) {
                 break;
             }
-            $text = substr($record, $offset, $textLength);
-            $offset += $textLength;
             $strings[] = $bytesPerCharacter === 2
                 ? (string) @iconv('UTF-16LE', 'UTF-8//IGNORE', $text)
                 : (string) @iconv('Windows-1252', 'UTF-8//IGNORE', $text);
-            $offset += $richRunCount * 4 + $extensionLength;
+            if ($readBytes($richRunCount * 4 + $extensionLength) === null) {
+                break;
+            }
         }
 
         return $strings;
