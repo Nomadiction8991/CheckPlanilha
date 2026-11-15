@@ -206,3 +206,15 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Lançar `RuntimeException` com mensagem acionável no ponto do fallback. Coberto por teste de unidade e de feature no fluxo de upload.
 **Padrão Recorrente**: Não
 **Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### LOC-001 - Nomes de UF e cidade perdiam minúsculas das partículas (de, da, do)
+
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A capitalização em modo título deixava "Do", "Da", "De" em nomes como "Mato Grosso do Sul" e "São João da Barra", virando "Mato Grosso Do Sul" e "São João Da Barra".
+**Risco/Impacto**: Listas de UF e cidade mostravam nomes com grafia errada, o que o usuário percebe ao escolher a localidade.
+**Recomendação**: Manter em minúsculas as partículas `de`, `da`, `do`, `das`, `dos` quando não forem a primeira palavra. Coberto por testes de estado e de cidade em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Não
+**Prioridade de Correção**: ⚠️ Próxima Sprint

@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Http;
 
 final class BrazilLocalityController extends Controller
 {
+    private const PARTICULAS = ['de', 'da', 'do', 'das', 'dos'];
+
     public function states(Request $request): JsonResponse
     {
         foreach ($this->stateProviders() as $source => $url) {
@@ -164,6 +166,16 @@ final class BrazilLocalityController extends Controller
             return '';
         }
 
-        return mb_convert_case($name, MB_CASE_TITLE, 'UTF-8');
+        $palavras = explode(' ', mb_convert_case($name, MB_CASE_TITLE, 'UTF-8'));
+
+        foreach ($palavras as $indice => $palavra) {
+            $minuscula = mb_strtolower($palavra, 'UTF-8');
+
+            if ($indice > 0 && in_array($minuscula, self::PARTICULAS, true)) {
+                $palavras[$indice] = $minuscula;
+            }
+        }
+
+        return implode(' ', $palavras);
     }
 }

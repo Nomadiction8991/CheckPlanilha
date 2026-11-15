@@ -99,6 +99,43 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testStatesKeepsPortugueseParticlesLowercase(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados' => Http::response([
+                ['sigla' => 'MS', 'nome' => 'MATO GROSSO DO SUL'],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.states'));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => [
+                ['sigla' => 'MS', 'nome' => 'Mato Grosso do Sul'],
+            ],
+        ]);
+    }
+
+    public function testCitiesKeepsPortugueseParticlesLowercase(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/MT/municipios' => Http::response([
+                ['nome' => 'SÃO JOÃO DA BARRA'],
+                ['nome' => 'CAMPOS DO JORDÃO'],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'MT']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ['São João da Barra', 'Campos do Jordão'],
+        ]);
+    }
+
     public function testCitiesRejectsInvalidState(): void
     {
         Http::fake();
