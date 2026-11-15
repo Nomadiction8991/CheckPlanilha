@@ -372,3 +372,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Decodificar `RK` (inteiro de 30 bits ou double truncado, com divisão por 100 quando indicado) e `MULRK` (várias células consecutivas na mesma linha). Coberto pelo arquivo `tests/Fixtures/importacao/xls-numeros-rk.xls`, gerado pelo LibreOffice com inteiros, decimais negativos e células adjacentes.
 **Padrão Recorrente**: Sim — o leitor deve cobrir os tipos de célula usados pelos arquivos BIFF comuns.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-015 - Barra invertida antes da aspa final corrompia CSV válido
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readCsv`, `detectCsvDelimiter`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: O leitor configurava a barra invertida como caractere de escape. Em CSV padrão, uma barra invertida literal antes da aspa que fecha um campo era interpretada como escape da aspa, fazendo o parser consumir os separadores e as linhas seguintes.
+**Risco/Impacto**: Campos e registros seguintes podiam ser unidos e importados com dados deslocados ou incompletos sem aviso.
+**Recomendação**: Usar escape vazio no parser e no gravador CSV, mantendo o escape de aspas no padrão de aspas duplicadas. Coberto por `csv-barra-invertida-antes-da-aspas.csv`.
+**Padrão Recorrente**: Sim — entrada e saída CSV devem seguir a mesma convenção de aspas.
+**Prioridade de Correção**: ✅ Resolvido

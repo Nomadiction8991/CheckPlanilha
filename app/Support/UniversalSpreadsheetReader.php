@@ -53,7 +53,7 @@ final class UniversalSpreadsheetReader
         }
 
         foreach ($rows as $row) {
-            fputcsv($fp, $row, ',', '"', "\\");
+            fputcsv($fp, $row, ',', '"', '');
         }
         fclose($fp);
 
@@ -114,7 +114,7 @@ final class UniversalSpreadsheetReader
         rewind($stream);
 
         $rows = [];
-        while (($row = fgetcsv($stream, 0, $delimiter, '"', '\\')) !== false) {
+        while (($row = fgetcsv($stream, 0, $delimiter, '"', '')) !== false) {
             $rows[] = array_map(static fn($c) => trim((string) $c), $row);
         }
         fclose($stream);
@@ -143,7 +143,7 @@ final class UniversalSpreadsheetReader
             rewind($stream);
 
             $columnFrequencies = [];
-            for ($line = 0; $line < 20 && ($row = fgetcsv($stream, 0, $candidate, '"', '\\')) !== false; $line++) {
+            for ($line = 0; $line < 20 && ($row = fgetcsv($stream, 0, $candidate, '"', '')) !== false; $line++) {
                 $columnCount = count($row);
                 if ($columnCount > 1) {
                     $columnFrequencies[$columnCount] = ($columnFrequencies[$columnCount] ?? 0) + 1;

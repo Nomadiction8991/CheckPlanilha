@@ -66,6 +66,15 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         ], UniversalSpreadsheetReader::read($caminho));
     }
 
+    public function test_le_csv_rfc4180_preservando_barra_invertida_antes_da_aspas_final(): void
+    {
+        self::assertSame([
+            ['Código', 'Descrição', 'Localidade'],
+            ['001', 'C:\\', 'Sala'],
+            ['002', 'Mesa', 'Templo'],
+        ], UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/csv-barra-invertida-antes-da-aspas.csv')));
+    }
+
     public function test_xlsx_corrompido_gera_erro_acionavel_em_vez_de_ler_binario_como_csv(): void
     {
         $caminho = sys_get_temp_dir() . '/planilha-corrompida-' . uniqid('', true) . '.xlsx';
