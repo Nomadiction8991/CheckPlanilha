@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 6
-- Médios: 8
+- Médios: 10
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (2)
-### Lógica (14)
+### Lógica (16)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -239,4 +239,26 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: O operador recebia uma orientação pouco útil e não sabia que precisava reparar ou reenviar o arquivo.
 **Recomendação**: Informar que a aba está ausente ou inválida e orientar a salvar novamente como `.xlsx`. Coberto por `test_xlsx_zip_sem_aba_legivel_gera_erro_acionavel`.
 **Padrão Recorrente**: Não
+**Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### IMP-008 - XLSX vazio era encaminhado como arquivo binário ao parser CSV
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`ensureCsv`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: Quando a primeira aba válida de um XLSX não tinha linhas de dados, `readXlsx()` retornava uma lista vazia e `ensureCsv()` devolvia o caminho original. O fluxo de upload então encaminhava o conteúdo ZIP ao parser CSV, em vez de produzir um CSV vazio para o parser informar que não há dados.
+**Risco/Impacto**: O usuário recebia uma falha de leitura confusa ou erro interno ao enviar uma planilha válida, mas vazia.
+**Recomendação**: Converter também resultados vazios e deixar a validação de conteúdo informar que não há dados importáveis. Coberto por teste com um XLSX válido sem linhas.
+**Padrão Recorrente**: Sim — arquivos binários reconhecidos devem ser convertidos mesmo quando não contêm registros.
+**Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### IMP-009 - Diagnóstico não reconhecia cabeçalho com acento em ambiente sem transliteração Unicode
+**Arquivo**: `app/Services/SpreadsheetDiagnosticService.php` (`normalizeString`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: Em ambientes onde `iconv` translitera `ó` como apóstrofo, o cabeçalho `Código` virava `c'odigo`. A detecção automática não encontrava a linha de cabeçalho e contava o próprio cabeçalho como produto, além de gerar uma contagem incorreta.
+**Risco/Impacto**: A pré-validação de CSV podia exibir contagens enganosas e aceitar cabeçalho como registro patrimonial.
+**Recomendação**: Normalizar apóstrofos introduzidos pela transliteração antes de comparar rótulos. Coberto pelo teste de diagnóstico de CSV válido.
+**Padrão Recorrente**: Sim — normalização de texto para comparação deve tolerar diferenças de transliteração entre ambientes.
 **Prioridade de Correção**: ⚠️ Próxima Sprint

@@ -223,6 +223,6 @@ final class SpreadsheetDiagnosticService
     {
         $str = mb_strtolower(trim($val), 'UTF-8');
         $translit = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $str);
-        return $translit !== false ? $translit : $str;
+        return $translit !== false ? str_replace("'", '', $translit) : $str;
     }
 }

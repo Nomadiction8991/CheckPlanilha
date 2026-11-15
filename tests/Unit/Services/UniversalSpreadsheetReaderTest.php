@@ -66,6 +66,35 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         }
     }
 
+    public function test_xlsx_valido_sem_dados_e_convertido_para_csv_vazio(): void
+    {
+        $caminho = sys_get_temp_dir() . '/planilha-vazia-' . uniqid('', true) . '.xlsx';
+        $zip = new ZipArchive();
+
+        self::assertSame(true, $zip->open($caminho, ZipArchive::CREATE | ZipArchive::OVERWRITE));
+        $zip->addFromString('xl/worksheets/sheet1.xml', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData/>
+            </worksheet>
+            XML);
+        $zip->close();
+
+        $caminhoConvertido = null;
+
+        try {
+            $caminhoConvertido = UniversalSpreadsheetReader::ensureCsv($caminho);
+
+            self::assertNotSame($caminho, $caminhoConvertido);
+            self::assertSame([], UniversalSpreadsheetReader::read($caminhoConvertido));
+        } finally {
+            if (is_string($caminhoConvertido) && $caminhoConvertido !== $caminho) {
+                @unlink($caminhoConvertido);
+            }
+            @unlink($caminho);
+        }
+    }
+
     public function test_le_xlsx_preservando_linhas_vazias_para_numero_da_linha_original(): void
     {
         $caminho = sys_get_temp_dir() . '/planilha-com-linha-vazia-' . uniqid('', true) . '.xlsx';

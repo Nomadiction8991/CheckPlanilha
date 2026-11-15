@@ -37,9 +37,6 @@ final class UniversalSpreadsheetReader
         }
 
         $rows = self::read($filePath);
-        if (empty($rows)) {
-            return $filePath;
-        }
 
         $dir = dirname($filePath);
         $filename = pathinfo($filePath, PATHINFO_FILENAME);

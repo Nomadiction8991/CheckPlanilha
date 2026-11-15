@@ -35,7 +35,7 @@ class PreCommitTest extends TestCase
 
     public function test_bloqueia_arquivo_de_ambiente_com_valores(): void
     {
-        $this->adicionar('.env', "APP_NAME=Teste\n");
+        $this->adicionar('.env', "APP_NAME=Teste\n", true);
 
         $this->assertBloqueado($this->executarHook(), '.env');
     }
@@ -88,10 +88,10 @@ class PreCommitTest extends TestCase
         (new Process(['git', ...$argumentos], $this->repositorio))->mustRun();
     }
 
-    private function adicionar(string $arquivo, string $conteudo): void
+    private function adicionar(string $arquivo, string $conteudo, bool $forcar = false): void
     {
         file_put_contents($this->repositorio . '/' . $arquivo, $conteudo);
-        $this->git(['add', $arquivo]);
+        $this->git(['add', ...($forcar ? ['-f'] : []), $arquivo]);
     }
 
     private function executarHook(): Process
