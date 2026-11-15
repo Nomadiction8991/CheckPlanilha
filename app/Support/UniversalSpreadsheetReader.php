@@ -492,7 +492,9 @@ final class UniversalSpreadsheetReader
 
         $maxRow = 0;
         $maxCol = 0;
-        $pos = 0;
+        $sheetInicio = self::posicaoPrimeiraAbaXls($wbData);
+        $pos = $sheetInicio ?? 0;
+        $textoFormulaPendente = null;
 
         while ($pos < $dataLen - 4) {
             $uCode = unpack('v', substr($wbData, $pos, 2));
@@ -501,7 +503,42 @@ final class UniversalSpreadsheetReader
             $length = $uLen ? (int) $uLen[1] : 0;
             $rec = substr($wbData, $pos + 4, $length);
 
-            if ($code === 0x0204 && strlen($rec) >= 8) { // LABEL
+            // Um registro STRING só vale para a FORMULA imediatamente anterior.
+            $textoFormula = $textoFormulaPendente;
+            $textoFormulaPendente = null;
+
+            if ($code === 0x000A && $sheetInicio !== null) { // EOF: fim da primeira aba
+                break;
+            }
+
+            if ($code === 0x0006 && strlen($rec) >= 14) { // FORMULA: resultado calculado da célula
+                $uR = unpack('v', substr($rec, 0, 2));
+                $uC = unpack('v', substr($rec, 2, 2));
+                $row = $uR ? (int) $uR[1] : 0;
+                $col = $uC ? (int) $uC[1] : 0;
+                $resultado = substr($rec, 6, 8);
+                $maxRow = max($maxRow, $row);
+                $maxCol = max($maxCol, $col);
+                if (substr($resultado, 6, 2) !== "\xFF\xFF") {
+                    $numVal = unpack('d', $resultado);
+                    $cells[$row][$col] = self::formatarNumeroXls($numVal ? (float) $numVal[1] : 0.0, $col);
+                } elseif (ord($resultado[0]) === 0x00) {
+                    // Resultado textual: o texto vem no STRING logo depois.
+                    $textoFormulaPendente = [$row, $col];
+                }
+            } elseif ($code === 0x0207 && $textoFormula !== null && strlen($rec) >= 3) { // STRING: texto do resultado
+                [$row, $col] = $textoFormula;
+                $cch = unpack('v', substr($rec, 0, 2));
+                $strLen = $cch ? (int) $cch[1] : 0;
+                if ((ord($rec[2]) & 1) !== 0) {
+                    $val = (string) @iconv('UTF-16LE', 'UTF-8//IGNORE', substr($rec, 3, $strLen * 2));
+                } else {
+                    $val = (string) @iconv('ISO-8859-1', 'UTF-8//IGNORE', substr($rec, 3, $strLen));
+                }
+                $cells[$row][$col] = trim($val, " \t\n\r\0\x0B");
+                $maxRow = max($maxRow, $row);
+                $maxCol = max($maxCol, $col);
+            } elseif ($code === 0x0204 && strlen($rec) >= 8) { // LABEL
                 $uR = unpack('v', substr($rec, 0, 2));
                 $uC = unpack('v', substr($rec, 2, 2));
                 $uS = unpack('v', substr($rec, 6, 2));
@@ -580,6 +617,37 @@ final class UniversalSpreadsheetReader
         }
 
         return $rows;
+    }
+
+    /**
+     * Posição, no stream do Workbook, do BOF da primeira aba (BOUNDSHEET do tipo planilha).
+     * Retorna null quando o arquivo não declara nenhuma aba de planilha.
+     */
+    private static function posicaoPrimeiraAbaXls(string $wbData): ?int
+    {
+        $dataLen = strlen($wbData);
+        $pos = 0;
+        while ($pos <= $dataLen - 4) {
+            $uCode = unpack('v', substr($wbData, $pos, 2));
+            $uLen = unpack('v', substr($wbData, $pos + 2, 2));
+            $code = $uCode ? (int) $uCode[1] : 0;
+            $length = $uLen ? (int) $uLen[1] : 0;
+
+            if ($code === 0x0085 && $length >= 6) { // BOUNDSHEET: uma entrada por aba, na ordem das abas
+                $rec = substr($wbData, $pos + 4, $length);
+                $uPos = unpack('V', substr($rec, 0, 4));
+                if ($uPos && ord($rec[5]) === 0x00) {
+                    return (int) $uPos[1];
+                }
+            }
+
+            if ($code === 0x000A) { // EOF das globais: as abas já foram declaradas
+                break;
+            }
+            $pos += 4 + $length;
+        }
+
+        return null;
     }
 
     /**

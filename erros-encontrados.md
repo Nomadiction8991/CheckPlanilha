@@ -383,3 +383,25 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Usar escape vazio no parser e no gravador CSV, mantendo o escape de aspas no padrão de aspas duplicadas. Coberto por `csv-barra-invertida-antes-da-aspas.csv`.
 **Padrão Recorrente**: Sim — entrada e saída CSV devem seguir a mesma convenção de aspas.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-016 - XLS com várias abas misturava as células de todas na mesma grade
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readXls`, `posicaoPrimeiraAbaXls`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: O leitor de `.xls` percorria o stream inteiro do Workbook, com as células de todas as abas. Quando uma aba posterior tinha célula no mesmo endereço da primeira, ela sobrescrevia o valor (ex.: o cabeçalho `Patrimonio` virava `ABA2-LINHA1`).
+**Risco/Impacto**: Dados da aba principal saíam trocados ou misturados com outra aba, sem nenhum aviso ao usuário.
+**Recomendação**: Ler apenas a primeira aba de planilha, a partir do BOF indicado pelo registro `BOUNDSHEET` e parando no `EOF` dela, como já é feito no XLSX. Coberto por `tests/Fixtures/importacao/xls-duas-abas.xls`, gerado pelo LibreOffice.
+**Padrão Recorrente**: Sim — o leitor deve respeitar os limites de cada aba, como já respeita os limites de cada bloco de registros.
+**Prioridade de Correção**: ✅ Resolvido
+
+### IMP-017 - XLS perdia o resultado de células com fórmula
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readXls`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: O leitor ignorava os registros `FORMULA` e `STRING`. Células cujo conteúdo é uma fórmula ficavam vazias, mesmo com o resultado calculado gravado no arquivo, tanto para números quanto para textos.
+**Risco/Impacto**: Valores calculados na planilha (ex.: quantidade multiplicada, nome concatenado) sumiam na importação sem aviso.
+**Recomendação**: Ler o resultado numérico direto do `FORMULA`; quando o resultado for texto (marcador `0xFFFF` com tipo `0`), usar o `STRING` logo seguinte. Coberto por `tests/Fixtures/importacao/xls-formulas.xls`, gerado a partir de um XLSX com fórmulas convertido pelo LibreOffice.
+**Padrão Recorrente**: Sim — o leitor deve cobrir todos os registros que carregam valor de célula, não só os de valor direto.
+**Prioridade de Correção**: ✅ Resolvido

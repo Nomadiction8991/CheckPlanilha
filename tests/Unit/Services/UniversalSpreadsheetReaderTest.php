@@ -54,6 +54,23 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         ], UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/xls-numeros-rk.xls')));
     }
 
+    public function test_le_apenas_a_primeira_aba_de_xls_com_varias_abas(): void
+    {
+        self::assertSame([
+            ['Patrimonio', 'Valor'],
+            ['Cadeira', '10'],
+        ], UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/xls-duas-abas.xls')));
+    }
+
+    public function test_le_resultado_de_formulas_numericas_e_textuais_em_xls(): void
+    {
+        self::assertSame([
+            ['Nome', 'Valor', 'Rotulo'],
+            ['Cadeira', '10', 'Cadeira-OK'],
+            ['Mesa', '20', 'Fixo'],
+        ], UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/xls-formulas.xls')));
+    }
+
     public function test_le_csv_com_dados_ficticios_e_preserva_celulas(): void
     {
         $caminho = base_path('tests/Fixtures/importacao/exemplo-leitor.csv');
