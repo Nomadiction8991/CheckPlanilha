@@ -413,10 +413,29 @@ final class UniversalSpreadsheetReader
         $wbData = substr($wbData, 0, $wbSize);
 
         $cells = [];
+        $dataLen = strlen($wbData);
+        $sharedStrings = [];
+        $recordPos = 0;
+        while ($recordPos <= $dataLen - 4) {
+            $recordCode = unpack('v', substr($wbData, $recordPos, 2));
+            $recordLength = unpack('v', substr($wbData, $recordPos + 2, 2));
+            $code = $recordCode ? (int) $recordCode[1] : 0;
+            $length = $recordLength ? (int) $recordLength[1] : 0;
+            if ($recordPos + 4 + $length > $dataLen) {
+                break;
+            }
+
+            if ($code === 0x00FC) { // SST: Shared String Table
+                $sharedStrings = self::parseBiffSharedStrings(substr($wbData, $recordPos + 4, $length));
+                break;
+            }
+
+            $recordPos += 4 + $length;
+        }
+
         $maxRow = 0;
         $maxCol = 0;
         $pos = 0;
-        $dataLen = strlen($wbData);
 
         while ($pos < $dataLen - 4) {
             $uCode = unpack('v', substr($wbData, $pos, 2));
@@ -444,6 +463,16 @@ final class UniversalSpreadsheetReader
                     }
                 }
                 $cells[$row][$col] = trim($val, " \t\n\r\0\x0B");
+                $maxRow = max($maxRow, $row);
+                $maxCol = max($maxCol, $col);
+            } elseif ($code === 0x00FD && strlen($rec) >= 10) { // LABELSST
+                $uR = unpack('v', substr($rec, 0, 2));
+                $uC = unpack('v', substr($rec, 2, 2));
+                $uSst = unpack('V', substr($rec, 6, 4));
+                $row = $uR ? (int) $uR[1] : 0;
+                $col = $uC ? (int) $uC[1] : 0;
+                $sstIndex = $uSst ? (int) $uSst[1] : -1;
+                $cells[$row][$col] = trim($sharedStrings[$sstIndex] ?? '', " \t\n\r\0\x0B");
                 $maxRow = max($maxRow, $row);
                 $maxCol = max($maxCol, $col);
             } elseif ($code === 0x0203 && strlen($rec) >= 14) { // NUMBER
@@ -502,5 +531,60 @@ final class UniversalSpreadsheetReader
         }
 
         return $matches[1] . str_pad($matches[2], $width, '0', STR_PAD_LEFT);
+    }
+
+    /** @return array<int, string> */
+    private static function parseBiffSharedStrings(string $record): array
+    {
+        if (strlen($record) < 8) {
+            return [];
+        }
+
+        $counts = unpack('Vtotal/Vunique', substr($record, 0, 8));
+        $stringCount = min((int) ($counts['unique'] ?? 0), 100000);
+        $offset = 8;
+        $strings = [];
+
+        for ($index = 0; $index < $stringCount && $offset + 3 <= strlen($record); $index++) {
+            $length = unpack('v', substr($record, $offset, 2));
+            $offset += 2;
+            $characterCount = $length ? (int) $length[1] : 0;
+            $flags = ord($record[$offset]);
+            $offset++;
+
+            $richRunCount = 0;
+            if (($flags & 0x08) !== 0) {
+                if ($offset + 2 > strlen($record)) {
+                    break;
+                }
+                $runs = unpack('v', substr($record, $offset, 2));
+                $richRunCount = $runs ? (int) $runs[1] : 0;
+                $offset += 2;
+            }
+
+            $extensionLength = 0;
+            if (($flags & 0x04) !== 0) {
+                if ($offset + 4 > strlen($record)) {
+                    break;
+                }
+                $extension = unpack('V', substr($record, $offset, 4));
+                $extensionLength = $extension ? (int) $extension[1] : 0;
+                $offset += 4;
+            }
+
+            $bytesPerCharacter = ($flags & 0x01) !== 0 ? 2 : 1;
+            $textLength = $characterCount * $bytesPerCharacter;
+            if ($offset + $textLength + $richRunCount * 4 + $extensionLength > strlen($record)) {
+                break;
+            }
+            $text = substr($record, $offset, $textLength);
+            $offset += $textLength;
+            $strings[] = $bytesPerCharacter === 2
+                ? (string) @iconv('UTF-16LE', 'UTF-8//IGNORE', $text)
+                : (string) @iconv('Windows-1252', 'UTF-8//IGNORE', $text);
+            $offset += $richRunCount * 4 + $extensionLength;
+        }
+
+        return $strings;
     }
 }

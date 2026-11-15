@@ -20,6 +20,15 @@ final class UniversalSpreadsheetReaderTest extends TestCase
         self::assertSame('SALA DE TESTE', $linhas[27][15]);
     }
 
+    public function test_le_xls_real_com_strings_compartilhadas(): void
+    {
+        $linhas = UniversalSpreadsheetReader::read(base_path('tests/Fixtures/importacao/xls-strings-compartilhadas.xls'));
+
+        self::assertSame(['Código', 'Nome', 'Dependência'], $linhas[0]);
+        self::assertSame(['09-0565 / 000000', 'Banco 0000', 'Templo 0000'], $linhas[1]);
+        self::assertSame(['09-0565 / 000099', 'Banco 0099', 'Templo 0099'], $linhas[100]);
+    }
+
     public function test_le_csv_com_dados_ficticios_e_preserva_celulas(): void
     {
         $caminho = base_path('tests/Fixtures/importacao/exemplo-leitor.csv');
