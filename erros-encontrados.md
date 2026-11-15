@@ -180,3 +180,18 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 
 **Padrão Recorrente**: Sim — ao converter planilhas, preservar a posição original das linhas para manter mensagens de erro acionáveis.
 **Prioridade de Correção**: ⚠️ Próxima Sprint
+
+### IMP-005 - XLSX importava a aba física `sheet1.xml` em vez da primeira aba do arquivo
+
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readXlsx`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: O leitor assumia que a primeira aba declarada no arquivo era sempre `xl/worksheets/sheet1.xml`. Em planilhas reorganizadas, o `workbook.xml` pode apontar a primeira aba para outro arquivo, como `sheet2.xml`. Nesses casos, a importação lia silenciosamente o conteúdo de outra aba.
+
+**Risco/Impacto**: A análise prévia podia usar dados de uma aba arquivada ou auxiliar, em vez do inventário visível ao abrir a planilha.
+
+**Recomendação**: Resolver o `r:id` da primeira aba em `workbook.xml` usando as relações de `xl/_rels/workbook.xml.rels` e ler o caminho correspondente. Correção aplicada no leitor e coberta por teste com um pacote XLSX de duas abas reordenadas.
+
+**Padrão Recorrente**: Sim — em arquivos OpenXML, a ordem declarada no workbook deve prevalecer sobre o nome físico do arquivo da aba.
+**Prioridade de Correção**: ⚠️ Próxima Sprint

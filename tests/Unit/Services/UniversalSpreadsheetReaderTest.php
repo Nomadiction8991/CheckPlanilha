@@ -94,4 +94,59 @@ final class UniversalSpreadsheetReaderTest extends TestCase
             @unlink($caminho);
         }
     }
+
+    public function test_le_a_primeira_aba_declarada_no_workbook_mesmo_quando_nao_e_sheet1(): void
+    {
+        $caminho = sys_get_temp_dir() . '/planilha-abas-reordenadas-' . uniqid('', true) . '.xlsx';
+        $zip = new ZipArchive();
+
+        self::assertSame(true, $zip->open($caminho, ZipArchive::CREATE | ZipArchive::OVERWRITE));
+        $zip->addFromString('[Content_Types].xml', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+              <Default Extension="xml" ContentType="application/xml"/>
+              <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+              <Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+              <Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+            </Types>
+            XML);
+        $zip->addFromString('_rels/.rels', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+            </Relationships>
+            XML);
+        $zip->addFromString('xl/workbook.xml', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <sheets>
+                <sheet name="Inventário" sheetId="2" r:id="rId2"/>
+                <sheet name="Arquivo" sheetId="1" r:id="rId1"/>
+              </sheets>
+            </workbook>
+            XML);
+        $zip->addFromString('xl/_rels/workbook.xml.rels', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+              <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>
+            </Relationships>
+            XML);
+        $zip->addFromString('xl/worksheets/sheet1.xml', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Arquivo antigo</t></is></c></row></sheetData></worksheet>
+            XML);
+        $zip->addFromString('xl/worksheets/sheet2.xml', <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>Código do inventário</t></is></c></row></sheetData></worksheet>
+            XML);
+        $zip->close();
+
+        try {
+            self::assertSame([['Código do inventário']], UniversalSpreadsheetReader::read($caminho));
+        } finally {
+            @unlink($caminho);
+        }
+    }
 }

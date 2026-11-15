@@ -156,7 +156,34 @@ final class UniversalSpreadsheetReader
             }
         }
 
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $sheetXml = false;
+        $workbookXml = $zip->getFromName('xl/workbook.xml');
+        $relationshipsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
+        if ($workbookXml !== false && $relationshipsXml !== false) {
+            $workbook = @simplexml_load_string($workbookXml);
+            $relationships = @simplexml_load_string($relationshipsXml);
+            $firstSheet = $workbook !== false ? ($workbook->sheets->sheet[0] ?? null) : null;
+
+            if ($firstSheet !== null && $relationships !== false) {
+                $sheetAttributes = $firstSheet->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships');
+                $relationshipId = (string) ($sheetAttributes['id'] ?? '');
+
+                foreach ($relationships->Relationship ?? [] as $relationship) {
+                    if ((string) $relationship['Id'] !== $relationshipId) {
+                        continue;
+                    }
+
+                    $target = ltrim((string) $relationship['Target'], '/');
+                    $worksheetPath = str_starts_with($target, 'xl/') ? $target : 'xl/' . $target;
+                    $sheetXml = $zip->getFromName($worksheetPath);
+                    break;
+                }
+            }
+        }
+
+        if ($sheetXml === false) {
+            $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        }
         if ($sheetXml === false) {
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $stat = $zip->statIndex($i);
