@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 6
-- Médios: 1
+- Médios: 2
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (0)
-### Lógica (5)
+### Lógica (6)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -149,4 +149,19 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Resolver o storage para um caminho realmente gravável com fallback seguro e evitar falha silenciosa no writer. Correção aplicada no serviço.
 
 **Padrão Recorrente**: Sim
+**Prioridade de Correção**: 🚨 Imediata
+
+### IMP-003 - Dependência com acento duplicada ou ignorada na importação
+
+**Arquivo**: `app/Services/CsvParserService.php` (`carregarTodasDependencias`, `analisarTodasAsLinhas`, `detectarExclusoes`), `app/Services/ImportacaoService.php` (`buscarOuCriarDependenciaCached`, `buscarOuCriarDependencia`), `app/Services/LegacySpreadsheetImportService.php` (agrupamento por dependência)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A tela de cadastro grava o nome da dependência com `mb_strtoupper` (ex.: `SALA DE REUNIÃO`), mas a importação normalizava com `strtoupper`, que não converte letras acentuadas. A planilha com `Sala de Reunião` virava `SALA DE REUNIão`, que não casava com o cadastro: a importação criava uma dependência duplicada com acento quebrado e a prévia deixava de sugerir a exclusão dos produtos daquela dependência.
+
+**Risco/Impacto**: Duplicatas de dependência no cadastro e exclusões sugeridas incorretamente na prévia, sem erro visível.
+
+**Recomendação**: Normalizar nomes de dependência com `mb_strtoupper` em todas as pontas (banco, planilha e cache). Correção aplicada nos serviços listados.
+
+**Padrão Recorrente**: Sim — qualquer normalização de texto com acento precisa ser multibyte (`mb_strtoupper`), nunca `strtoupper`.
 **Prioridade de Correção**: 🚨 Imediata

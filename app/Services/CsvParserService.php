@@ -306,7 +306,7 @@ class CsvParserService
 
         $depsPorComum = [];
         foreach ($todasDeps as $dep) {
-            $chave = strtoupper(trim($dep['descricao']));
+            $chave = mb_strtoupper(trim($dep['descricao']));
             $depsPorComum[$dep['comum_id']][$chave] = (int) $dep['id'];
         }
 
@@ -345,7 +345,7 @@ class CsvParserService
 
                 // Rastrear códigos e dependências por comum
                 $codigoRastr = strtoupper(trim($linha['codigo'] ?? ''));
-                $depRastr = strtoupper(trim((string) ($linha['dependencia_descricao'] ?? $linha['dependencia'] ?? '')));
+                $depRastr = mb_strtoupper(trim((string) ($linha['dependencia_descricao'] ?? $linha['dependencia'] ?? '')));
 
                 if ($comumIdLinha > 0) {
                     if ($codigoRastr !== '') {
@@ -438,7 +438,7 @@ class CsvParserService
                 // Se o CSV contém informações de dependência, só sugerimos exclusão
                 // se a dependência do produto no DB estiver presente no CSV.
                 // Se a dependência não estiver no CSV, assumimos que o arquivo é parcial para aquele setor.
-                $depProdutoDb = strtoupper(trim((string) ($produto['dependencia_descricao'] ?? '')));
+                $depProdutoDb = mb_strtoupper(trim((string) ($produto['dependencia_descricao'] ?? '')));
                 
                 if (!empty($depsNoCSV) && $depProdutoDb !== '' && !isset($depsNoCSV[$depProdutoDb])) {
                     continue;
@@ -601,7 +601,7 @@ class CsvParserService
             $complemento   = $parsed['complemento'] ?: '';
 
             // Dependência vem direto da coluna da planilha (sem parse inline)
-            $dependenciaFinal = strtoupper($dependencia);
+            $dependenciaFinal = mb_strtoupper($dependencia);
 
             $linhas[] = [
                 'codigo'            => $codigo,
@@ -1171,7 +1171,7 @@ class CsvParserService
 
         // Resolve tipo_bem e dependência para exibição
         $tipoBemDesc = $tiposBens[$tipoBemCodigo] ?? ($tipoBemCodigo !== '' ? 'Tipo ' . $tipoBemCodigo : '');
-        $depDescNorm = trim(strtoupper($dependenciaDescricao));
+        $depDescNorm = trim(mb_strtoupper($dependenciaDescricao));
 
         // Dados normalizados do CSV
         $dadosNormalizados = [
@@ -1225,7 +1225,7 @@ class CsvParserService
             ];
         }
 
-        $depDbDesc = trim(strtoupper($produtoDb['dependencia_descricao'] ?? ''));
+        $depDbDesc = trim(mb_strtoupper($produtoDb['dependencia_descricao'] ?? ''));
         if ($depDbDesc !== $depDescNorm) {
             $diferencas['dependencia'] = [
                 'antes' => $produtoDb['dependencia_descricao'] ?? '',

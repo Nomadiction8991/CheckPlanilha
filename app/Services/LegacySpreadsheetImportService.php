@@ -572,7 +572,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
 
         foreach ($registros as $registro) {
             $churchCode = $this->resolveChurchCodeForRecord($registro, $fallbackChurchCode);
-            $dependencyName = strtoupper(trim((string) ($registro['dados_csv']['dependencia_descricao'] ?? $registro['dependencia'] ?? 'SEM DEPENDÊNCIA')));
+            $dependencyName = mb_strtoupper(trim((string) ($registro['dados_csv']['dependencia_descricao'] ?? $registro['dependencia'] ?? 'SEM DEPENDÊNCIA')));
             if ($dependencyName === '') {
                 $dependencyName = 'SEM DEPENDÊNCIA';
             }
@@ -747,7 +747,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
             }
 
             $churchCode = $this->resolveChurchCodeForRecord($registro, $fallbackChurchCode);
-            $dependencyName = strtoupper(trim((string) ($registro['dados_csv']['dependencia_descricao'] ?? $registro['dependencia'] ?? 'SEM DEPENDÊNCIA')));
+            $dependencyName = mb_strtoupper(trim((string) ($registro['dados_csv']['dependencia_descricao'] ?? $registro['dependencia'] ?? 'SEM DEPENDÊNCIA')));
             if ($dependencyName === '') {
                 $dependencyName = 'SEM DEPENDÊNCIA';
             }

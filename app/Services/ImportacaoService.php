@@ -465,7 +465,7 @@ class ImportacaoService
 
     private function buscarOuCriarDependenciaCached(string $descricao, int $comumId): int
     {
-        $descricao = trim(strtoupper($descricao));
+        $descricao = trim(mb_strtoupper($descricao));
         if (empty($descricao)) {
             $descricao = 'SEM DEPENDÊNCIA';
         }
@@ -476,7 +476,7 @@ class ImportacaoService
             $stmt = $this->conexao->prepare("SELECT id, descricao FROM dependencias WHERE comum_id = :comum_id");
             $stmt->execute([':comum_id' => $comumId]);
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $this->cacheDependencias[$comumId][strtoupper(trim((string) $row['descricao']))] = (int) $row['id'];
+                $this->cacheDependencias[$comumId][mb_strtoupper(trim((string) $row['descricao']))] = (int) $row['id'];
             }
         }
 
@@ -645,7 +645,7 @@ class ImportacaoService
 
     private function buscarOuCriarDependencia(string $descricao, int $comumId): int
     {
-        $descricao = trim(strtoupper($descricao));
+        $descricao = trim(mb_strtoupper($descricao));
 
         if (empty($descricao)) {
             $descricao = 'SEM DEPENDÊNCIA';
