@@ -485,8 +485,10 @@ class CsvParserService
             throw new Exception('Arquivo não legível');
         }
 
-        // Detectar encoding
-        $amostra = (string) file_get_contents($caminhoReal, false, null, 0, 8192);
+        // Detectar encoding. A amostra é cortada em 8 KB, então um caractere UTF-8
+        // pode ficar partido no fim; sem aparar isso, a detecção cai em ISO-8859-1
+        // e os acentos do arquivo inteiro são corrompidos.
+        $amostra = $this->aparaCaractereUtf8Incompleto((string) file_get_contents($caminhoReal, false, null, 0, 8192));
         $encoding = mb_detect_encoding($amostra, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
 
         // Detectar delimitador
@@ -678,6 +680,15 @@ class CsvParserService
     /**
      * Detecta o delimitador mais provável do CSV.
      */
+    /**
+     * Remove do fim da amostra os bytes de um caractere UTF-8 cortado pelo limite
+     * de leitura (lead byte e continuações incompletas). Só afeta a detecção.
+     */
+    private function aparaCaractereUtf8Incompleto(string $amostra): string
+    {
+        return (string) preg_replace('/[\xC2-\xF4][\x80-\xBF]{0,2}\z/', '', $amostra);
+    }
+
     private function detectarDelimitador(string $amostra): string
     {
         $contVirgula = substr_count($amostra, ',');

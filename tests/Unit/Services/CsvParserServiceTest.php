@@ -8,6 +8,7 @@ use App\Services\CsvParserService;
 use PDO;
 use PDOStatement;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
+use ReflectionClassConstant;
 use ReflectionMethod;
 use Tests\TestCase;
 
@@ -188,6 +189,89 @@ final class CsvParserServiceTest extends TestCase
             $this->expectExceptionMessage('colunas obrigatórias');
 
             $service->analisar($caminho, 0);
+        } finally {
+            @unlink($caminho);
+        }
+    }
+
+    public function testLerCsvPreservaAcentosDeArquivoUtf8MaiorQueAAmostraDeDeteccao(): void
+    {
+        // Controle: UTF-8 com mais de 8 KB e acento longe da fronteira da amostra.
+        $conteudo = $this->montarCsvComAcentoNaPosicao(3000, 9000);
+
+        $linhas = $this->lerCsvComParser($conteudo);
+
+        self::assertStringContainsString('AÇÃO', serialize($linhas));
+    }
+
+    public function testLerCsvNaoCorrompeAcentosQuandoAmostraCortaCaractereUtf8(): void
+    {
+        // Os 8192 bytes da amostra terminam no meio do "Ç" (lead byte em 8191).
+        // Sem tratar o corte, a detecção cai em ISO-8859-1 e o arquivo vira mojibake.
+        $posicaoDoAcento = 8191;
+        $conteudo = $this->montarCsvComAcentoNaPosicao($posicaoDoAcento, 9000);
+
+        // Garante que a fixture realmente cruza a fronteira de 8192 bytes.
+        self::assertSame("\xC3\x87", substr($conteudo, $posicaoDoAcento, 2));
+
+        $linhas = $this->lerCsvComParser($conteudo);
+
+        self::assertStringContainsString('AÇÃO', serialize($linhas), 'Acento cortado pela amostra foi corrompido.');
+    }
+
+    /**
+     * Monta CSV UTF-8 (separador ';', 16 colunas) cuja primeira linha tem "AÇÃO"
+     * começando exatamente no byte $posicaoDoAcento, com linhas válidas até $tamanhoMinimo.
+     */
+    private function montarCsvComAcentoNaPosicao(int $posicaoDoAcento, int $tamanhoMinimo): string
+    {
+        $montarLinha = static function (int $preenchimento, string $codigo): string {
+            $campos = array_fill(0, 16, '');
+            $campos[0] = $codigo;
+            $campos[3] = str_repeat('Z', $preenchimento) . 'AÇÃO';
+            $campos[10] = 'CONGREGAÇÃO CENTRAL';
+            $campos[15] = 'SALAO 1';
+
+            return implode(';', $campos);
+        };
+
+        $inicio = strpos($montarLinha(0, '09-0565 / 0001'), 'Ç');
+        $linhas = [$montarLinha($posicaoDoAcento - $inicio, '09-0565 / 0001')];
+        $tamanho = strlen($linhas[0]);
+
+        for ($i = 2; $tamanho < $tamanhoMinimo; $i++) {
+            $campos = array_fill(0, 16, '');
+            $campos[0] = sprintf('09-0565 / %04d', $i);
+            $campos[3] = 'CADEIRA ORDINARIA';
+            $campos[10] = 'CONGREGAÇÃO CENTRAL';
+            $campos[15] = 'SALAO 1';
+            $linhas[] = implode(';', $campos);
+            $tamanho += strlen(end($linhas));
+        }
+
+        return implode("\n", $linhas) . "\n";
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function lerCsvComParser(string $conteudo): array
+    {
+        $base = sys_get_temp_dir() . '/check-planilha-imobilizado/importacao';
+        if (!is_dir($base)) {
+            mkdir($base, 0777, true);
+        }
+        $caminho = $base . '/encoding-' . uniqid('', true) . '.csv';
+        file_put_contents($caminho, $conteudo);
+
+        try {
+            $pdo = $this->createMock(PDO::class);
+            $service = new CsvParserService($pdo);
+            $method = new ReflectionMethod($service, 'lerCsv');
+            $method->setAccessible(true);
+            $mapeamento = (new ReflectionClassConstant(CsvParserService::class, 'MAPEAMENTO_PADRAO'))->getValue();
+
+            return $method->invoke($service, $caminho, $mapeamento, 0);
         } finally {
             @unlink($caminho);
         }

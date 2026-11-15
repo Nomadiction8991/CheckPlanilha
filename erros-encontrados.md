@@ -2,13 +2,13 @@
 
 ## Resumo
 - Críticos: 0
-- Altos: 5
+- Altos: 6
 - Médios: 1
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (0)
-### Lógica (4)
+### Lógica (5)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -27,6 +27,17 @@
 **Recomendação**: Escapar o cifrão do replacement com `addcslashes($valor, '\\$')` logo após o `htmlspecialchars`. O round-trip do valor fica literal em textarea e input.
 
 **Padrão Recorrente**: Sim — qualquer interpolação de valor de usuário em replacement de `preg_replace` precisa do escape.
+**Prioridade de Correção**: 🚨 Imediata
+
+### IMP-002 - Acentos corrompidos quando a amostra de encoding corta um caractere UTF-8
+**Arquivo**: `app/Services/CsvParserService.php` (método `lerCsv`, detecção de encoding)
+**Severidade**: 🟠 ALTO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A detecção de encoding lia só os primeiros 8192 bytes do CSV. Se o corte caísse no meio de um caractere UTF-8 (ex.: `Ç`, `é`), a validação em modo estrito falhava e o arquivo inteiro era tratado como ISO-8859-1. Resultado: `CONGREGAÇÃO` virava `CONGREGAÃÃO` em todas as linhas.
+**Risco/Impacto**: Nomes de localidade, dependência e bem saem com acentos trocados na prévia e no cadastro, sem erro visível. Só aparece em arquivos maiores que 8 KB com acento perto do limite.
+**Recomendação**: Aparar, da amostra de detecção, os bytes de um caractere UTF-8 incompleto antes de chamar `mb_detect_encoding`.
+**Padrão Recorrente**: Sim — qualquer leitura por janela fixa de bytes precisa respeitar a fronteira de caractere.
 **Prioridade de Correção**: 🚨 Imediata
 
 ### LEG-001 - Reconhecer admin pela sessão nas listagens
