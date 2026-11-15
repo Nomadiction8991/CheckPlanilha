@@ -306,3 +306,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Letra depois de apóstrofo precedido de duas letras fica maiúscula ("Sant'Ana"). Coberto por `testCitiesCapitalizesLetterAfterApostropheInsideWord` em `tests/Feature/BrazilLocalityControllerTest.php`.
 **Padrão Recorrente**: Sim — regras de capitalização precisam ser conferidas para todo tipo de fronteira de palavra (espaço, hífen e apóstrofo).
 **Prioridade de Correção**: ✅ Resolvido
+
+### LOC-006 - Partículas ligadas por hífen saíam com maiúscula (ex.: Passo-Do-Sobrado)
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A regra que mantém `de`, `da`, `do`, `das`, `dos` e `e` minúsculos só separava palavras por espaço. `PASSO-DO-SOBRADO` saía como `Passo-Do-Sobrado` e `PEDRA-DA-ÁGUA` como `Pedra-Da-Água`.
+**Risco/Impacto**: Nome de cidade com grafia errada na lista de localidades, visível ao escolher a cidade no cadastro.
+**Recomendação**: Tratar hífen como fronteira de palavra também para as partículas, mantendo a primeira palavra do nome em maiúscula. Coberto por `testCitiesKeepsParticlesLowercaseWhenJoinedByHyphen` em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Sim — mesma família de LOC-003: fronteira de palavra precisa considerar hífen além do espaço.
+**Prioridade de Correção**: ✅ Resolvido

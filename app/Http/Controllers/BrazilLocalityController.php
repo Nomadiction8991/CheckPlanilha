@@ -166,19 +166,29 @@ final class BrazilLocalityController extends Controller
             return '';
         }
 
-        $palavras = explode(' ', mb_convert_case($name, MB_CASE_TITLE, 'UTF-8'));
+        // Separadores (espaço ou hífen) ficam no array, em posições ímpares, para remontar o nome igual.
+        $partes = preg_split('/(\s+|-)/u', mb_convert_case($name, MB_CASE_TITLE, 'UTF-8'), -1, PREG_SPLIT_DELIM_CAPTURE)
+            ?: [$name];
 
-        foreach ($palavras as $indice => $palavra) {
-            $minuscula = mb_strtolower($palavra, 'UTF-8');
+        $indicePalavra = 0;
 
-            if ($indice > 0 && in_array($minuscula, self::PARTICULAS, true)) {
-                $palavras[$indice] = $minuscula;
+        foreach ($partes as $indice => $parte) {
+            if ($indice % 2 === 1 || $parte === '') {
+                continue;
             }
+
+            $minuscula = mb_strtolower($parte, 'UTF-8');
+
+            if ($indicePalavra > 0 && in_array($minuscula, self::PARTICULAS, true)) {
+                $partes[$indice] = $minuscula;
+            }
+
+            $indicePalavra++;
         }
 
         // "d'" com apóstrofo segue a grafia oficial: "d'Oeste", "d'Água" (não "D'oeste"),
         // inclusive depois de hífen: "Olhos-d'Água".
-        $nome = implode(' ', $palavras);
+        $nome = implode('', $partes);
 
         $nome = preg_replace_callback(
             '/(?<=[\s-])D\'(\p{L})/u',

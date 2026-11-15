@@ -171,6 +171,24 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testCitiesKeepsParticlesLowercaseWhenJoinedByHyphen(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/RS/municipios' => Http::response([
+                ['nome' => 'PASSO-DO-SOBRADO'],
+                ['nome' => 'PEDRA-DA-ÁGUA'],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'RS']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ['Passo-do-Sobrado', 'Pedra-da-Água'],
+        ]);
+    }
+
     public function testCitiesKeepsConjunctionELowercase(): void
     {
         Http::fake([
