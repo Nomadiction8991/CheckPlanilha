@@ -101,6 +101,10 @@ final class UniversalSpreadsheetReader
             return [];
         }
 
+        if (str_starts_with($content, "\xEF\xBB\xBF")) {
+            $content = substr($content, 3);
+        }
+
         $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
         if ($encoding && $encoding !== 'UTF-8') {
             $content = (string) mb_convert_encoding($content, 'UTF-8', $encoding);

@@ -3,7 +3,7 @@
 ## Resumo
 - Críticos: 0
 - Altos: 5
-- Médios: 1
+- Médios: 2
 - Baixos: 0
 
 ## Erros por Categoria
@@ -139,3 +139,18 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 
 **Padrão Recorrente**: Sim
 **Prioridade de Correção**: 🚨 Imediata
+
+### IMP-002 - BOM UTF-8 permanece no primeiro cabeçalho do CSV
+
+**Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readCsv`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: Arquivos CSV salvos com BOM UTF-8 mantinham o marcador invisível no início da primeira célula. O nome da primeira coluna deixava de corresponder ao cabeçalho esperado e podia impedir o mapeamento dos dados.
+
+**Risco/Impacto**: Planilhas CSV exportadas com BOM podiam ser interpretadas com a primeira coluna incorreta.
+
+**Recomendação**: Remover o BOM UTF-8 apenas quando estiver no início do conteúdo antes de detectar a codificação e separar as células.
+
+**Padrão Recorrente**: Não
+**Prioridade de Correção**: ⚠️ Próxima Sprint
