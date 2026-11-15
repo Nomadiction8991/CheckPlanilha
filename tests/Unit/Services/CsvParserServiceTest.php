@@ -29,6 +29,20 @@ final class CsvParserServiceTest extends TestCase
         ]));
     }
 
+    public function testDetectarComunsNoCsvPrefereComumDaAdministracaoAoRegistroSemAdministracao(): void
+    {
+        $pdo = new PDO('sqlite::memory:');
+        $pdo->exec('CREATE TABLE comums (id INTEGER, codigo TEXT, administracao_id INTEGER)');
+        $pdo->exec("INSERT INTO comums (id, codigo, administracao_id) VALUES (5, '09-0001', NULL), (10, '09-0001', 1)");
+
+        $service = new CsvParserService($pdo, 1);
+        $method = new ReflectionMethod($service, 'detectarComunsNoCsv');
+
+        self::assertSame(['09-0001' => 10], $method->invoke($service, [
+            ['codigo_comum' => '09-0001'],
+        ]));
+    }
+
     public function testParsearNomePreservesOriginalComplementoWhileIdentifyingAssetType(): void
     {
         $pdo = $this->createMock(PDO::class);

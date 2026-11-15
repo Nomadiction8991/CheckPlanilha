@@ -219,7 +219,12 @@ class CsvParserService
 
         $mapa = array_fill_keys($codigos, 0);
         foreach ($comunsDb as $comum) {
-            $mapa[(string) $comum['codigo']] = (int) $comum['id'];
+            $codigo = (string) $comum['codigo'];
+            // A consulta já ordena a igreja da administração antes da sem administração:
+            // o primeiro registro encontrado para o código é o que vale.
+            if (($mapa[$codigo] ?? 0) === 0) {
+                $mapa[$codigo] = (int) $comum['id'];
+            }
         }
 
         return $mapa;
