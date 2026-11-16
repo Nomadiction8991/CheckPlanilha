@@ -48,9 +48,12 @@ final class LegacyTransferControllerTest extends TransferenciasTestCase
         $this->criarAdministracao(2, 'Administração Restrita');
         $this->criarIgreja(10, '50-0003', 'Igreja Restrita', 2);
         $this->criarDependencia(100, 10, 'Salão');
+        // Quem transfere entre administrações precisa ser administrador de verdade no banco.
+        DB::table('usuarios')->where('id', 9)->update(['tipo' => 'administrador']);
         (new LegacyTransferService())->transferir(7, 10, 100, [1001], 9);
 
-        Session::put('is_admin', false);
+        // Depois a conta perde o cargo: a sessão ainda diz admin, mas o banco já não.
+        DB::table('usuarios')->where('id', 9)->update(['tipo' => null]);
         Session::put('administracoes_permitidas', [1]);
         Session::put('administracao_id', 1);
         Session::put('comum_id', 10);

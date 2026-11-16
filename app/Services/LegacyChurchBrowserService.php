@@ -11,6 +11,7 @@ use App\Models\Legacy\Comum;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use App\Support\LegacySearchPattern;
 use Illuminate\Support\Collection;
+use App\Support\LegacyAdministratorAccess;
 use Illuminate\Support\Facades\Session;
 
 class LegacyChurchBrowserService implements LegacyChurchBrowserServiceInterface
@@ -85,7 +86,7 @@ class LegacyChurchBrowserService implements LegacyChurchBrowserServiceInterface
      */
     private function currentAdministrationScopeIds(): ?array
     {
-        if ((bool) Session::get('is_admin', false)) {
+        if (LegacyAdministratorAccess::sessionIsAdministrator()) {
             return null;
         }
 

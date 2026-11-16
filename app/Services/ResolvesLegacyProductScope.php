@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Comum;
+use App\Support\LegacyAdministratorAccess;
 use Illuminate\Support\Facades\Session;
 use RuntimeException;
 
@@ -69,7 +70,7 @@ trait ResolvesLegacyProductScope
 
     protected function productScopeIsGlobal(): bool
     {
-        return (bool) Session::get('is_admin', false);
+        return LegacyAdministratorAccess::sessionIsAdministrator();
     }
 
     /**

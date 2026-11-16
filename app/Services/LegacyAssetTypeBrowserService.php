@@ -12,6 +12,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use App\Support\LegacySearchPattern;
 use Illuminate\Support\Facades\Schema;
+use App\Support\LegacyAdministratorAccess;
 use Illuminate\Support\Facades\Session;
 
 class LegacyAssetTypeBrowserService implements LegacyAssetTypeBrowserServiceInterface
@@ -119,7 +120,7 @@ class LegacyAssetTypeBrowserService implements LegacyAssetTypeBrowserServiceInte
 
     private function canManageOtherAdministrations(): bool
     {
-        return (bool) Session::get('is_admin', false);
+        return LegacyAdministratorAccess::sessionIsAdministrator();
     }
 
     private function currentAdministrationId(): ?int

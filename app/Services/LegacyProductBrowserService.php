@@ -18,6 +18,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use App\Support\LegacySearchPattern;
 use Illuminate\Support\Facades\Schema;
+use App\Support\LegacyAdministratorAccess;
 use Illuminate\Support\Facades\Session;
 
 class LegacyProductBrowserService implements LegacyProductBrowserServiceInterface
@@ -284,7 +285,7 @@ class LegacyProductBrowserService implements LegacyProductBrowserServiceInterfac
      */
     private function currentAdministrationScopeIds(): ?array
     {
-        if ((bool) Session::get('is_admin', false)) {
+        if (LegacyAdministratorAccess::sessionIsAdministrator()) {
             $userId = (int) Session::get('usuario_id', 0);
             if ($userId <= 0 || DB::table('usuarios')->where('id', $userId)->where('ativo', 1)->exists()) {
                 return null;

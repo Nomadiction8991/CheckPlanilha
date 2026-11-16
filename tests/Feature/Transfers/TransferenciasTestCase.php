@@ -28,6 +28,7 @@ abstract class TransferenciasTestCase extends TestCase
             $table->integer('id')->primary();
             $table->string('nome')->nullable();
             $table->string('email')->nullable();
+            $table->string('tipo')->nullable();
         });
 
         // Vazia de propósito: sem configurações gravadas, o layout usa os valores padrão.

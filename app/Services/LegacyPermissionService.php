@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Contracts\LegacyPermissionServiceInterface;
+use App\Support\LegacyAdministratorAccess;
 use App\Models\Legacy\Usuario;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
@@ -57,7 +58,7 @@ class LegacyPermissionService implements LegacyPermissionServiceInterface
 
     private function isAdmin(): bool
     {
-        return (bool) Session::get('is_admin', false);
+        return LegacyAdministratorAccess::sessionIsAdministrator();
     }
 
     private function permissionSignature(): string

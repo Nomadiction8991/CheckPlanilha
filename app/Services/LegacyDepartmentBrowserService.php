@@ -12,6 +12,7 @@ use App\Models\Legacy\Dependencia;
 use App\Support\LegacySearchPattern;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use App\Support\LegacyAdministratorAccess;
 use Illuminate\Support\Facades\Session;
 
 class LegacyDepartmentBrowserService implements LegacyDepartmentBrowserServiceInterface
@@ -94,7 +95,7 @@ class LegacyDepartmentBrowserService implements LegacyDepartmentBrowserServiceIn
      */
     private function currentAdministrationScopeIds(): ?array
     {
-        if ((bool) Session::get('is_admin', false)) {
+        if (LegacyAdministratorAccess::sessionIsAdministrator()) {
             return null;
         }
 

@@ -9,6 +9,7 @@ use App\Contracts\LegacyReportServiceInterface;
 use App\Contracts\LegacyTransferServiceInterface;
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Comum;
+use App\Support\LegacyAdministratorAccess;
 use App\Support\LegacyCsvSanitizer;
 use App\Support\LegacyProductNameSupport;
 use Illuminate\Support\Collection;
@@ -849,7 +850,10 @@ class LegacyReportService implements LegacyReportServiceInterface
     {
         $session = (array) Session::all();
 
-        if ((bool) ($session['is_admin'] ?? false)) {
+        if (LegacyAdministratorAccess::isAdministrator(
+            (int) ($session['usuario_id'] ?? 0),
+            (bool) ($session['is_admin'] ?? false),
+        )) {
             return null;
         }
 

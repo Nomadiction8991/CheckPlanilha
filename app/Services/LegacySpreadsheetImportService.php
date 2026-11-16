@@ -11,6 +11,7 @@ use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Comum;
 use App\Models\Legacy\Usuario;
 use App\Services\AnalysisPersistenceService;
+use App\Support\LegacyAdministratorAccess;
 use App\Support\LegacyCsvSanitizer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -1294,7 +1295,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
      */
     private function currentAdministrationScopeIds(): ?array
     {
-        if ((bool) Session::get('is_admin', false)) {
+        if (LegacyAdministratorAccess::sessionIsAdministrator()) {
             return null;
         }
 
