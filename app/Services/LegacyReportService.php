@@ -1216,7 +1216,10 @@ class LegacyReportService implements LegacyReportServiceInterface
             } elseif ($printLabel && $hasObservation) {
                 $sections['observacao_etiqueta']['itens'][] = $product;
             } elseif ($printLabel) {
-                $sections['etiqueta']['itens'][] = $product;
+                // Produto editado já entrou em "etiqueta" acima; não repetir na mesma seção.
+                if (!$hasChanges) {
+                    $sections['etiqueta']['itens'][] = $product;
+                }
             } elseif ($hasObservation && $isChecked) {
                 $sections['checados_observacao']['itens'][] = $product;
             } elseif ($hasObservation) {
