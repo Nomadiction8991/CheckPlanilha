@@ -77,7 +77,7 @@ class LegacyPermissionService implements LegacyPermissionServiceInterface
         }
 
         try {
-            $user = Usuario::query()->whereKey($userId)->first(['ativo']);
+            $user = Usuario::query()->whereKey($userId)->first(['ativo', 'tipo', 'email', 'permissions']);
         } catch (Throwable) {
             return 'unknown';
         }
@@ -86,7 +86,13 @@ class LegacyPermissionService implements LegacyPermissionServiceInterface
             return 'missing';
         }
 
-        return (int) $user->ativo === 1 ? 'active' : 'inactive';
+        $status = (int) $user->ativo === 1 ? 'active' : 'inactive';
+        $authorization = hash('sha256', serialize([
+            $user->isAdministrator(),
+            $user->permissions,
+        ]));
+
+        return $status.'|'.$authorization;
     }
 
     /**

@@ -74,4 +74,27 @@ final class LegacyPermissionServiceActiveUserTest extends TestCase
 
         self::assertFalse($service->can('products.view'));
     }
+
+    public function testPermissionChangesRevokePreviouslyCachedPermissions(): void
+    {
+        DB::table('usuarios')->insert([
+            'id' => 33,
+            'tipo' => 'usuario',
+            'email' => 'user@example.test',
+            'ativo' => 1,
+            'permissions' => json_encode(['products.view' => true]),
+        ]);
+        Session::put('usuario_id', 33);
+        Session::put('is_admin', false);
+        Session::put('legacy_permissions', ['products.view' => true]);
+        config(['legacy.permissions.defaults' => ['products.view' => false]]);
+
+        self::assertTrue((new LegacyPermissionService())->can('products.view'));
+
+        DB::table('usuarios')->where('id', 33)->update([
+            'permissions' => json_encode(['products.view' => false]),
+        ]);
+
+        self::assertFalse((new LegacyPermissionService())->can('products.view'));
+    }
 }
