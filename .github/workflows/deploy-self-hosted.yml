@@ -1,9 +1,11 @@
 name: Deploy no servidor
 
+# Deploy só por tag de versão (AA.MM.DD.VV), igual ao OdeWize.
+# Push na main não publica; é preciso criar e enviar a tag.
 on:
   push:
-    branches: ["main"]
-  workflow_dispatch:
+    tags:
+      - '[0-9][0-9].[0-9][0-9].[0-9][0-9].[0-9][0-9]'
 
 concurrency:
   group: checkplanilha-production
@@ -14,7 +16,6 @@ permissions:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main'
     runs-on: [self-hosted, linux, check-planilha-imobilizado]
     timeout-minutes: 45
     steps:
@@ -28,7 +29,9 @@ jobs:
           cd "$APP_DIR"
 
           AUTH_B64="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
-          GIT_TERMINAL_PROMPT=0 git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH_B64}" fetch --prune origin main
+          # Mirror das tags: --force atualiza tag local divergente; --prune remove
+          # tag local que nao existe mais na origin.
+          GIT_TERMINAL_PROMPT=0 git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH_B64}" fetch origin --tags --force --prune
           git reset --hard "$GITHUB_SHA"
 
           docker run --rm \
