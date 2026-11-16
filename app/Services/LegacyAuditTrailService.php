@@ -351,10 +351,26 @@ final class LegacyAuditTrailService implements LegacyAuditTrailServiceInterface
                 continue;
             }
 
-            $entries[] = LegacyAuditEntryData::fromArray($decoded);
+            $entry = LegacyAuditEntryData::fromArray($decoded);
+
+            // Data que não está no formato esperado não pode ser comparada nos filtros: a linha é ignorada.
+            if (! $this->ehDataValida($entry->occurredAt)) {
+                continue;
+            }
+
+            $entries[] = $entry;
         }
 
         return $entries;
+    }
+
+    private function ehDataValida(string $valor): bool
+    {
+        try {
+            return \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $valor) !== false;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function parseDateBoundary(string $value, bool $endOfDay): ?\Carbon\Carbon

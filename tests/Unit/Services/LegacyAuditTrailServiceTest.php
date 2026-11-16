@@ -109,6 +109,33 @@ final class LegacyAuditTrailServiceTest extends TestCase
         self::assertSame('', $export['content']);
     }
 
+    public function testLinhaComDataInvalidaNoArquivoNaoDerrubaAAuditoria(): void
+    {
+        $service = new LegacyAuditTrailService($this->storageFile);
+
+        $service->record($this->makeEntry(userId: 1, administrationId: 9));
+
+        // Linha corrompida ou editada à mão: a data não está no formato Y-m-d H:i:s.
+        file_put_contents(
+            $this->storageFile,
+            json_encode([
+                'occurred_at' => 'ontem à tarde',
+                'user_id' => 1,
+                'administration_id' => 9,
+                'module' => 'Produtos',
+                'action' => 'Atualização',
+                'description' => 'Linha corrompida.',
+            ], JSON_UNESCAPED_UNICODE).PHP_EOL,
+            FILE_APPEND | LOCK_EX,
+        );
+
+        $paginator = $service->paginate([], 1, 9, null, false, '/audits');
+
+        self::assertSame(1, $paginator->total());
+        self::assertCount(1, $paginator->items());
+        self::assertSame('Produtos', $paginator->items()[0]->module);
+    }
+
     private function makeEntry(int $userId, ?int $administrationId): LegacyAuditEntryData
     {
         return new LegacyAuditEntryData(
