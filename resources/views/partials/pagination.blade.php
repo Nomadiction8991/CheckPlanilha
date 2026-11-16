@@ -1,4 +1,5 @@
 @if ($paginator->hasPages())
+    @php($paginator->appends(request()->query()))
     <div class="pagination">
         <div class="pagination-summary">
             Página {{ $paginator->currentPage() }} de {{ $paginator->lastPage() }}.
