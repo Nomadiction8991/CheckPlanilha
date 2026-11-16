@@ -135,12 +135,23 @@ class LegacyTransferController extends Controller
 
     public function show(Transferencia $transferencia): View
     {
+        $igrejaAtual = $this->igrejaAtual();
+
+        abort_unless(
+            $this->igrejaEstaNoEscopo($igrejaAtual)
+            && in_array($igrejaAtual, [
+                (int) $transferencia->comum_origem_id,
+                (int) $transferencia->comum_destino_id,
+            ], true),
+            404,
+        );
+
         return view('transfers.show', [
             'transferencia' => $transferencia->load('itens'),
             'origem' => Comum::query()->find($transferencia->comum_origem_id),
             'destino' => Comum::query()->find($transferencia->comum_destino_id),
             'local' => Dependencia::query()->find($transferencia->dependencia_destino_id),
-            'igrejaAtual' => $this->igrejaAtual(),
+            'igrejaAtual' => $igrejaAtual,
         ]);
     }
 
@@ -151,7 +162,10 @@ class LegacyTransferController extends Controller
             ? (int) $transferencia->comum_origem_id
             : (int) $transferencia->comum_destino_id;
 
-        if ($this->igrejaAtual() !== $emitente) {
+        $igrejaAtual = $this->igrejaAtual();
+        abort_unless($this->igrejaEstaNoEscopo($igrejaAtual), 404);
+
+        if ($igrejaAtual !== $emitente) {
             return redirect()
                 ->route('migration.transfers.show', $transferencia)
                 ->with('status', 'Este formulário é de outra igreja. Troque de igreja para abri-lo.')

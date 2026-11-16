@@ -215,6 +215,27 @@ final class LegacyTransferControllerTest extends TransferenciasTestCase
         $response->assertSee('Cadeira de madeira');
     }
 
+    public function testResumoNaoExpoeTransferenciaDeIgrejasQueNaoEnvolvemAIgrejaAtual(): void
+    {
+        $this->transferencia = (new LegacyTransferService())->transferir(7, 8, 80, [1001], 9);
+        $this->criarIgreja(9, '40-0002', 'Central Sinop');
+        Session::put('comum_id', 9);
+
+        $this->get(route('migration.transfers.show', $this->transferencia))
+            ->assertNotFound();
+    }
+
+    public function testFormularioNaoExpoeTransferenciaDeIgrejaForaDoEscopo(): void
+    {
+        $this->transferencia = (new LegacyTransferService())->transferir(7, 8, 80, [1001], 9);
+        Session::put('is_admin', false);
+        Session::put('administracoes_permitidas', [2]);
+        Session::put('administracao_id', 2);
+
+        $this->get(route('migration.transfers.form', [$this->transferencia, 'saida']))
+            ->assertNotFound();
+    }
+
     public function testFormularioDeSaidaAbreParaAIgrejaDeOrigem(): void
     {
         $this->transferencia = (new LegacyTransferService())->transferir(7, 8, 80, [1001], 9);
