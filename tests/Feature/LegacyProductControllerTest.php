@@ -676,6 +676,40 @@ final class LegacyProductControllerTest extends TestCase
         $response->assertSessionHas('status_type', 'success');
     }
 
+    public function testUpdateIgnoresProtocolRelativeReturnUrl(): void
+    {
+        $this->productManager
+            ->shouldReceive('update')
+            ->once()
+            ->andReturn($this->boundProduct);
+
+        $response = $this->put(route('migration.products.update', ['product' => 42]), [
+            'novo_tipo_bem_id' => '99',
+            'novo_bem' => 'MESA ESCRITÓRIO',
+            'nova_dependencia_id' => '1',
+            'return_url' => '//evil.example/phish',
+        ]);
+
+        $response->assertRedirect(route('migration.products.index', ['comum_id' => 7]));
+    }
+
+    public function testUpdateRejectsSameHostUrlWithProtocolRelativePath(): void
+    {
+        $this->productManager
+            ->shouldReceive('update')
+            ->once()
+            ->andReturn($this->boundProduct);
+
+        $response = $this->put(route('migration.products.update', ['product' => 42]), [
+            'novo_tipo_bem_id' => '99',
+            'novo_bem' => 'MESA ESCRITÓRIO',
+            'nova_dependencia_id' => '1',
+            'return_url' => rtrim((string) config('app.url'), '/') . '//evil.example/phish',
+        ]);
+
+        $response->assertRedirect(route('migration.products.index', ['comum_id' => 7]));
+    }
+
     public function testUpdateRejectsMissingRequiredFields(): void
     {
         $response = $this->from(route('migration.products.edit', ['product' => 42]))

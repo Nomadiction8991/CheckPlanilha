@@ -14,6 +14,7 @@ use App\Http\Requests\StoreProductVerificationRequest;
 use App\Http\Requests\UpdateLegacyProductRequest;
 use App\Models\Legacy\Produto;
 use App\Support\LegacyProductTypeOptionSupport;
+use App\Support\InternalRedirect;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -268,7 +269,7 @@ class LegacyProductController extends Controller
             return null;
         }
 
-        if (str_starts_with($candidate, '/')) {
+        if (InternalRedirect::isSafePath($candidate)) {
             return $candidate;
         }
 
@@ -283,6 +284,10 @@ class LegacyProductController extends Controller
         }
 
         $path = (string) $candidateParts['path'];
+        if (!InternalRedirect::isSafePath($path)) {
+            return null;
+        }
+
         $query = isset($candidateParts['query']) && $candidateParts['query'] !== ''
             ? '?' . $candidateParts['query']
             : '';

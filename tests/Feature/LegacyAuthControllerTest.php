@@ -225,6 +225,33 @@ final class LegacyAuthControllerTest extends TestCase
         $response->assertSessionHas('usuario_id', 9);
     }
 
+    public function test_login_ignores_protocol_relative_redirect_after_login(): void
+    {
+        $this->mock(LegacyAuthSessionServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('attempt')
+                ->once()
+                ->andReturn([
+                    'id' => 9,
+                    'nome' => 'Maria Silva',
+                    'email' => 'MARIA@EXEMPLO.COM',
+                    'comum_id' => null,
+                    'administracao_id' => 4,
+                    'administracoes_permitidas' => [4, 8],
+                    'is_admin' => false,
+                    'legacy_permissions' => [],
+                ]);
+        });
+
+        $response = $this->withSession([
+            'redirect_after_login' => '//evil.example/phish',
+        ])->post(route('migration.login.store'), [
+            'email' => 'maria@exemplo.com',
+            'senha' => 'segredo',
+        ]);
+
+        $response->assertRedirect(route('migration.dashboard'));
+    }
+
     // ─── logout ────────────────────────────────────────────────────────
 
     public function test_logout_clears_legacy_session_and_redirects(): void

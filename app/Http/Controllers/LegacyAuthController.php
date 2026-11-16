@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Contracts\LegacyAuthSessionServiceInterface;
 use App\Contracts\LegacyPasswordRecoveryServiceInterface;
 use App\Http\Requests\LegacyPasswordResetRequest;
+use App\Support\InternalRedirect;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -67,7 +68,7 @@ class LegacyAuthController extends Controller
         ]);
 
         $redirectTarget = (string) $request->session()->pull('redirect_after_login', '');
-        if ($redirectTarget !== '' && str_starts_with($redirectTarget, '/')) {
+        if (InternalRedirect::isSafePath($redirectTarget)) {
             return redirect($redirectTarget);
         }
 
@@ -141,7 +142,7 @@ class LegacyAuthController extends Controller
 
         $redirectTo = (string) ($validated['redirect_to'] ?? '');
 
-        if ($redirectTo !== '' && str_starts_with($redirectTo, '/')) {
+        if (InternalRedirect::isSafePath($redirectTo)) {
             return redirect($redirectTo)
                 ->with('status', 'Igreja ativa atualizada.')
                 ->with('status_type', 'success');
