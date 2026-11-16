@@ -118,6 +118,8 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
             throw new RuntimeException('O tipo de bem selecionado não está mais disponível.');
         }
 
+        $this->assertAssetTypeWithinProductScope($assetType);
+
         return $assetType;
     }
 

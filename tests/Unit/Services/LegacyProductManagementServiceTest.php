@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\DTO\CreateLegacyProductData;
+use App\DTO\UpdateLegacyProductData;
+use App\Models\Legacy\Produto;
 use App\Services\LegacyProductManagementService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -149,6 +151,97 @@ final class LegacyProductManagementServiceTest extends TestCase
         $this->assertSame('ABC-4', DB::table('produtos')->value('codigo'));
     }
 
+    public function testRejeitaTipoDeBemDeOutraAdministracaoParaUsuarioSemAcessoGlobal(): void
+    {
+        DB::table('tipos_bens')->insert(['id' => 5, 'administracao_id' => 2, 'codigo' => '2', 'descricao' => 'CADEIRA']);
+        $this->escopoDaAdministracao1();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('O tipo de bem selecionado está fora do seu escopo permitido.');
+
+        try {
+            $this->service()->createMany($this->dados(code: 'ABC-5', multiplier: 1, assetTypeId: 5));
+        } finally {
+            $this->assertSame(0, DB::table('produtos')->count(), 'Nenhum bem deve ser gravado com tipo de outra administração.');
+        }
+    }
+
+    public function testAceitaTipoDeBemDaPropriaAdministracaoParaUsuarioSemAcessoGlobal(): void
+    {
+        $this->escopoDaAdministracao1();
+
+        $quantidade = $this->service()->createMany($this->dados(code: 'ABC-6', multiplier: 1, assetTypeId: 4));
+
+        $this->assertSame(1, $quantidade);
+    }
+
+    public function testEdicaoNaoTrocaParaTipoDeBemDeOutraAdministracao(): void
+    {
+        DB::table('tipos_bens')->insert(['id' => 5, 'administracao_id' => 2, 'codigo' => '2', 'descricao' => 'CADEIRA']);
+        DB::table('produtos')->insert([
+            'id_produto' => 30,
+            'comum_id' => 7,
+            'codigo' => 'ABC-8',
+            'tipo_bem_id' => 4,
+            'bem' => 'CADEIRA',
+            'dependencia_id' => 2,
+            'ativo' => 1,
+        ]);
+        $this->escopoDaAdministracao1();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('O tipo de bem selecionado está fora do seu escopo permitido.');
+
+        try {
+            $this->service()->update(
+                Produto::query()->findOrFail(30),
+                new UpdateLegacyProductData(
+                    editedAssetTypeId: 5,
+                    editedItemName: 'CADEIRA',
+                    editedComplement: 'Metalica',
+                    editedBrand: null,
+                    editedHeightMeters: null,
+                    editedWidthMeters: null,
+                    editedLengthMeters: null,
+                    editedDependencyId: 2,
+                    verified: true,
+                    printLabel: true,
+                    observation: '',
+                    printReport141: false,
+                    condition141: '',
+                    invoiceNumber: null,
+                    invoiceDate: null,
+                    invoiceValue: null,
+                    invoiceSupplier: null,
+                ),
+            );
+        } finally {
+            $this->assertNull(
+                DB::table('produtos')->where('id_produto', 30)->value('editado_tipo_bem_id'),
+                'A edição não deve gravar tipo de outra administração.',
+            );
+        }
+    }
+
+    public function testAceitaTipoDeBemCompartilhadoSemAdministracaoParaUsuarioSemAcessoGlobal(): void
+    {
+        DB::table('tipos_bens')->insert(['id' => 6, 'administracao_id' => null, 'codigo' => '3', 'descricao' => 'CADEIRA']);
+        $this->escopoDaAdministracao1();
+
+        $quantidade = $this->service()->createMany($this->dados(code: 'ABC-7', multiplier: 1, assetTypeId: 6));
+
+        $this->assertSame(1, $quantidade);
+    }
+
+    private function escopoDaAdministracao1(): void
+    {
+        session([
+            'is_admin' => false,
+            'administracao_id' => 1,
+            'administracoes_permitidas' => [1],
+        ]);
+    }
+
     private function service(): LegacyProductManagementService
     {
         return new LegacyProductManagementService();
@@ -166,12 +259,12 @@ final class LegacyProductManagementServiceTest extends TestCase
         ]);
     }
 
-    private function dados(?string $code, int $multiplier): CreateLegacyProductData
+    private function dados(?string $code, int $multiplier, int $assetTypeId = 4): CreateLegacyProductData
     {
         return new CreateLegacyProductData(
             churchId: 7,
             code: $code,
-            assetTypeId: 4,
+            assetTypeId: $assetTypeId,
             itemName: 'CADEIRA',
             complement: 'Metalica',
             brand: null,

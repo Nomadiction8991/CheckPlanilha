@@ -47,6 +47,26 @@ trait ResolvesLegacyProductScope
         $this->assertChurchWithinProductScope((int) $product->comum_id);
     }
 
+    /**
+     * Tipo de bem compartilhado (sem administração) vale para qualquer escopo; um tipo
+     * vinculado a uma administração só pode ser usado por quem tem essa administração.
+     */
+    protected function assertAssetTypeWithinProductScope(\App\Models\Legacy\TipoBem $assetType): void
+    {
+        if ($this->productScopeIsGlobal()) {
+            return;
+        }
+
+        $administrationId = (int) ($assetType->administracao_id ?? 0);
+        if ($administrationId <= 0) {
+            return;
+        }
+
+        if (!in_array($administrationId, $this->productScopeAdministrationIds(), true)) {
+            throw new RuntimeException('O tipo de bem selecionado está fora do seu escopo permitido.');
+        }
+    }
+
     protected function productScopeIsGlobal(): bool
     {
         return (bool) Session::get('is_admin', false);

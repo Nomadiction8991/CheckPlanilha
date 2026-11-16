@@ -14,6 +14,17 @@
 
 ## Detalhes dos Erros
 
+### PROD-001 - Bem aceita tipo de bem de outra administração
+**Arquivo**: `app/Services/LegacyProductManagementService.php` (método `resolveAssetType`, usado por criar e editar bem); regra compartilhada em `app/Services/ResolvesLegacyProductScope.php` (`assertAssetTypeWithinProductScope`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança (acesso entre administrações)
+**Status**: Corrigido nesta rodada.
+**Descrição**: O cadastro e a edição de bem aceitavam qualquer `tipo_bem_id`, inclusive o de uma administração que o usuário não tem. A listagem de tipos de bem já restringe o usuário não-administrador à própria administração e aos tipos compartilhados (sem administração), e a gestão de tipos de bem recusa edição fora desse escopo; o cadastro de bem não aplicava a mesma regra.
+**Risco/Impacto**: Um bem de uma igreja pode ficar classificado com tipo que pertence a outra administração, e o usuário pode usar tipos que não enxerga na tela.
+**Recomendação**: Aplicar ao tipo de bem a mesma checagem de escopo usada para igreja e administração: sem administração vale para todos; com administração, só se estiver entre as administrações permitidas da sessão. Administrador global continua sem restrição.
+**Padrão Recorrente**: Sim — qualquer ID de cadastro vindo do formulário (igreja, dependência, tipo de bem) precisa da checagem de escopo antes de gravar.
+**Prioridade de Correção**: 🚨 Imediata
+
 ### REL-001 - Relatório corrompe valores com cifrão ($) no preenchimento
 
 **Arquivo**: `resources/legacy-reports/fillers/bootstrap.php` (linha 37, função `appReportPreencherCampoPorName`)
