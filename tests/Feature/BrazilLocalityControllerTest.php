@@ -240,6 +240,24 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testCitiesTreatsTypographicApostropheLikeAsciiApostrophe(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/PR/municipios' => Http::response([
+                ['nome' => 'D’ÁVILA'],
+                ['nome' => 'SANTA CRUZ D’OESTE'],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'PR']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ['D’Ávila', 'Santa Cruz d’Oeste'],
+        ]);
+    }
+
     public function testCitiesRejectsInvalidState(): void
     {
         Http::fake();

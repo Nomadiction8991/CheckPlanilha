@@ -190,16 +190,17 @@ final class BrazilLocalityController extends Controller
         // inclusive depois de hífen: "Olhos-d'Água".
         $nome = implode('', $partes);
 
+        // Aceita o apóstrofo ASCII (') e o tipográfico (’), que vem de algumas bases de nomes.
         $nome = preg_replace_callback(
-            '/(?<=[\s-])D\'(\p{L})/u',
-            static fn (array $m): string => "d'" . mb_strtoupper($m[1], 'UTF-8'),
+            '/(?<=[\s-])D([\'’])(\p{L})/u',
+            static fn (array $m): string => 'd' . $m[1] . mb_strtoupper($m[2], 'UTF-8'),
             $nome,
         ) ?? $nome;
 
         // Apóstrofo dentro de palavra ("Sant'Ana", "D'Ávila") mantém a letra seguinte maiúscula.
         return preg_replace_callback(
-            '/(\p{L})\'(\p{L})/u',
-            static fn (array $m): string => $m[1] . "'" . mb_strtoupper($m[2], 'UTF-8'),
+            '/(\p{L})([\'’])(\p{L})/u',
+            static fn (array $m): string => $m[1] . $m[2] . mb_strtoupper($m[3], 'UTF-8'),
             $nome,
         ) ?? $nome;
     }

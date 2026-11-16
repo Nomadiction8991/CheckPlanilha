@@ -329,6 +329,17 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Padrão Recorrente**: Sim — regras de capitalização precisam ser conferidas para todo tipo de fronteira de palavra (espaço, hífen e apóstrofo).
 **Prioridade de Correção**: ✅ Resolvido
 
+### LOC-008 - Apóstrofo tipográfico (’) não seguia a regra de "d'" e "D'" (ex.: "SANTA CRUZ D’OESTE")
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: As regras de apóstrofo só reconheciam o apóstrofo ASCII ('). Com o caractere tipográfico (’, U+2019), "SANTA CRUZ D’OESTE" saía como "Santa Cruz D’oeste" e "D’ÁVILA" como "D’ávila".
+**Risco/Impacto**: Cidades vindas de fontes que usam o apóstrofo tipográfico saíam com grafia diferente da oficial na lista de cidades.
+**Recomendação**: Tratar ' e ’ como o mesmo apóstrofo nas regras de "d'" e de letra maiúscula após apóstrofo, preservando o caractere original. Coberto por `testCitiesTreatsTypographicApostropheLikeAsciiApostrophe` em `tests/Feature/BrazilLocalityControllerTest.php`.
+**Padrão Recorrente**: Sim — regras de texto que mencionam um caractere especial precisam considerar as variantes tipográficas do mesmo caractere.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### IMP-011 - CSV com vírgulas dentro de aspas era separado pela vírgula
 **Arquivo**: `app/Support/UniversalSpreadsheetReader.php` (`readCsv`)
 **Severidade**: 🟡 MÉDIO
