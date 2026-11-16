@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Sync;
 
 use InvalidArgumentException;
+use RuntimeException;
 
 /**
  * Histórico de auditoria: um evento por linha JSON, só acrescentado.
@@ -77,7 +78,45 @@ final class AuditLog
             throw new InvalidArgumentException('Não foi possível criar a pasta da auditoria.');
         }
 
-        file_put_contents($this->arquivo, implode(PHP_EOL, $novas) . PHP_EOL, FILE_APPEND | LOCK_EX);
+        $conteudo = implode(PHP_EOL, $novas) . PHP_EOL;
+        $arquivo = @fopen($this->arquivo, 'ab');
+
+        if ($arquivo === false) {
+            throw new RuntimeException('Não foi possível abrir o histórico de auditoria para gravação.');
+        }
+
+        try {
+            if (! flock($arquivo, LOCK_EX)) {
+                throw new RuntimeException('Não foi possível bloquear o histórico de auditoria para gravação.');
+            }
+
+            $estadoInicial = fstat($arquivo);
+            if ($estadoInicial === false) {
+                throw new RuntimeException('Não foi possível verificar o histórico de auditoria.');
+            }
+
+            $tamanho = strlen($conteudo);
+            $gravado = 0;
+
+            while ($gravado < $tamanho) {
+                $bytes = @fwrite($arquivo, substr($conteudo, $gravado));
+
+                if ($bytes === false || $bytes === 0) {
+                    @ftruncate($arquivo, $estadoInicial['size']);
+                    throw new RuntimeException('Não foi possível gravar o histórico de auditoria completo.');
+                }
+
+                $gravado += $bytes;
+            }
+
+            if (! fflush($arquivo)) {
+                @ftruncate($arquivo, $estadoInicial['size']);
+                throw new RuntimeException('Não foi possível confirmar a gravação do histórico de auditoria.');
+            }
+        } finally {
+            flock($arquivo, LOCK_UN);
+            fclose($arquivo);
+        }
 
         return count($novas);
     }

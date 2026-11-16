@@ -65,6 +65,27 @@ class SincronizacaoArquivosApiTest extends SincronizacaoTestCase
         $this->getJson('/api/sincronizacao/auditoria')->assertUnauthorized();
     }
 
+    public function test_auditoria_nao_confirma_eventos_quando_o_arquivo_nao_pode_ser_escrito(): void
+    {
+        $arquivo = $this->pasta . '/audit-log.jsonl';
+        mkdir($arquivo, 0777, true);
+        $linha = '{"acao":"login"}';
+
+        set_error_handler(static fn (): bool => true);
+        try {
+            $this->withHeader('Authorization', 'Bearer ' . $this->token)
+                ->postJson('/api/sincronizacao/auditoria', [
+                    'linhas' => [[
+                        'sha256' => hash('sha256', $linha),
+                        'linha' => $linha,
+                    ]],
+                ])
+                ->assertServerError();
+        } finally {
+            restore_error_handler();
+        }
+    }
+
     private function enviarPlanilha(string $nome, string $conteudo, string $sha256): \Illuminate\Testing\TestResponse
     {
         return $this->call(

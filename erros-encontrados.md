@@ -2,13 +2,13 @@
 
 ## Resumo
 - Críticos: 0
-- Altos: 6
+- Altos: 7
 - Médios: 11
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (2)
-### Lógica (16)
+### Lógica (17)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -160,6 +160,21 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Resolver o storage para um caminho realmente gravável com fallback seguro e evitar falha silenciosa no writer. Correção aplicada no serviço.
 
 **Padrão Recorrente**: Sim
+**Prioridade de Correção**: 🚨 Imediata
+
+### AUD-002 - Sincronização confirma auditoria sem persistir o lote
+
+**Arquivo**: `app/Sync/AuditLog.php` (`acrescentar`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Lógica / Operação
+**Status**: Corrigido nesta rodada.
+**Descrição**: O serviço ignorava o resultado da gravação do histórico no fluxo de sincronização. Quando o arquivo não podia ser aberto ou escrito, a API ainda respondia como se os eventos tivessem sido recebidos; o notebook então não tinha motivo para reenviá-los.
+
+**Risco/Impacto**: Eventos de auditoria podiam faltar no servidor sem sinal de falha para o notebook.
+
+**Recomendação**: Confirmar a abertura, o bloqueio, a gravação integral e o flush do arquivo, retornando erro operacional quando qualquer etapa falhar.
+
+**Padrão Recorrente**: Sim — gravadores de auditoria não devem confirmar eventos antes de verificar sua persistência.
 **Prioridade de Correção**: 🚨 Imediata
 
 ### IMP-003 - Dependência com acento duplicada ou ignorada na importação

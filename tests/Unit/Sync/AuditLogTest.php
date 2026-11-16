@@ -6,6 +6,7 @@ namespace Tests\Unit\Sync;
 
 use App\Sync\AuditLog;
 use InvalidArgumentException;
+use RuntimeException;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -65,6 +66,20 @@ class AuditLogTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
 
         $log->acrescentar([$this->entrada('isto nao e json')]);
+    }
+
+    public function test_nao_confirma_linhas_quando_o_arquivo_de_auditoria_nao_pode_ser_escrito(): void
+    {
+        mkdir($this->arquivo, 0777, true);
+        $log = new AuditLog($this->arquivo);
+
+        set_error_handler(static fn (): bool => true);
+        try {
+            $this->expectException(RuntimeException::class);
+            $log->acrescentar([$this->entrada('{"acao":"login"}')]);
+        } finally {
+            restore_error_handler();
+        }
     }
 
     /**
