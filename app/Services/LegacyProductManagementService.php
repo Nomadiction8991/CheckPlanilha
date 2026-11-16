@@ -25,6 +25,8 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
         $assetType = $this->resolveAssetType($data->assetTypeId);
         $dependency = $this->resolveDependency($data->dependencyId, $church->id);
         $itemName = $this->normalizeItemName($assetType, $data->itemName);
+        $code = $data->code !== null && trim($data->code) !== '' ? trim($data->code) : null;
+        $this->assertCodeCanBeUsed($code, $data->multiplier);
         $complement = mb_strtoupper(trim($data->complement), 'UTF-8');
         $brand = $data->brand !== null
             ? mb_strtoupper(trim($data->brand), 'UTF-8')
@@ -33,11 +35,11 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
             ? mb_strtoupper(trim($data->invoiceSupplier), 'UTF-8')
             : null;
 
-        DB::transaction(function () use ($data, $church, $assetType, $dependency, $itemName, $complement, $brand, $invoiceSupplier): void {
+        DB::transaction(function () use ($data, $church, $assetType, $dependency, $itemName, $code, $complement, $brand, $invoiceSupplier): void {
             for ($index = 0; $index < $data->multiplier; $index++) {
                 Produto::query()->create([
                     'comum_id' => (int) $church->id,
-                    'codigo' => $data->code !== null && trim($data->code) !== '' ? trim($data->code) : null,
+                    'codigo' => $code,
                     'tipo_bem_id' => (int) $assetType->id,
                     'bem' => $itemName,
                     'complemento' => $complement,
@@ -131,6 +133,26 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
         }
 
         return $dependency;
+    }
+
+    /**
+     * O código é único na tabela de bens (inclusive nos inativos). Um código não pode
+     * ser atribuído a mais de um bem, então não há como cadastrar vários com o mesmo código.
+     */
+    private function assertCodeCanBeUsed(?string $code, int $multiplier): void
+    {
+        if ($code === null) {
+            return;
+        }
+
+        if ($multiplier > 1) {
+            throw new RuntimeException('Para cadastrar mais de um bem, deixe o código em branco.');
+        }
+
+        $emUso = Produto::query()->where('codigo', $code)->exists();
+        if ($emUso) {
+            throw new RuntimeException('Este código já está em uso por outro bem.');
+        }
     }
 
     private function normalizeItemName(TipoBem $assetType, string $itemName): string

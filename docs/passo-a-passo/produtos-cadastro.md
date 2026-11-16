@@ -2,8 +2,8 @@
 
 ## O que é possível executar:
 - **Selecionar a igreja**: O primeiro campo do formulário define a qual igreja o bem vai pertencer.
-- **Informar código**: O campo “Código” recebe o identificador externo do item.
-- **Definir multiplicador**: O campo numérico multiplicador ajusta a quantidade do item no cadastro.
+- **Informar código**: O campo “Código” recebe o identificador externo do item. O código não pode repetir o de outro bem, inclusive de bem inativo.
+- **Definir multiplicador**: O campo numérico multiplicador ajusta a quantidade do item no cadastro. Para cadastrar mais de um bem de uma vez, deixe o código em branco; com código e multiplicador maior que 1, a página recusa o cadastro e mostra a mensagem.
 - **Escolher o tipo de bem**: O seletor de tipo de bem amarra o item à categoria correta.
 - **Escolher o bem**: O campo “Bem” carrega as opções ligadas ao tipo selecionado.
 - **Escolher dependência**: O seletor de dependência mostra as opções da igreja escolhida.

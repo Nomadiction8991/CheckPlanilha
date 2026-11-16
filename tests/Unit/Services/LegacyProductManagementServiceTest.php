@@ -1,0 +1,191 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tests\Unit\Services;
+
+use App\DTO\CreateLegacyProductData;
+use App\Services\LegacyProductManagementService;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use RuntimeException;
+use Tests\TestCase;
+
+final class LegacyProductManagementServiceTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Schema::create('comums', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('administracao_id')->nullable();
+            $table->string('codigo')->nullable();
+            $table->string('descricao')->nullable();
+        });
+
+        Schema::create('dependencias', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('comum_id')->nullable();
+            $table->string('descricao')->nullable();
+        });
+
+        Schema::create('tipos_bens', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('administracao_id')->nullable();
+            $table->string('codigo')->nullable();
+            $table->string('descricao')->nullable();
+        });
+
+        // Espelha a constraint uk_produto_codigo (UNIQUE em codigo) do MySQL de produção.
+        Schema::create('produtos', function (Blueprint $table): void {
+            $table->id('id_produto');
+            $table->unsignedBigInteger('comum_id')->nullable();
+            $table->string('codigo', 50)->nullable()->unique();
+            $table->unsignedBigInteger('tipo_bem_id')->nullable();
+            $table->string('bem')->nullable();
+            $table->string('complemento')->nullable();
+            $table->string('editado_marca')->nullable();
+            $table->string('altura_m')->nullable();
+            $table->string('largura_m')->nullable();
+            $table->string('comprimento_m')->nullable();
+            $table->unsignedBigInteger('dependencia_id')->nullable();
+            $table->unsignedBigInteger('editado_tipo_bem_id')->nullable();
+            $table->string('editado_bem')->nullable();
+            $table->string('editado_complemento')->nullable();
+            $table->string('editado_altura_m')->nullable();
+            $table->string('editado_largura_m')->nullable();
+            $table->string('editado_comprimento_m')->nullable();
+            $table->unsignedBigInteger('editado_dependencia_id')->nullable();
+            $table->integer('novo')->nullable();
+            $table->integer('importado')->nullable();
+            $table->integer('checado')->nullable();
+            $table->integer('editado')->nullable();
+            $table->integer('imprimir_etiqueta')->nullable();
+            $table->integer('imprimir_14_1')->nullable();
+            $table->string('condicao_14_1')->nullable();
+            $table->string('observacao')->nullable();
+            $table->string('nota_numero')->nullable();
+            $table->string('nota_data')->nullable();
+            $table->string('nota_valor')->nullable();
+            $table->string('nota_fornecedor')->nullable();
+            $table->unsignedBigInteger('administrador_acessor_id')->nullable();
+            $table->integer('ativo')->default(1);
+        });
+
+        DB::table('comums')->insert(['id' => 7, 'administracao_id' => 1, 'codigo' => '001', 'descricao' => 'Central']);
+        DB::table('dependencias')->insert(['id' => 2, 'comum_id' => 7, 'descricao' => 'Salão']);
+        DB::table('tipos_bens')->insert(['id' => 4, 'administracao_id' => 1, 'codigo' => '1', 'descricao' => 'CADEIRA']);
+
+        session(['is_admin' => true]);
+    }
+
+    protected function tearDown(): void
+    {
+        Schema::dropIfExists('produtos');
+        Schema::dropIfExists('tipos_bens');
+        Schema::dropIfExists('dependencias');
+        Schema::dropIfExists('comums');
+
+        parent::tearDown();
+    }
+
+    public function testRejeitaCodigoJaUsadoPorOutroBemComMensagemAcionavel(): void
+    {
+        $this->insertProduto('ABC-1', ativo: 1);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Este código já está em uso por outro bem.');
+
+        try {
+            $this->service()->createMany($this->dados(code: 'ABC-1', multiplier: 1));
+        } finally {
+            $this->assertSame(1, DB::table('produtos')->count(), 'Nenhum bem novo deve ser gravado.');
+        }
+    }
+
+    public function testRejeitaCodigoJaUsadoPorBemInativo(): void
+    {
+        // A constraint do banco vale também para bens inativos, então o código continua ocupado.
+        $this->insertProduto('ABC-2', ativo: 0);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Este código já está em uso por outro bem.');
+
+        $this->service()->createMany($this->dados(code: 'ABC-2', multiplier: 1));
+    }
+
+    public function testRejeitaCodigoComMultiplicadorMaiorQueUmSemGravarNada(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Para cadastrar mais de um bem, deixe o código em branco.');
+
+        try {
+            $this->service()->createMany($this->dados(code: 'ABC-3', multiplier: 2));
+        } finally {
+            $this->assertSame(0, DB::table('produtos')->count(), 'Nenhum bem deve ser gravado pela metade.');
+        }
+    }
+
+    public function testCadastraVariosBensSemCodigo(): void
+    {
+        $quantidade = $this->service()->createMany($this->dados(code: null, multiplier: 3));
+
+        $this->assertSame(3, $quantidade);
+        $this->assertSame(3, DB::table('produtos')->count());
+        $this->assertSame(
+            0,
+            DB::table('produtos')->whereNotNull('codigo')->count(),
+            'Bens cadastrados sem código não devem receber código.',
+        );
+    }
+
+    public function testCadastraBemUnicoComCodigoNovo(): void
+    {
+        $quantidade = $this->service()->createMany($this->dados(code: 'ABC-4', multiplier: 1));
+
+        $this->assertSame(1, $quantidade);
+        $this->assertSame('ABC-4', DB::table('produtos')->value('codigo'));
+    }
+
+    private function service(): LegacyProductManagementService
+    {
+        return new LegacyProductManagementService();
+    }
+
+    private function insertProduto(string $codigo, int $ativo): void
+    {
+        DB::table('produtos')->insert([
+            'comum_id' => 7,
+            'codigo' => $codigo,
+            'tipo_bem_id' => 4,
+            'bem' => 'CADEIRA',
+            'dependencia_id' => 2,
+            'ativo' => $ativo,
+        ]);
+    }
+
+    private function dados(?string $code, int $multiplier): CreateLegacyProductData
+    {
+        return new CreateLegacyProductData(
+            churchId: 7,
+            code: $code,
+            assetTypeId: 4,
+            itemName: 'CADEIRA',
+            complement: 'Metalica',
+            brand: null,
+            heightMeters: null,
+            widthMeters: null,
+            lengthMeters: null,
+            dependencyId: 2,
+            multiplier: $multiplier,
+            printReport141: false,
+            condition141: '',
+            invoiceNumber: null,
+            invoiceDate: null,
+            invoiceValue: null,
+            invoiceSupplier: null,
+        );
+    }
+}
