@@ -50,3 +50,8 @@ napkin.md
 
 # Pacotes e binários montados pelos scripts de deploy
 /build/
+
+# configs locais de ferramentas de IA
+.codex/
+.mcp.json
+opencode.json
