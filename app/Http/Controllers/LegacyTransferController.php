@@ -36,6 +36,8 @@ class LegacyTransferController extends Controller
             return $this->semIgreja();
         }
 
+        abort_unless($this->igrejaEstaNoEscopo($comumId), 404);
+
         return view('transfers.index', [
             'igreja' => Comum::query()->find($comumId),
             'pendentes' => $this->transferencias->pendentesDeCodigo($comumId),

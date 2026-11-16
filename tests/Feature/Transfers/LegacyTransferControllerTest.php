@@ -43,6 +43,21 @@ final class LegacyTransferControllerTest extends TransferenciasTestCase
         $response->assertSee('Histórico');
     }
 
+    public function testPaginaDeTransferenciasNaoExibeHistoricoForaDoEscopo(): void
+    {
+        $this->criarAdministracao(2, 'Administração Restrita');
+        $this->criarIgreja(10, '50-0003', 'Igreja Restrita', 2);
+        $this->criarDependencia(100, 10, 'Salão');
+        (new LegacyTransferService())->transferir(7, 10, 100, [1001], 9);
+
+        Session::put('is_admin', false);
+        Session::put('administracoes_permitidas', [1]);
+        Session::put('administracao_id', 1);
+        Session::put('comum_id', 10);
+
+        $this->get(route('migration.transfers.index'))->assertNotFound();
+    }
+
     public function testPaginaDeTransferirBemMostraAIgrejaAtualDoBem(): void
     {
         $response = $this->get(route('migration.products.transfer', ['product' => 1001]));
