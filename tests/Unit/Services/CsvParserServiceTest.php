@@ -247,6 +247,18 @@ final class CsvParserServiceTest extends TestCase
         self::assertStringContainsString('AÇÃO', serialize($linhas), 'Acento cortado pela amostra foi corrompido.');
     }
 
+    public function testLerCsvDetectaEncodingLegadoDepoisDaAmostraAsciiInicial(): void
+    {
+        $conteudo = file_get_contents(base_path('tests/Fixtures/importacao/csv-windows1252-apos-amostra.csv'));
+        self::assertNotFalse($conteudo);
+        self::assertSame('UTF-8', mb_detect_encoding(substr($conteudo, 0, 8192), ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true));
+
+        $linhas = $this->lerCsvComParser($conteudo);
+
+        self::assertCount(1, $linhas);
+        self::assertStringContainsString('AÇÃO', serialize($linhas));
+    }
+
     public function testLerCsvDetectaPontoVirgulaMesmoQuandoDescricaoTemMaisVirgulasQueSeparadores(): void
     {
         // Cada descrição entre aspas tem 25 vírgulas; no arquivo há 60 ';' e 75 ','.

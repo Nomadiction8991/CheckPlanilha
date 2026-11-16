@@ -438,3 +438,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Remover o BOM somente do início do conteúdo antes de detectar o separador e interpretar os campos. Coberto por `tests/Fixtures/importacao/csv-utf8-bom.csv`.
 **Padrão Recorrente**: Sim — marcadores de codificação devem ser tratados antes da leitura dos cabeçalhos.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-020 - CSV com metadados ASCII longos corrompia acentos em encoding legado
+**Arquivo**: `app/Services/CsvParserService.php` (`lerCsv`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: A detecção do encoding analisava somente os primeiros 8 KB. Quando esse trecho continha apenas metadados ASCII e os acentos apareciam depois em Windows-1252, o parser não convertia os bytes para UTF-8.
+**Risco/Impacto**: Nomes de bens e localidades podiam chegar corrompidos à prévia e à importação.
+**Recomendação**: Continuar a leitura em blocos até encontrar bytes não ASCII, sem carregar o arquivo inteiro na memória. Coberto por `csv-windows1252-apos-amostra.csv`.
+**Padrão Recorrente**: Sim — a detecção de encoding não pode assumir que os primeiros bytes do arquivo representam o conteúdo textual.
+**Prioridade de Correção**: ✅ Resolvido

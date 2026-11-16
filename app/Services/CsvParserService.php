@@ -505,7 +505,9 @@ class CsvParserService
         // pode ficar partido no fim; sem aparar isso, a detecção cai em ISO-8859-1
         // e os acentos do arquivo inteiro são corrompidos.
         $amostra = $this->aparaCaractereUtf8Incompleto((string) file_get_contents($caminhoReal, false, null, 0, 8192));
-        $encoding = mb_detect_encoding($amostra, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+        $encoding = preg_match('/[\x80-\xFF]/', $amostra) === 1
+            ? mb_detect_encoding($amostra, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true)
+            : $this->detectarEncodingCsv($caminhoReal);
 
         // Detectar delimitador
         $delimitador = $this->detectarDelimitador($amostra);
@@ -703,6 +705,47 @@ class CsvParserService
     private function aparaCaractereUtf8Incompleto(string $amostra): string
     {
         return (string) preg_replace('/[\xC2-\xF4][\x80-\xBF]{0,2}\z/', '', $amostra);
+    }
+
+    /**
+     * Procura o primeiro byte não ASCII sem carregar o arquivo inteiro na memória.
+     * Arquivos exportados em encodings legados podem começar com metadados ASCII
+     * longos, então a detecção não pode parar após uma amostra fixa.
+     */
+    private function detectarEncodingCsv(string $caminho): ?string
+    {
+        $arquivo = fopen($caminho, 'rb');
+        if ($arquivo === false) {
+            return null;
+        }
+
+        try {
+            while (!feof($arquivo)) {
+                $bloco = fread($arquivo, 8192);
+                if ($bloco === false || $bloco === '') {
+                    break;
+                }
+
+                if (preg_match('/[\x80-\xFF]/', $bloco, $correspondencia, PREG_OFFSET_CAPTURE) !== 1) {
+                    continue;
+                }
+
+                // Lê bytes adicionais para não cortar uma sequência UTF-8 no limite do bloco.
+                $amostra = substr($bloco, $correspondencia[0][1]);
+                if (!feof($arquivo)) {
+                    $continua = fread($arquivo, 4);
+                    if ($continua !== false) {
+                        $amostra .= $continua;
+                    }
+                }
+
+                return mb_detect_encoding($amostra, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+            }
+        } finally {
+            fclose($arquivo);
+        }
+
+        return 'UTF-8';
     }
 
     private function detectarDelimitador(string $amostra): string
