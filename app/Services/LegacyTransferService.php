@@ -121,6 +121,11 @@ final class LegacyTransferService implements LegacyTransferServiceInterface
                 throw new RuntimeException('O bem não pertence a esta igreja.');
             }
 
+            // Bem desativado não aparece na lista de pendentes nem nas etiquetas: não pode receber código.
+            if ((int) $produto->ativo !== 1) {
+                throw new RuntimeException('Este bem está desativado e não pode receber código.');
+            }
+
             $itemPendente = TransferenciaItem::query()
                 ->where('produto_id', $produtoId)
                 ->whereNull('codigo_novo')

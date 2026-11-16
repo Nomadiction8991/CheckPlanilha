@@ -8,6 +8,7 @@ use App\Models\Legacy\Produto;
 use App\Models\Legacy\Transferencia;
 use App\Models\Legacy\TransferenciaItem;
 use App\Services\LegacyTransferService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use RuntimeException;
 
@@ -182,6 +183,25 @@ final class LegacyTransferServiceTest extends TransferenciasTestCase
         $this->expectExceptionMessage('Este bem não está pendente de código.');
 
         $this->servico->informarCodigo(1001, 7, 'Z-1');
+    }
+
+    public function testRecusaInformarCodigoDeBemDesativadoSemGravarNada(): void
+    {
+        $this->servico->transferir(7, 8, 80, [1001], 9);
+        DB::table('produtos')->where('id_produto', 1001)->update(['ativo' => 0]);
+
+        try {
+            $this->servico->informarCodigo(1001, 8, 'B-200');
+            $this->fail('Era esperado RuntimeException.');
+        } catch (RuntimeException $erro) {
+            $this->assertSame('Este bem está desativado e não pode receber código.', $erro->getMessage());
+        }
+
+        $bem = Produto::query()->findOrFail(1001);
+        $this->assertNull($bem->codigo);
+        $this->assertSame(0, (int) $bem->checado);
+        $this->assertSame(0, (int) $bem->imprimir_etiqueta);
+        $this->assertNull(TransferenciaItem::query()->where('produto_id', 1001)->value('codigo_novo'));
     }
 
     public function testPendentesDeCodigoListaSoBensSemCodigoTransferidos(): void
