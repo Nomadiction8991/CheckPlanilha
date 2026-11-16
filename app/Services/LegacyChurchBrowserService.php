@@ -9,6 +9,7 @@ use App\DTO\ChurchFilters;
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Comum;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Support\LegacySearchPattern;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Session;
 
@@ -41,9 +42,8 @@ class LegacyChurchBrowserService implements LegacyChurchBrowserServiceInterface
                 $filters->search !== '',
                 static function ($query) use ($filters): void {
                     $query->where(function ($nested) use ($filters): void {
-                        $nested
-                            ->where('codigo', 'like', '%' . $filters->search . '%')
-                            ->orWhere('descricao', 'like', '%' . $filters->search . '%');
+                        LegacySearchPattern::whereContains($nested, 'codigo', $filters->search);
+                        LegacySearchPattern::whereContains($nested, 'descricao', $filters->search, true);
                     });
                 }
             )

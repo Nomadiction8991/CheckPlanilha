@@ -209,4 +209,61 @@ final class LegacyDepartmentBrowserServiceTest extends TestCase
         self::assertCount(1, $administrations);
         self::assertSame(10, $administrations->first()->id);
     }
+
+    public function testSearchTreatsUnderscoreAsLiteralCharacter(): void
+    {
+        $church = new Comum();
+        $church->forceFill(['id' => 100, 'codigo' => 'SP-01', 'descricao' => 'Central SP']);
+        $church->save();
+
+        $dep1 = new Dependencia();
+        $dep1->forceFill(['id' => 1, 'comum_id' => 100, 'descricao' => 'CULTO_JOVEM']);
+        $dep1->save();
+
+        $dep2 = new Dependencia();
+        $dep2->forceFill(['id' => 2, 'comum_id' => 100, 'descricao' => 'CULTO JOVEM']);
+        $dep2->save();
+
+        $result = $this->service->paginate($this->filtersWithSearch('_'));
+
+        self::assertSame(1, $result->total());
+        self::assertSame('CULTO_JOVEM', $result->items()[0]->descricao);
+    }
+
+    public function testSearchTreatsPercentAsLiteralCharacter(): void
+    {
+        $church = new Comum();
+        $church->forceFill(['id' => 100, 'codigo' => 'SP-01', 'descricao' => 'Central SP']);
+        $church->save();
+
+        $dep1 = new Dependencia();
+        $dep1->forceFill(['id' => 1, 'comum_id' => 100, 'descricao' => 'SALAO 100% FIEL']);
+        $dep1->save();
+
+        $dep2 = new Dependencia();
+        $dep2->forceFill(['id' => 2, 'comum_id' => 100, 'descricao' => 'SALAO 1000 FIEL']);
+        $dep2->save();
+
+        $result = $this->service->paginate($this->filtersWithSearch('%'));
+
+        self::assertSame(1, $result->total());
+        self::assertSame('SALAO 100% FIEL', $result->items()[0]->descricao);
+
+        $result = $this->service->paginate($this->filtersWithSearch('100%'));
+
+        self::assertSame(1, $result->total());
+        self::assertSame('SALAO 100% FIEL', $result->items()[0]->descricao);
+    }
+
+    private function filtersWithSearch(string $search): DepartmentFilters
+    {
+        return new DepartmentFilters(
+            administrationId: null,
+            comumId: null,
+            search: $search,
+            state: null,
+            page: 1,
+            perPage: 10,
+        );
+    }
 }

@@ -10,6 +10,7 @@ use App\Contracts\LegacyUserBrowserServiceInterface;
 use App\DTO\UserFilters;
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Usuario;
+use App\Support\LegacySearchPattern;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
@@ -38,9 +39,8 @@ class LegacyUserBrowserService implements LegacyUserBrowserServiceInterface
                 $filters->search !== '',
                 static function ($query) use ($filters): void {
                     $query->where(function ($nested) use ($filters): void {
-                        $nested
-                            ->where('nome', 'like', '%' . $filters->search . '%')
-                            ->orWhere('email', 'like', '%' . $filters->search . '%');
+                        LegacySearchPattern::whereContains($nested, 'nome', $filters->search);
+                        LegacySearchPattern::whereContains($nested, 'email', $filters->search, true);
                     });
                 }
             )

@@ -10,6 +10,7 @@ use App\Models\Legacy\Administracao;
 use App\Models\Legacy\TipoBem;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use App\Support\LegacySearchPattern;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 
@@ -37,9 +38,8 @@ class LegacyAssetTypeBrowserService implements LegacyAssetTypeBrowserServiceInte
                 $filters->search !== '',
                 static function ($query) use ($filters): void {
                     $query->where(function ($nested) use ($filters): void {
-                        $nested
-                            ->where('descricao', 'like', '%' . $filters->search . '%')
-                            ->orWhere('codigo', 'like', '%' . $filters->search . '%');
+                        LegacySearchPattern::whereContains($nested, 'descricao', $filters->search);
+                        LegacySearchPattern::whereContains($nested, 'codigo', $filters->search, true);
                     });
                 }
             )

@@ -307,4 +307,21 @@ final class LegacyChurchBrowserServiceTest extends TestCase
 
         self::assertSame(2, $results->total());
     }
+
+    public function testSearchTreatsWildcardCharactersAsLiteralText(): void
+    {
+        foreach ([[1, 'CN-01', 'Central_Norte'], [2, 'CN-02', 'Central Norte'], [3, 'CN-03', 'Central 100%']] as [$id, $codigo, $descricao]) {
+            $church = new Comum();
+            $church->forceFill(['id' => $id, 'codigo' => $codigo, 'descricao' => $descricao]);
+            $church->save();
+        }
+
+        $underscore = $this->service->paginate(new ChurchFilters(administrationId: null, search: '_', state: null, page: 1, perPage: 10));
+        self::assertSame(1, $underscore->total());
+        self::assertSame('Central_Norte', $underscore->items()[0]->descricao);
+
+        $percent = $this->service->paginate(new ChurchFilters(administrationId: null, search: '%', state: null, page: 1, perPage: 10));
+        self::assertSame(1, $percent->total());
+        self::assertSame('Central 100%', $percent->items()[0]->descricao);
+    }
 }

@@ -761,4 +761,47 @@ final class LegacyProductBrowserServiceTest extends TestCase
             perPage: 10,
         );
     }
+
+    public function testSearchTreatsWildcardCharactersAsLiteralText(): void
+    {
+        $church = new Comum();
+        $church->forceFill(['id' => 100, 'codigo' => 'CTA-01', 'descricao' => 'Central Curitiba', 'administracao_id' => null, 'estado' => 'PR']);
+        $church->save();
+
+        foreach ([[1, 'CADEIRA_A'], [2, 'CADEIRA B'], [3, 'MESA 100%']] as [$id, $bem]) {
+            $prod = new Produto();
+            $prod->forceFill(['id_produto' => $id, 'comum_id' => 100, 'codigo' => 'P-00' . $id, 'bem' => $bem, 'ativo' => 1]);
+            $prod->save();
+        }
+
+        $underscore = $this->service->paginate(new ProductFilters(
+            administrationId: null,
+            comumId: null,
+            search: '_',
+            dependencyId: null,
+            assetTypeId: null,
+            state: null,
+            status: '',
+            onlyNew: false,
+            page: 1,
+            perPage: 10,
+        ));
+        self::assertSame(1, $underscore->total());
+        self::assertSame('CADEIRA_A', $underscore->items()[0]->bem);
+
+        $percent = $this->service->paginate(new ProductFilters(
+            administrationId: null,
+            comumId: null,
+            search: '%',
+            dependencyId: null,
+            assetTypeId: null,
+            state: null,
+            status: '',
+            onlyNew: false,
+            page: 1,
+            perPage: 10,
+        ));
+        self::assertSame(1, $percent->total());
+        self::assertSame('MESA 100%', $percent->items()[0]->bem);
+    }
 }

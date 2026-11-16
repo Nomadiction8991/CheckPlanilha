@@ -86,4 +86,21 @@ final class LegacyAdministrationBrowserServiceTest extends TestCase
         self::assertSame(1, $paginator->total());
         self::assertSame('Administração Central Curitiba', $paginator->items()[0]->descricao);
     }
+
+    public function testSearchTreatsWildcardCharactersAsLiteralText(): void
+    {
+        foreach ([[1, 'ADM_NORTE'], [2, 'ADM NORTE'], [3, 'ADM 100%']] as [$id, $descricao]) {
+            $adm = new Administracao();
+            $adm->forceFill(['id' => $id, 'descricao' => $descricao]);
+            $adm->save();
+        }
+
+        $underscore = $this->service->paginate(new AdministrationFilters(search: '_', state: null, page: 1, perPage: 10));
+        self::assertSame(1, $underscore->total());
+        self::assertSame('ADM_NORTE', $underscore->items()[0]->descricao);
+
+        $percent = $this->service->paginate(new AdministrationFilters(search: '%', state: null, page: 1, perPage: 10));
+        self::assertSame(1, $percent->total());
+        self::assertSame('ADM 100%', $percent->items()[0]->descricao);
+    }
 }

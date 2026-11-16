@@ -16,6 +16,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use App\Support\LegacySearchPattern;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 
@@ -59,17 +60,17 @@ class LegacyProductBrowserService implements LegacyProductBrowserServiceInterfac
                     $search = $filters->search;
 
                     $query->where(function (Builder $nested) use ($search): void {
+                        LegacySearchPattern::whereContains($nested, 'codigo', $search);
+                        LegacySearchPattern::whereContains($nested, 'bem', $search, true);
+                        LegacySearchPattern::whereContains($nested, 'complemento', $search, true);
                         $nested
-                            ->where('codigo', 'like', '%'.$search.'%')
-                            ->orWhere('bem', 'like', '%'.$search.'%')
-                            ->orWhere('complemento', 'like', '%'.$search.'%')
                             ->orWhere(function (Builder $current) use ($search): void {
                                 $this->whereCurrentClassification(
                                     $current,
                                     'dependencia',
                                     'editadoDependencia',
                                     static function (Builder $relationQuery) use ($search): void {
-                                        $relationQuery->where('descricao', 'like', '%'.$search.'%');
+                                        LegacySearchPattern::whereContains($relationQuery, 'descricao', $search);
                                     },
                                     false,
                                 );
@@ -81,9 +82,8 @@ class LegacyProductBrowserService implements LegacyProductBrowserServiceInterfac
                                     'editadoTipoBem',
                                     static function (Builder $relationQuery) use ($search): void {
                                         $relationQuery->where(function (Builder $match) use ($search): void {
-                                            $match
-                                                ->where('codigo', 'like', '%'.$search.'%')
-                                                ->orWhere('descricao', 'like', '%'.$search.'%');
+                                            LegacySearchPattern::whereContains($match, 'codigo', $search);
+                                            LegacySearchPattern::whereContains($match, 'descricao', $search, true);
                                         });
                                     },
                                     true,

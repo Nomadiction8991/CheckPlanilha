@@ -9,6 +9,7 @@ use App\DTO\DepartmentFilters;
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Comum;
 use App\Models\Legacy\Dependencia;
+use App\Support\LegacySearchPattern;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Session;
@@ -40,7 +41,7 @@ class LegacyDepartmentBrowserService implements LegacyDepartmentBrowserServiceIn
             )
             ->when(
                 $filters->search !== '',
-                static fn ($query) => $query->where('descricao', 'like', '%' . $filters->search . '%')
+                static fn ($query) => LegacySearchPattern::whereContains($query, 'descricao', $filters->search)
             )
             ->orderBy('descricao')
             ->paginate(

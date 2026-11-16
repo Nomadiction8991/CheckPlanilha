@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Contracts\LegacyAdministrationBrowserServiceInterface;
 use App\DTO\AdministrationFilters;
 use App\Models\Legacy\Administracao;
+use App\Support\LegacySearchPattern;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class LegacyAdministrationBrowserService implements LegacyAdministrationBrowserServiceInterface
@@ -24,7 +25,7 @@ class LegacyAdministrationBrowserService implements LegacyAdministrationBrowserS
                             $nested->whereKey((int) $filters->search);
                         }
 
-                        $nested->orWhere('descricao', 'like', '%' . $filters->search . '%');
+                        LegacySearchPattern::whereContains($nested, 'descricao', $filters->search, true);
                         if ($cnpjSearch !== '') {
                             $nested->orWhere('cnpj', 'like', '%' . $cnpjSearch . '%');
                         }

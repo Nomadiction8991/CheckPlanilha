@@ -167,4 +167,21 @@ final class LegacyUserBrowserServiceTest extends TestCase
         self::assertSame(0, $service->countAll());
         self::assertCount(0, $service->administrationOptions());
     }
+
+    public function testSearchTreatsWildcardCharactersAsLiteralText(): void
+    {
+        foreach ([[1, 'Ana_Lima', 'ana1@x.com'], [2, 'Ana Lima', 'ana2@x.com'], [3, 'Ana 100%', 'ana3@x.com']] as [$id, $nome, $email]) {
+            $user = new Usuario();
+            $user->forceFill(['id' => $id, 'nome' => $nome, 'email' => $email, 'ativo' => 1]);
+            $user->save();
+        }
+
+        $underscore = $this->service->paginate(new UserFilters(administrationId: null, search: '_', status: '', state: null, page: 1, perPage: 10));
+        self::assertSame(1, $underscore->total());
+        self::assertSame('Ana_Lima', $underscore->items()[0]->nome);
+
+        $percent = $this->service->paginate(new UserFilters(administrationId: null, search: '%', status: '', state: null, page: 1, perPage: 10));
+        self::assertSame(1, $percent->total());
+        self::assertSame('Ana 100%', $percent->items()[0]->nome);
+    }
 }

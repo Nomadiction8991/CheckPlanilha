@@ -200,4 +200,23 @@ final class LegacyAssetTypeBrowserServiceTest extends TestCase
 
         self::assertCount(0, $this->service->administrationOptions());
     }
+
+    public function testSearchTreatsWildcardCharactersAsLiteralText(): void
+    {
+        Session::put('is_admin', true);
+
+        foreach ([[1, 'BEM_A'], [2, 'BEM B'], [3, 'BEM 100%']] as [$codigo, $descricao]) {
+            $type = new TipoBem();
+            $type->forceFill(['id' => $codigo, 'codigo' => $codigo, 'descricao' => $descricao]);
+            $type->save();
+        }
+
+        $underscore = $this->service->paginate(new AssetTypeFilters(administrationId: null, search: '_', state: null, page: 1, perPage: 10));
+        self::assertSame(1, $underscore->total());
+        self::assertSame('BEM_A', $underscore->items()[0]->descricao);
+
+        $percent = $this->service->paginate(new AssetTypeFilters(administrationId: null, search: '%', state: null, page: 1, perPage: 10));
+        self::assertSame(1, $percent->total());
+        self::assertSame('BEM 100%', $percent->items()[0]->descricao);
+    }
 }
