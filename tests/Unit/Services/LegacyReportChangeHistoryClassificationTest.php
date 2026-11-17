@@ -58,6 +58,65 @@ final class LegacyReportChangeHistoryClassificationTest extends TestCase
         self::assertCount(0, $sections['alteracoes']['itens']);
     }
 
+    public function testEditedCheckedProductWithLabelFlagAppearsOnceAcrossLabelSections(): void
+    {
+        $auth = $this->mock(LegacyAuthSessionServiceInterface::class);
+        $service = new LegacyReportService(new LegacyReportTemplateService(), $auth);
+
+        $product = [
+            'origem' => 'produto',
+            'codigo' => '3003',
+            'editado' => 1,
+            'imprimir' => 1,
+            'checado' => 1,
+            'observacoes' => null,
+            'ativo' => 1,
+        ];
+
+        $sections = $this->classify($service, [$product]);
+
+        self::assertSame(1, $this->countAcrossLabelSections($sections, '3003'), 'Produto editado, checado e com etiqueta não pode entrar em duas seções de etiquetas.');
+        self::assertCount(1, $sections['alteracoes']['itens']);
+    }
+
+    public function testEditedProductWithLabelFlagAndObservationAppearsOnceAcrossLabelSections(): void
+    {
+        $auth = $this->mock(LegacyAuthSessionServiceInterface::class);
+        $service = new LegacyReportService(new LegacyReportTemplateService(), $auth);
+
+        $product = [
+            'origem' => 'produto',
+            'codigo' => '4004',
+            'editado' => 1,
+            'imprimir' => 1,
+            'checado' => 0,
+            'observacoes' => 'Verificar plaqueta',
+            'ativo' => 1,
+        ];
+
+        $sections = $this->classify($service, [$product]);
+
+        self::assertSame(1, $this->countAcrossLabelSections($sections, '4004'), 'Produto editado com observação e etiqueta não pode entrar em duas seções de etiquetas.');
+        self::assertCount(1, $sections['alteracoes']['itens']);
+    }
+
+    /**
+     * @param array<string, array{titulo: string, itens: array<int, array<string, mixed>>}> $sections
+     */
+    private function countAcrossLabelSections(array $sections, string $codigo): int
+    {
+        $total = 0;
+
+        foreach (['etiqueta', 'checados_etiqueta', 'observacao_etiqueta', 'checados_observacao_etiqueta'] as $secao) {
+            $total += count(array_filter(
+                $sections[$secao]['itens'],
+                static fn (array $item): bool => $item['codigo'] === $codigo,
+            ));
+        }
+
+        return $total;
+    }
+
     /**
      * @param array<int, array<string, mixed>> $products
      * @return array<string, array{titulo: string, itens: array<int, array<string, mixed>>}>

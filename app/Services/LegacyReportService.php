@@ -1210,21 +1210,29 @@ class LegacyReportService implements LegacyReportServiceInterface
 
             if ($hasChanges) {
                 $sections['alteracoes']['itens'][] = $product;
+            }
+
+            // Produto com etiqueta marcada entra em exatamente uma seção de etiquetas.
+            if ($printLabel) {
+                if ($hasObservation && $isChecked) {
+                    $sections['checados_observacao_etiqueta']['itens'][] = $product;
+                } elseif ($isChecked) {
+                    $sections['checados_etiqueta']['itens'][] = $product;
+                } elseif ($hasObservation) {
+                    $sections['observacao_etiqueta']['itens'][] = $product;
+                } else {
+                    $sections['etiqueta']['itens'][] = $product;
+                }
+
+                continue;
+            }
+
+            // Editado sem etiqueta marcada também precisa de etiqueta nova.
+            if ($hasChanges) {
                 $sections['etiqueta']['itens'][] = $product;
             }
 
-            if ($printLabel && $hasObservation && $isChecked) {
-                $sections['checados_observacao_etiqueta']['itens'][] = $product;
-            } elseif ($printLabel && $isChecked) {
-                $sections['checados_etiqueta']['itens'][] = $product;
-            } elseif ($printLabel && $hasObservation) {
-                $sections['observacao_etiqueta']['itens'][] = $product;
-            } elseif ($printLabel) {
-                // Produto editado já entrou em "etiqueta" acima; não repetir na mesma seção.
-                if (!$hasChanges) {
-                    $sections['etiqueta']['itens'][] = $product;
-                }
-            } elseif ($hasObservation && $isChecked) {
+            if ($hasObservation && $isChecked) {
                 $sections['checados_observacao']['itens'][] = $product;
             } elseif ($hasObservation) {
                 $sections['observacao']['itens'][] = $product;
