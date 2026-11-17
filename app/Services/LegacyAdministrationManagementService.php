@@ -63,6 +63,10 @@ class LegacyAdministrationManagementService implements LegacyAdministrationManag
             throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a importações.');
         }
 
+        if (DB::table('tipos_bens')->where('administracao_id', (int) $administration->getKey())->exists()) {
+            throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a tipos de bens.');
+        }
+
         $administration->delete();
     }
 
