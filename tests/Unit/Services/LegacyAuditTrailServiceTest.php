@@ -136,6 +136,64 @@ final class LegacyAuditTrailServiceTest extends TestCase
         self::assertSame('Produtos', $paginator->items()[0]->module);
     }
 
+    public function testLinhaComDataDeCalendarioInvalidaNoArquivoEIgnorada(): void
+    {
+        $service = new LegacyAuditTrailService($this->storageFile);
+
+        $service->record($this->makeEntry(userId: 1, administrationId: 9));
+        file_put_contents(
+            $this->storageFile,
+            json_encode([
+                'occurred_at' => '2026-02-30 12:00:00',
+                'user_id' => 2,
+                'administration_id' => 9,
+                'module' => 'Produtos',
+                'action' => 'Atualização',
+                'description' => 'Data impossível.',
+            ], JSON_UNESCAPED_UNICODE) . PHP_EOL,
+            FILE_APPEND | LOCK_EX,
+        );
+
+        $paginator = $service->paginate([], 1, 9, null, false, '/audits');
+
+        self::assertSame(1, $paginator->total());
+        self::assertSame('Produto atualizado com sucesso.', $paginator->items()[0]->description);
+    }
+
+    public function testFiltroDeDataDeCalendarioInvalidaEIgnorado(): void
+    {
+        $service = new LegacyAuditTrailService($this->storageFile);
+        $service->record(new LegacyAuditEntryData(
+            occurredAt: '2026-03-01 09:15:00',
+            userId: 1,
+            userName: 'Ana',
+            userEmail: 'ana@example.com',
+            administrationId: 9,
+            churchId: null,
+            isAdmin: false,
+            module: 'Produtos',
+            action: 'Atualização',
+            description: 'Registro de março.',
+            routeName: 'migration.products.update',
+            path: 'products/1',
+            method: 'PUT',
+            statusCode: 302,
+            ipAddress: '127.0.0.1',
+            userAgent: 'PHPUnit',
+        ));
+
+        $paginator = $service->paginate(
+            ['date_from' => '2026-02-30'],
+            1,
+            9,
+            null,
+            false,
+            '/audits',
+        );
+
+        self::assertSame(1, $paginator->total());
+    }
+
     private function makeEntry(int $userId, ?int $administrationId): LegacyAuditEntryData
     {
         return new LegacyAuditEntryData(

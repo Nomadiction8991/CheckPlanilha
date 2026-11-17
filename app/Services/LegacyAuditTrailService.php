@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Contracts\LegacyAuditTrailServiceInterface;
 use App\DTO\LegacyAuditEntryData;
 use App\Support\LegacyCsvSanitizer;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Throwable;
@@ -366,11 +367,7 @@ final class LegacyAuditTrailService implements LegacyAuditTrailServiceInterface
 
     private function ehDataValida(string $valor): bool
     {
-        try {
-            return \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', $valor) !== false;
-        } catch (\Throwable) {
-            return false;
-        }
+        return $this->parseDateStrictly('Y-m-d H:i:s', $valor) !== null;
     }
 
     private function parseDateBoundary(string $value, bool $endOfDay): ?\Carbon\Carbon
@@ -381,13 +378,30 @@ final class LegacyAuditTrailService implements LegacyAuditTrailServiceInterface
             return null;
         }
 
-        try {
-            $date = \Carbon\Carbon::createFromFormat('Y-m-d', $value);
-        } catch (\Throwable) {
+        $date = $this->parseDateStrictly('Y-m-d', $value);
+
+        if ($date === null) {
             return null;
         }
 
         return $endOfDay ? $date->endOfDay() : $date->startOfDay();
+    }
+
+    private function parseDateStrictly(string $format, string $value): ?Carbon
+    {
+        try {
+            $date = Carbon::createFromFormat($format, $value);
+        } catch (Throwable) {
+            return null;
+        }
+
+        $errors = Carbon::getLastErrors();
+
+        if ($date === false || (is_array($errors) && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+            return null;
+        }
+
+        return $date;
     }
 
     private function resolveWritableStorageFile(string $storageFile): string
