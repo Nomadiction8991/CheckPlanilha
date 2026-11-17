@@ -55,6 +55,7 @@ final class LegacyEscritaIgrejasDependenciasScopeTest extends TestCase
             $table->id('id_produto');
             $table->unsignedBigInteger('comum_id')->nullable();
             $table->unsignedBigInteger('dependencia_id')->nullable();
+            $table->unsignedBigInteger('editado_dependencia_id')->nullable();
             $table->string('codigo')->nullable();
             $table->string('bem')->nullable();
             $table->integer('ativo')->default(1);
@@ -365,7 +366,81 @@ final class LegacyEscritaIgrejasDependenciasScopeTest extends TestCase
         self::assertNull(Dependencia::query()->find(1));
     }
 
+    public function testDepartmentCannotMoveToAnotherChurchWhileProductsAreLinked(): void
+    {
+        $this->seedDepartments();
+        $this->seedProductLinkedToDepartment(productId: 500, churchId: 100, departmentId: 1);
+
+        Session::put([
+            'is_admin' => false,
+            'administracao_id' => 10,
+            'administracoes_permitidas' => [20],
+        ]);
+
+        $service = new LegacyDepartmentManagementService();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('vinculada a produtos');
+
+        $service->update(Dependencia::query()->find(1), new DepartmentMutationData(churchId: 200, description: 'SALAO SP'));
+    }
+
+    public function testDepartmentWithLinkedProductsKeepsChurchWhenMoveIsBlocked(): void
+    {
+        $this->seedDepartments();
+        $this->seedProductLinkedToDepartment(productId: 500, churchId: 100, departmentId: 1);
+
+        Session::put([
+            'is_admin' => false,
+            'administracao_id' => 10,
+            'administracoes_permitidas' => [20],
+        ]);
+
+        $service = new LegacyDepartmentManagementService();
+
+        try {
+            $service->update(Dependencia::query()->find(1), new DepartmentMutationData(churchId: 200, description: 'SALAO SP'));
+        } catch (RuntimeException) {
+            // Bloqueio esperado; o estado persistido é verificado abaixo.
+        }
+
+        self::assertSame(100, (int) Dependencia::query()->find(1)->comum_id);
+        self::assertSame(100, (int) Produto::query()->find(500)->comum_id);
+    }
+
+    public function testDepartmentWithLinkedProductsCanStillBeRenamedInSameChurch(): void
+    {
+        $this->seedDepartments();
+        $this->seedProductLinkedToDepartment(productId: 500, churchId: 100, departmentId: 1);
+
+        Session::put([
+            'is_admin' => false,
+            'administracao_id' => 10,
+            'administracoes_permitidas' => [20],
+        ]);
+
+        $service = new LegacyDepartmentManagementService();
+        $updated = $service->update(Dependencia::query()->find(1), new DepartmentMutationData(churchId: 100, description: 'SALAO CENTRAL'));
+
+        self::assertSame(100, (int) $updated->comum_id);
+        self::assertSame('SALAO CENTRAL', $updated->descricao);
+    }
+
     // ——— helpers ———
+
+    private function seedProductLinkedToDepartment(int $productId, int $churchId, int $departmentId): void
+    {
+        $produto = new Produto();
+        $produto->forceFill([
+            'id_produto' => $productId,
+            'comum_id' => $churchId,
+            'dependencia_id' => $departmentId,
+            'editado_dependencia_id' => $departmentId,
+            'bem' => 'CADEIRA',
+            'ativo' => 1,
+        ]);
+        $produto->save();
+    }
 
     private function seedChurches(): void
     {

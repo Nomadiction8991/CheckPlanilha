@@ -8,6 +8,7 @@ use App\Contracts\LegacyDepartmentManagementServiceInterface;
 use App\DTO\DepartmentMutationData;
 use App\Models\Legacy\Comum;
 use App\Models\Legacy\Dependencia;
+use App\Models\Legacy\Produto;
 use Illuminate\Database\Eloquent\Builder;
 use RuntimeException;
 
@@ -35,6 +36,12 @@ class LegacyDepartmentManagementService implements LegacyDepartmentManagementSer
     {
         $this->assertChurchWithinProductScope((int) $department->comum_id);
         $this->assertChurchWithinProductScope((int) $data->churchId);
+
+        // Bens vinculados só podem usar locais da própria igreja; mover o local os deixaria inconsistentes.
+        if ((int) $data->churchId !== (int) $department->comum_id && $this->hasLinkedProducts($department)) {
+            throw new RuntimeException('Esta dependência não pode ser movida para outra igreja porque já está vinculada a produtos.');
+        }
+
         $normalizedDescription = $this->normalizeDescription($data->description);
         $this->assertChurchExists($data->churchId);
         $this->assertUniqueDescription(
@@ -60,6 +67,16 @@ class LegacyDepartmentManagementService implements LegacyDepartmentManagementSer
         }
 
         $department->delete();
+    }
+
+    private function hasLinkedProducts(Dependencia $department): bool
+    {
+        $id = (int) $department->getKey();
+
+        return Produto::query()
+            ->where('dependencia_id', $id)
+            ->orWhere('editado_dependencia_id', $id)
+            ->exists();
     }
 
     private function assertChurchExists(int $churchId): void

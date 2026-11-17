@@ -2,13 +2,13 @@
 
 ## Resumo
 - Críticos: 0
-- Altos: 7
+- Altos: 8
 - Médios: 11
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (2)
-### Lógica (17)
+### Lógica (18)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -474,4 +474,15 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Nomes de bens e localidades podiam chegar corrompidos à prévia e à importação.
 **Recomendação**: Continuar a leitura em blocos até encontrar bytes não ASCII, sem carregar o arquivo inteiro na memória. Coberto por `csv-windows1252-apos-amostra.csv`.
 **Padrão Recorrente**: Sim — a detecção de encoding não pode assumir que os primeiros bytes do arquivo representam o conteúdo textual.
+**Prioridade de Correção**: ✅ Resolvido
+
+### DEP-001 - Dependência com bens vinculados podia mudar de igreja
+**Arquivo**: `app/Services/LegacyDepartmentManagementService.php` (`update`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A edição de uma dependência aceitava trocar a igreja (`comum_id`) mesmo quando já havia bens vinculados a ela (por `dependencia_id` ou `editado_dependencia_id`). Os bens ficavam apontando para um local de outra igreja.
+**Risco/Impacto**: Relatórios, etiquetas e a listagem de bens mostravam um local que não pertence à igreja do bem. A transferência e o cadastro de bens já exigem que o local pertença à igreja; a edição de dependência era a única brecha.
+**Recomendação**: Bloquear a troca de igreja enquanto houver bens vinculados; manter a renomeação dentro da mesma igreja e a troca livre quando não houver vínculo. Coberto por `testDepartmentCannotMoveToAnotherChurchWhileProductsAreLinked`, `testDepartmentWithLinkedProductsKeepsChurchWhenMoveIsBlocked` e `testDepartmentWithLinkedProductsCanStillBeRenamedInSameChurch`.
+**Padrão Recorrente**: Sim — todo caminho que grava um vínculo entre registros de igrejas diferentes precisa validar que o registro vinculado pertence à mesma igreja.
 **Prioridade de Correção**: ✅ Resolvido
