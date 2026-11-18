@@ -426,7 +426,67 @@ final class LegacyEscritaIgrejasDependenciasScopeTest extends TestCase
         self::assertSame('SALAO CENTRAL', $updated->descricao);
     }
 
+    public function testDepartmentUsedOnlyAsEditedLocationCannotBeDeleted(): void
+    {
+        $this->seedDepartments();
+        $this->seedDepartmentAsEditedLocation(productId: 500, churchId: 100, originalDepartmentId: 1, editedDepartmentId: 3);
+
+        Session::put([
+            'is_admin' => false,
+            'administracao_id' => 10,
+            'administracoes_permitidas' => [20],
+        ]);
+
+        $service = new LegacyDepartmentManagementService();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('vinculada a produtos');
+
+        $service->delete(Dependencia::query()->find(3));
+    }
+
+    public function testDepartmentUsedAsEditedLocationIsKeptWhenDeletionIsBlocked(): void
+    {
+        $this->seedDepartments();
+        $this->seedDepartmentAsEditedLocation(productId: 500, churchId: 100, originalDepartmentId: 1, editedDepartmentId: 3);
+
+        Session::put([
+            'is_admin' => false,
+            'administracao_id' => 10,
+            'administracoes_permitidas' => [20],
+        ]);
+
+        $service = new LegacyDepartmentManagementService();
+
+        try {
+            $service->delete(Dependencia::query()->find(3));
+        } catch (RuntimeException) {
+            // Bloqueio esperado; o estado persistido é verificado abaixo.
+        }
+
+        self::assertNotNull(Dependencia::query()->find(3));
+        self::assertSame(3, (int) Produto::query()->find(500)->editado_dependencia_id);
+    }
+
     // ——— helpers ———
+
+    private function seedDepartmentAsEditedLocation(int $productId, int $churchId, int $originalDepartmentId, int $editedDepartmentId): void
+    {
+        $dependenciaEditada = new Dependencia();
+        $dependenciaEditada->forceFill(['id' => $editedDepartmentId, 'comum_id' => $churchId, 'descricao' => 'COPA']);
+        $dependenciaEditada->save();
+
+        $produto = new Produto();
+        $produto->forceFill([
+            'id_produto' => $productId,
+            'comum_id' => $churchId,
+            'dependencia_id' => $originalDepartmentId,
+            'editado_dependencia_id' => $editedDepartmentId,
+            'bem' => 'CADEIRA',
+            'ativo' => 1,
+        ]);
+        $produto->save();
+    }
 
     private function seedProductLinkedToDepartment(int $productId, int $churchId, int $departmentId): void
     {

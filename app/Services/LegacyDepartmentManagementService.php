@@ -62,7 +62,8 @@ class LegacyDepartmentManagementService implements LegacyDepartmentManagementSer
     public function delete(Dependencia $department): void
     {
         $this->assertChurchWithinProductScope((int) $department->comum_id);
-        if ($department->products()->exists()) {
+        // Vale também para bens cujo local foi só editado para esta dependência.
+        if ($this->hasLinkedProducts($department)) {
             throw new RuntimeException('Esta dependência não pode ser excluída porque já está vinculada a produtos.');
         }
 

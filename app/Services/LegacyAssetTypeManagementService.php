@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Contracts\LegacyAssetTypeManagementServiceInterface;
 use App\DTO\AssetTypeMutationData;
 use App\Models\Legacy\Administracao;
+use App\Models\Legacy\Produto;
 use App\Models\Legacy\TipoBem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -60,7 +61,14 @@ class LegacyAssetTypeManagementService implements LegacyAssetTypeManagementServi
     {
         $this->assertAssetTypeWithinScope($assetType);
 
-        if ($assetType->products()->exists()) {
+        // Vale também para bens cujo tipo foi só editado para este tipo de bem.
+        $id = (int) $assetType->getKey();
+        $vinculado = Produto::query()
+            ->where('tipo_bem_id', $id)
+            ->orWhere('editado_tipo_bem_id', $id)
+            ->exists();
+
+        if ($vinculado) {
             throw new RuntimeException('Este tipo de bem não pode ser excluído porque já está vinculado a produtos.');
         }
 

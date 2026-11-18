@@ -2,13 +2,13 @@
 
 ## Resumo
 - Críticos: 0
-- Altos: 8
+- Altos: 10
 - Médios: 11
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (2)
-### Lógica (18)
+### Lógica (20)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -485,4 +485,26 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Relatórios, etiquetas e a listagem de bens mostravam um local que não pertence à igreja do bem. A transferência e o cadastro de bens já exigem que o local pertença à igreja; a edição de dependência era a única brecha.
 **Recomendação**: Bloquear a troca de igreja enquanto houver bens vinculados; manter a renomeação dentro da mesma igreja e a troca livre quando não houver vínculo. Coberto por `testDepartmentCannotMoveToAnotherChurchWhileProductsAreLinked`, `testDepartmentWithLinkedProductsKeepsChurchWhenMoveIsBlocked` e `testDepartmentWithLinkedProductsCanStillBeRenamedInSameChurch`.
 **Padrão Recorrente**: Sim — todo caminho que grava um vínculo entre registros de igrejas diferentes precisa validar que o registro vinculado pertence à mesma igreja.
+**Prioridade de Correção**: ✅ Resolvido
+
+### DEP-002 - Dependência usada só como local editado podia ser excluída
+**Arquivo**: `app/Services/LegacyDepartmentManagementService.php` (`delete`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A exclusão de dependência só verificava bens com `dependencia_id` igual ao local. Um bem cujo local foi editado para uma dependência (`editado_dependencia_id`) não bloqueava a exclusão, e a regra de movimentação já considerava esse vínculo.
+**Risco/Impacto**: Ao apagar essa dependência, o bem perdia o local editado sem aviso: etiquetas e relatórios voltavam a mostrar o local original.
+**Recomendação**: Usar a mesma checagem de vínculo nos dois campos (`dependencia_id` e `editado_dependencia_id`) em exclusão e movimentação. Coberto por `testDepartmentUsedOnlyAsEditedLocationCannotBeDeleted` e `testDepartmentUsedAsEditedLocationIsKeptWhenDeletionIsBlocked`.
+**Padrão Recorrente**: Sim — toda guarda de exclusão precisa considerar tanto o vínculo original quanto o vínculo editado.
+**Prioridade de Correção**: ✅ Resolvido
+
+### PROD-002 - Tipo de bem usado só como tipo editado podia ser excluído
+**Arquivo**: `app/Services/LegacyAssetTypeManagementService.php` (`delete`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A exclusão de tipo de bem só verificava bens com `tipo_bem_id` igual ao tipo. Um bem com o tipo editado (`editado_tipo_bem_id`) não bloqueava a exclusão.
+**Risco/Impacto**: Ao apagar esse tipo, o bem perdia o tipo editado sem aviso, e relatórios e etiquetas passavam a mostrar o tipo original.
+**Recomendação**: Bloquear a exclusão quando houver bem com `tipo_bem_id` ou `editado_tipo_bem_id` igual ao tipo. Coberto por `testAssetTypeUsedOnlyAsEditedTypeCannotBeDeleted` e `testAssetTypeUsedAsEditedTypeIsKeptWhenDeletionIsBlocked`.
+**Padrão Recorrente**: Sim — mesmo padrão de DEP-002.
 **Prioridade de Correção**: ✅ Resolvido
