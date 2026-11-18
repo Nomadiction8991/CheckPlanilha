@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Sync;
 
 use App\Sync\DeviceRegistry;
+use App\Sync\SyncService;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Crypt;
@@ -99,6 +100,34 @@ class SyncPushTest extends SincronizacaoTestCase
             ->assertJsonPath('ja_recebidas', 1);
 
         $this->assertSame(1, DB::table('produtos')->where('id_produto', 6)->count());
+    }
+
+    public function test_falha_ao_marcar_uuid_desfaz_a_alteracao_recebida(): void
+    {
+        $uuid = '12121212-aaaa-4aaa-8aaa-121212121212';
+        $aparelho = app(DeviceRegistry::class)->registrar('Notebook de teste', 7)['aparelho'];
+        DB::statement(<<<'SQL'
+            CREATE TRIGGER falha_ao_registrar_envio
+            BEFORE INSERT ON sincronizacao_envios
+            BEGIN
+                SELECT RAISE(ABORT, 'falha de teste');
+            END
+            SQL);
+
+        $resumo = app(SyncService::class)->enviar(
+            $aparelho,
+            [$this->alteracao($uuid, 'produtos', '41', 'insert', null, [
+                'id_produto' => 41,
+                'codigo' => 'P-41',
+                'comum_id' => 1,
+                'bem' => 'Mesa',
+                'checado' => false,
+            ])],
+        );
+
+        $this->assertSame($uuid, $resumo['erros'][0]['uuid']);
+        $this->assertSame(0, DB::table('produtos')->where('id_produto', 41)->count());
+        $this->assertFalse(DB::table('sincronizacao_envios')->where('uuid', $uuid)->exists());
     }
 
     public function test_texto_vazio_e_espacos_chegam_exatamente_como_foram_gravados_no_notebook(): void

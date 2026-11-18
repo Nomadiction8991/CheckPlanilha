@@ -52,7 +52,23 @@ final class SyncService
                 }
 
                 try {
-                    $resultado = DB::transaction(fn (): array => $this->aplicador->aplicar($alteracao));
+                    $resultado = DB::transaction(function () use ($alteracao, $aparelho, $uuid): array {
+                        $resultado = $this->aplicador->aplicar($alteracao);
+
+                        if ($resultado['status'] === ChangeApplier::ERRO) {
+                            return $resultado;
+                        }
+
+                        // A alteração, o UUID de idempotência e um eventual conflito formam
+                        // uma única operação: se qualquer gravação falhar, tudo é desfeito.
+                        $this->marcarRecebida($uuid, (int) $aparelho->id);
+
+                        if ($resultado['status'] === ChangeApplier::CONFLITO) {
+                            $this->registrarConflito($aparelho, $alteracao, $resultado);
+                        }
+
+                        return $resultado;
+                    });
                 } catch (RuntimeException) {
                     // Inclui falha de banco e campo cifrado que não abre. A mensagem técnica não sai daqui.
                     $resumo['erros'][] = ['uuid' => $uuid, 'motivo' => 'Falha ao gravar no servidor.'];
@@ -67,14 +83,11 @@ final class SyncService
                     continue;
                 }
 
-                $this->marcarRecebida($uuid, (int) $aparelho->id);
-
                 if ($resultado['status'] === ChangeApplier::APLICADA) {
                     $resumo['aplicadas']++;
                 } elseif ($resultado['status'] === ChangeApplier::IGNORADA) {
                     $resumo['ignoradas']++;
                 } else {
-                    $this->registrarConflito($aparelho, $alteracao, $resultado);
                     $resumo['conflitos'][] = [
                         'uuid' => $uuid,
                         'tabela' => (string) $alteracao['tabela'],
