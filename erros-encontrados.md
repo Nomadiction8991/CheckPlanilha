@@ -508,3 +508,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Bloquear a exclusão quando houver bem com `tipo_bem_id` ou `editado_tipo_bem_id` igual ao tipo. Coberto por `testAssetTypeUsedOnlyAsEditedTypeCannotBeDeleted` e `testAssetTypeUsedAsEditedTypeIsKeptWhenDeletionIsBlocked`.
 **Padrão Recorrente**: Sim — mesmo padrão de DEP-002.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-021 - Download de erros de importação ignorava o escopo quando recebia o id da importação
+**Arquivo**: `app/Services/LegacySpreadsheetImportService.php` (`downloadImportErrorsCsv`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança
+**Status**: Corrigido nesta rodada.
+**Descrição**: Com `importacao_id` informado, o CSV de correção de erros buscava as linhas de `import_erros` só pelo id da importação. A checagem de administração (ou de igreja) era ignorada, diferentemente da listagem de erros (`loadImportErrors`). Um usuário de outra administração, ou sem administração, baixava os erros de qualquer importação.
+**Risco/Impacto**: Vazamento de código, nome, localidade e dependência de bens de outra administração.
+**Recomendação**: Aplicar no ramo `importacao_id` o mesmo escopo da listagem: `whereIn` nas administrações permitidas ou filtro por igreja. Coberto por `testNonAdminCannotDownloadErrorsOfImportOutsideItsAdministration`, `testUserWithoutAdministrationScopeCannotDownloadErrorsOfAnyImport` e `testNonAdminDownloadsErrorsOfImportInsidePermittedAdministration`.
+**Padrão Recorrente**: Sim — ações que recebem o id da importação sem checar escopo. Pendente de decisão de regra: `preview`, `confirm`, `savePreviewActions`, `bulkPreviewAction` e `processing` do `SpreadsheetImportController` não checam dono nem escopo.
+**Prioridade de Correção**: ✅ Resolvido

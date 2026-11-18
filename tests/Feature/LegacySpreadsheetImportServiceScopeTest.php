@@ -111,6 +111,110 @@ final class LegacySpreadsheetImportServiceScopeTest extends TestCase
         self::assertSame('B-private.csv', $imports[0]['arquivo_nome']);
     }
 
+    public function testNonAdminCannotDownloadErrorsOfImportOutsideItsAdministration(): void
+    {
+        Session::put([
+            'usuario_id' => 501,
+            'is_admin' => false,
+            'administracoes_permitidas' => [self::ADMIN_A],
+        ]);
+        $this->createImportErrorsTable();
+        $this->seedImportErrors();
+
+        $linhas = $this->collectRows((new LegacySpreadsheetImportService())->downloadImportErrorsCsv(null, 1)['rows']);
+
+        // Somente o cabeçalho: o erro da importação B não pode sair para um usuário da administração A.
+        self::assertCount(1, $linhas);
+    }
+
+    public function testUserWithoutAdministrationScopeCannotDownloadErrorsOfAnyImport(): void
+    {
+        Session::put([
+            'usuario_id' => 502,
+            'is_admin' => false,
+            'administracoes_permitidas' => [],
+        ]);
+        $this->createImportErrorsTable();
+        $this->seedImportErrors();
+
+        $linhas = $this->collectRows((new LegacySpreadsheetImportService())->downloadImportErrorsCsv(null, 2)['rows']);
+
+        self::assertCount(1, $linhas);
+    }
+
+    public function testNonAdminDownloadsErrorsOfImportInsidePermittedAdministration(): void
+    {
+        Session::put([
+            'usuario_id' => 501,
+            'is_admin' => false,
+            'administracoes_permitidas' => [self::ADMIN_A],
+        ]);
+        $this->createImportErrorsTable();
+        $this->seedImportErrors();
+
+        $linhas = $this->collectRows((new LegacySpreadsheetImportService())->downloadImportErrorsCsv(null, 2)['rows']);
+
+        self::assertCount(2, $linhas);
+        self::assertSame('A-001', $linhas[1][0]);
+    }
+
+    /**
+     * @return array<int, array<int, string>>
+     */
+    private function collectRows(iterable $rows): array
+    {
+        $collected = [];
+        foreach ($rows as $row) {
+            $collected[] = $row;
+        }
+
+        return $collected;
+    }
+
+    private function createImportErrorsTable(): void
+    {
+        DB::statement('CREATE TABLE import_erros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            importacao_id INTEGER NOT NULL,
+            linha_csv INTEGER DEFAULT NULL,
+            codigo TEXT DEFAULT NULL,
+            codigo_comum TEXT DEFAULT NULL,
+            localidade TEXT DEFAULT NULL,
+            descricao_csv TEXT DEFAULT NULL,
+            bem TEXT DEFAULT NULL,
+            complemento TEXT DEFAULT NULL,
+            dependencia TEXT DEFAULT NULL,
+            mensagem_erro TEXT DEFAULT NULL,
+            resolvido INTEGER DEFAULT 0
+        )');
+    }
+
+    private function seedImportErrors(): void
+    {
+        DB::table('import_erros')->insert([
+            [
+                'importacao_id' => 1,
+                'linha_csv' => 2,
+                'codigo' => 'B-001',
+                'localidade' => 'Zona Leste',
+                'descricao_csv' => 'Cadeira da administração B',
+                'dependencia' => 'Sala B',
+                'mensagem_erro' => 'Dependência inválida.',
+                'resolvido' => 0,
+            ],
+            [
+                'importacao_id' => 2,
+                'linha_csv' => 2,
+                'codigo' => 'A-001',
+                'localidade' => 'Central',
+                'descricao_csv' => 'Mesa da administração A',
+                'dependencia' => 'Sala A',
+                'mensagem_erro' => 'Dependência inválida.',
+                'resolvido' => 0,
+            ],
+        ]);
+    }
+
     private function createTables(): void
     {
         DB::statement('CREATE TABLE administracoes (

@@ -1011,7 +1011,16 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
         $effectiveChurchId = $churchId ?? $this->currentChurchId();
 
         if (($importacaoId ?? 0) > 0) {
-            $query->where('ie.importacao_id', '=', $importacaoId)->where('ie.resolvido', '=', 0);
+            // Mesmo escopo da listagem (loadImportErrors): o id da importação não dispensa a checagem de administração.
+            $query
+                ->join('importacoes as imp', 'imp.id', '=', 'ie.importacao_id')
+                ->where('ie.importacao_id', '=', $importacaoId)
+                ->where('ie.resolvido', '=', 0);
+            if ($administrationIds !== null) {
+                $query->whereIn('imp.administracao_id', $administrationIds);
+            } elseif (($effectiveChurchId ?? 0) > 0) {
+                $query->where('imp.comum_id', '=', $effectiveChurchId);
+            }
             $suffix = 'imp_' . $importacaoId;
         } elseif ($administrationIds !== null) {
             $query
