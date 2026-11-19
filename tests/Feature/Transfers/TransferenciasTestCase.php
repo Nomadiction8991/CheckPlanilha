@@ -26,6 +26,7 @@ abstract class TransferenciasTestCase extends TestCase
 
         Schema::create('usuarios', function ($table): void {
             $table->integer('id')->primary();
+            $table->integer('ativo')->default(1);
             $table->string('nome')->nullable();
             $table->string('email')->nullable();
             $table->string('tipo')->nullable();

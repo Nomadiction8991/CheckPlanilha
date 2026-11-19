@@ -11,11 +11,11 @@ use App\Http\Requests\StoreLegacyAssetTypeRequest;
 use App\Http\Requests\UpdateLegacyAssetTypeRequest;
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\TipoBem;
+use App\Support\LegacyAdministratorAccess;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Session;
 use RuntimeException;
 
 class LegacyAssetTypeController extends Controller
@@ -111,7 +111,7 @@ class LegacyAssetTypeController extends Controller
         $query = Administracao::query()->orderBy('descricao');
         $administrationId = $this->currentAdministrationId();
 
-        if (!Session::get('is_admin', false) && $administrationId !== null) {
+        if (!LegacyAdministratorAccess::sessionIsAdministrator() && $administrationId !== null) {
             $query->whereKey($administrationId);
         }
 

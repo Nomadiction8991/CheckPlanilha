@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\DTO\AssetTypeMutationData;
 use App\Models\Legacy\Produto;
 use App\Models\Legacy\TipoBem;
 use App\Services\LegacyAssetTypeManagementService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 use RuntimeException;
@@ -26,6 +28,23 @@ final class LegacyAssetTypeDeleteEditedLinkTest extends TestCase
             $table->unsignedBigInteger('administracao_id')->nullable();
         });
 
+        Schema::create('usuarios', function (Blueprint $table): void {
+            $table->id();
+            $table->integer('ativo')->default(1);
+            $table->string('tipo')->nullable();
+            $table->string('email')->nullable();
+        });
+
+        Schema::create('administracoes', function (Blueprint $table): void {
+            $table->id();
+            $table->string('descricao')->nullable();
+        });
+
+        DB::table('administracoes')->insert([
+            ['id' => 10, 'descricao' => 'LOCAL'],
+            ['id' => 20, 'descricao' => 'OUTRA'],
+        ]);
+
         Schema::create('produtos', function (Blueprint $table): void {
             $table->id('id_produto');
             $table->unsignedBigInteger('comum_id')->nullable();
@@ -43,6 +62,8 @@ final class LegacyAssetTypeDeleteEditedLinkTest extends TestCase
     {
         Schema::dropIfExists('produtos');
         Schema::dropIfExists('tipos_bens');
+        Schema::dropIfExists('usuarios');
+        Schema::dropIfExists('administracoes');
         parent::tearDown();
     }
 
@@ -83,6 +104,67 @@ final class LegacyAssetTypeDeleteEditedLinkTest extends TestCase
         $service->delete(TipoBem::query()->find(3));
 
         self::assertNull(TipoBem::query()->find(3));
+    }
+
+    public function testDemotedAdministratorCannotDeleteTypeFromAnotherAdministration(): void
+    {
+        $this->createAssetType(4, 20);
+        $this->startDemotedAdministratorSession();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Você só pode gerenciar tipos de bem da sua própria administração.');
+
+        (new LegacyAssetTypeManagementService())->delete(TipoBem::query()->findOrFail(4));
+    }
+
+    public function testDemotedAdministratorCannotCreateTypeInAnotherAdministration(): void
+    {
+        $this->startDemotedAdministratorSession();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Você só pode cadastrar ou editar tipos de bem da sua própria administração.');
+
+        (new LegacyAssetTypeManagementService())->create(new AssetTypeMutationData(20, 'OUTRO TIPO'));
+    }
+
+    public function testDemotedAdministratorCannotMoveTypeToAnotherAdministration(): void
+    {
+        $this->createAssetType(4, 10);
+        $this->startDemotedAdministratorSession();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Você só pode cadastrar ou editar tipos de bem da sua própria administração.');
+
+        (new LegacyAssetTypeManagementService())->update(
+            TipoBem::query()->findOrFail(4),
+            new AssetTypeMutationData(20, 'TIPO MOVIDO'),
+        );
+    }
+
+    private function startDemotedAdministratorSession(): void
+    {
+        DB::table('usuarios')->insert([
+            'id' => 9,
+            'ativo' => 1,
+            'tipo' => 'comum',
+            'email' => 'usuario@example.test',
+        ]);
+        Session::put([
+            'usuario_id' => 9,
+            'is_admin' => true,
+            'administracao_id' => 10,
+        ]);
+    }
+
+    private function createAssetType(int $id, int $administrationId): void
+    {
+        $type = new TipoBem();
+        $type->forceFill([
+            'id' => $id,
+            'codigo' => str_pad((string) $id, 3, '0', STR_PAD_LEFT),
+            'descricao' => 'TIPO ' . $id,
+            'administracao_id' => $administrationId,
+        ])->save();
     }
 
     private function seedAssetTypeAsEditedType(int $productId, int $originalTypeId, int $editedTypeId): void

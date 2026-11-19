@@ -9,6 +9,7 @@ use App\DTO\AssetTypeMutationData;
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Produto;
 use App\Models\Legacy\TipoBem;
+use App\Support\LegacyAdministratorAccess;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Schema;
@@ -137,7 +138,7 @@ class LegacyAssetTypeManagementService implements LegacyAssetTypeManagementServi
 
     private function canManageOtherAdministrations(): bool
     {
-        return (bool) Session::get('is_admin', false);
+        return LegacyAdministratorAccess::sessionIsAdministrator();
     }
 
     private function currentAdministrationId(): ?int

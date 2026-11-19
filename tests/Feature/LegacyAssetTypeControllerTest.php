@@ -137,6 +137,38 @@ final class LegacyAssetTypeControllerTest extends TestCase
         $response->assertViewHas('states', (array) config('brazil.states', []));
     }
 
+    public function testDemotedAdministratorOnlySeesOwnAdministrationInCreateForm(): void
+    {
+        DB::statement('CREATE TABLE usuarios (id INTEGER PRIMARY KEY, ativo INTEGER, tipo VARCHAR(50), email VARCHAR(255))');
+        DB::table('usuarios')->insert([
+            'id' => 9,
+            'ativo' => 1,
+            'tipo' => 'comum',
+            'email' => 'maria@example.test',
+        ]);
+        DB::table('administracoes')->insert([
+            'id' => self::ADMINISTRATION_ID,
+            'descricao' => 'Administração Central',
+        ]);
+        DB::table('administracoes')->insert([
+            'id' => 100,
+            'descricao' => 'Administração de outra pessoa',
+        ]);
+
+        $response = $this->withSession(array_merge($this->authSession(), [
+            '_enforce_legacy_auth' => false,
+            'usuario_id' => 9,
+            'is_admin' => true,
+            'administracao_id' => self::ADMINISTRATION_ID,
+            'legacy_permissions' => ['asset-types.create' => true],
+        ]))
+            ->get(route('migration.asset-types.create'));
+
+        $response->assertOk();
+        $response->assertDontSee('Administração de outra pessoa');
+        self::assertSame([self::ADMINISTRATION_ID], $response->viewData('administrations')->modelKeys());
+    }
+
     public function testCreatePageRedirectsGuestsToLogin(): void
     {
         $response = $this->withSession(['_enforce_legacy_auth' => true])

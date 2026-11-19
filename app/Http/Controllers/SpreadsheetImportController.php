@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Contracts\LegacySpreadsheetImportServiceInterface;
 use App\Http\Requests\StoreSpreadsheetImportRequest;
+use App\Support\LegacyAdministratorAccess;
 use App\Support\UniversalSpreadsheetReader;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -474,7 +475,7 @@ class SpreadsheetImportController extends Controller
      */
     private function currentAdministrationScope(): ?array
     {
-        if ((bool) Session::get('is_admin', false)) {
+        if (LegacyAdministratorAccess::sessionIsAdministrator()) {
             return null;
         }
 

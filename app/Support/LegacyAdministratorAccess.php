@@ -39,7 +39,7 @@ final class LegacyAdministratorAccess
             }
 
             if ($user !== null) {
-                return $user->isAdministrator();
+                return (int) $user->ativo === 1 && $user->isAdministrator();
             }
         }
 

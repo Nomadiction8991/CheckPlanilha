@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Support\LegacyAdministratorAccess;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,7 +22,7 @@ class RequireLegacyAdmin
                 ->route('migration.login');
         }
 
-        if ((bool) $request->session()->get('is_admin', false)) {
+        if (LegacyAdministratorAccess::sessionIsAdministrator()) {
             return $next($request);
         }
 
