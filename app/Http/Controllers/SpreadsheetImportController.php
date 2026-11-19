@@ -76,6 +76,11 @@ class SpreadsheetImportController extends Controller
 
     public function preview(int $importacao): View|RedirectResponse
     {
+        $ownership = $this->assertOwnershipForPage($importacao);
+        if ($ownership !== null) {
+            return $ownership;
+        }
+
         $preview = $this->imports->loadPreview($importacao);
 
         if ($preview === null) {
@@ -98,6 +103,11 @@ class SpreadsheetImportController extends Controller
 
     public function savePreviewActions(Request $request, int $importacao): JsonResponse
     {
+        $ownership = $this->assertOwnership($importacao);
+        if ($ownership !== null) {
+            return $ownership;
+        }
+
         try {
             $result = $this->imports->savePreviewActions(
                 $importacao,
@@ -123,6 +133,11 @@ class SpreadsheetImportController extends Controller
 
     public function bulkPreviewAction(Request $request, int $importacao): JsonResponse
     {
+        $ownership = $this->assertOwnership($importacao);
+        if ($ownership !== null) {
+            return $ownership;
+        }
+
         try {
             $result = $this->imports->applyBulkPreviewAction(
                 $importacao,
@@ -146,6 +161,11 @@ class SpreadsheetImportController extends Controller
 
     public function confirm(Request $request, int $importacao): RedirectResponse
     {
+        $ownership = $this->assertOwnershipForPage($importacao);
+        if ($ownership !== null) {
+            return $ownership;
+        }
+
         $importAll = $request->boolean('importar_tudo');
 
         try {
@@ -179,6 +199,11 @@ class SpreadsheetImportController extends Controller
 
     public function processing(int $importacao): View|RedirectResponse
     {
+        $ownership = $this->assertOwnershipForPage($importacao);
+        if ($ownership !== null) {
+            return $ownership;
+        }
+
         $progress = $this->imports->loadProgress($importacao);
 
         if ($progress === null) {
@@ -527,5 +552,20 @@ class SpreadsheetImportController extends Controller
         }
 
         return null;
+    }
+
+    private function assertOwnershipForPage(int $importacao): ?RedirectResponse
+    {
+        $ownership = $this->assertOwnership($importacao);
+        if ($ownership === null) {
+            return null;
+        }
+
+        $payload = $ownership->getData(true);
+
+        return redirect()
+            ->route('migration.spreadsheets.create')
+            ->with('status', (string) ($payload['message'] ?? 'Acesso negado à importação.'))
+            ->with('status_type', 'error');
     }
 }

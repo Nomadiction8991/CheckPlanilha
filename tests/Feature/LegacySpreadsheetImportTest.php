@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Contracts\LegacySpreadsheetImportServiceInterface;
+use App\Contracts\LegacyAuthSessionServiceInterface;
 use App\DTO\SpreadsheetImportUploadData;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -501,6 +502,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testPreviewPageShowsChurchScopeWarning(): void
     {
+        $this->asImportOwner();
         $response = $this->get(route('migration.spreadsheets.preview', ['importacao' => 15]));
 
         $response->assertOk();
@@ -570,6 +572,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testPreviewPageRendersSummary(): void
     {
+        $this->asImportOwner();
         $response = $this->get(route('migration.spreadsheets.preview', ['importacao' => 15]));
 
         $response->assertOk();
@@ -581,8 +584,50 @@ final class LegacySpreadsheetImportTest extends TestCase
         $response->assertDontSee('Salvar ações');
     }
 
+    public function testPreviewActionsAreDeniedForAnotherUsersImport(): void
+    {
+        $response = $this->withSession([
+            'usuario_id' => 5,
+            'is_admin' => false,
+        ])->postJson(route('migration.spreadsheets.preview.actions', ['importacao' => 15]), [
+            'acoes' => ['30' => 'pular'],
+        ]);
+
+        $response->assertForbidden();
+        $response->assertJson(['success' => false, 'message' => 'Acesso negado à importação.']);
+    }
+
+    public function testOtherUserCannotReadPreviewOrProcessingPage(): void
+    {
+        $this->withSession(['usuario_id' => 5, 'is_admin' => false]);
+
+        $preview = $this->get(route('migration.spreadsheets.preview', ['importacao' => 15]));
+        $preview->assertRedirect(route('migration.spreadsheets.create'));
+        $preview->assertSessionHas('status', 'Acesso negado à importação.');
+
+        $processing = $this->get(route('migration.spreadsheets.processing', ['importacao' => 15]));
+        $processing->assertRedirect(route('migration.spreadsheets.create'));
+        $processing->assertSessionHas('status', 'Acesso negado à importação.');
+    }
+
+    public function testOtherUserCannotApplyBulkActionOrConfirmImport(): void
+    {
+        $this->withSession(['usuario_id' => 5, 'is_admin' => false]);
+
+        $bulk = $this->postJson(route('migration.spreadsheets.preview.bulk', ['importacao' => 15]), [
+            'acao' => 'pular',
+        ]);
+        $bulk->assertForbidden();
+        $bulk->assertJson(['message' => 'Acesso negado à importação.']);
+
+        $confirm = $this->post(route('migration.spreadsheets.confirm', ['importacao' => 15]));
+        $confirm->assertRedirect(route('migration.spreadsheets.create'));
+        $confirm->assertSessionHas('status', 'Acesso negado à importação.');
+    }
+
     public function testPreviewPageRendersErrorListWhenAnalysisHasFailures(): void
     {
+        $this->asImportOwner();
         $response = $this->get(route('migration.spreadsheets.preview', ['importacao' => 15]));
 
         $response->assertOk();
@@ -596,6 +641,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testConfirmRedirectsToProductsWithResultMessage(): void
     {
+        $this->asImportOwner();
         $response = $this->post(route('migration.spreadsheets.confirm', ['importacao' => 15]));
 
         $response->assertRedirect(route('migration.spreadsheets.processing', ['importacao' => 15]));
@@ -603,6 +649,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testPreviewActionsEndpointReturnsJson(): void
     {
+        $this->asImportOwner();
         $response = $this->postJson(route('migration.spreadsheets.preview.actions', ['importacao' => 15]), [
             'igrejas' => ['12-3456' => 'importar'],
         ]);
@@ -613,6 +660,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testLegacyPreviewActionsEndpointReturnsJson(): void
     {
+        $this->asImportOwner();
         $response = $this->postJson('/spreadsheets/preview/save-actions', [
             'importacao_id' => 15,
             'acoes' => ['30' => 'importar'],
@@ -625,6 +673,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testPreviewBulkEndpointReturnsJson(): void
     {
+        $this->asImportOwner();
         $response = $this->postJson(route('migration.spreadsheets.preview.bulk', ['importacao' => 15]), [
             'acao' => 'importar',
         ]);
@@ -635,6 +684,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testLegacyPreviewBulkEndpointReturnsJson(): void
     {
+        $this->asImportOwner();
         $response = $this->postJson('/spreadsheets/preview/bulk-action', [
             'importacao_id' => 15,
             'acao' => 'importar',
@@ -646,6 +696,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testLegacyConfirmRedirectsToProcessing(): void
     {
+        $this->asImportOwner();
         $response = $this->post('/spreadsheets/confirm', [
             'importacao_id' => 15,
         ]);
@@ -655,6 +706,7 @@ final class LegacySpreadsheetImportTest extends TestCase
 
     public function testProcessingPageRendersProgressShell(): void
     {
+        $this->asImportOwner();
         $response = $this->get(route('migration.spreadsheets.processing', ['importacao' => 15]));
 
         $response->assertOk();
@@ -675,6 +727,14 @@ final class LegacySpreadsheetImportTest extends TestCase
         $response->assertSee('Administração: Administração Central');
         $response->assertSee('Baixar CSV de correção');
         $response->assertSee('Itens com falha');
+    }
+
+    private function asImportOwner(): void
+    {
+        $this->withSession(['usuario_id' => 9, 'is_admin' => false]);
+        $auth = \Mockery::mock(LegacyAuthSessionServiceInterface::class);
+        $auth->shouldReceive('currentUser')->andReturn(null);
+        $this->app->instance(LegacyAuthSessionServiceInterface::class, $auth);
     }
 
     public function testStartProcessingEndpointReturnsJson(): void
