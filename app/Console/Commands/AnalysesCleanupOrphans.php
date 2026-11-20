@@ -121,11 +121,6 @@ class AnalysesCleanupOrphans extends Command
         foreach ($orphans as $orphan) {
             $filePath = $this->storageDir . '/' . $orphan['file'];
 
-            if (is_file($filePath)) {
-                @unlink($filePath);
-                $deletedFiles++;
-            }
-
             if ($forceDelete && ($orphan['removable'] ?? false) && $orphan['status'] !== 'sem registro') {
                 try {
                     DB::connection()->transaction(function () use ($orphan): void {
@@ -145,15 +140,18 @@ class AnalysesCleanupOrphans extends Command
                     return 1;
                 }
             }
+
+            if (is_file($filePath)) {
+                @unlink($filePath);
+                $deletedFiles++;
+            }
         }
 
         if ($forceDelete && $deletedDb > 0) {
             $this->line($deletedDb . ' DB record(s) deleted.');
         }
 
-        if ($forceDelete) {
-            $this->line('Database records were kept.' === '' ? '' : '');
-        } elseif (! $forceDelete && $deletedFiles > 0) {
+        if (! $forceDelete && $deletedFiles > 0) {
             $this->line('Database records were kept.');
         }
 

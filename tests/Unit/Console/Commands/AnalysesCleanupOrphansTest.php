@@ -436,25 +436,21 @@ final class AnalysesCleanupOrphansTest extends TestCase
     }
 
     /** @test */
-    public function test_db_exception_during_force_delete_is_handled_gracefully(): void
+    public function test_db_exception_during_force_delete_preserves_file_and_import(): void
     {
         $this->bindCommandWithTempDir();
         $this->criarImportacao(90, 'concluida');
+        $this->criarErroImportacao(90);
         $this->criarArquivoAnalise(90);
 
-        // Create the file removal scenario: file is deleted but DB fails
-        // Simulate by dropping the import_erros table + dropping importacoes after
-        // The first file unlink should succeed, then DB transaction fails
-        // We need to make the DB transaction throw
-        // By dropping the importacoes table, the delete will fail
         DB::connection()->statement('DROP TABLE import_erros');
 
         $this->artisan('analyses:cleanup-orphans', ['--force-delete' => true])
             ->expectsOutputToContain('Failed to delete DB records')
             ->assertExitCode(1);
 
-        // File should be removed even though DB failed
-        $this->assertFileDoesNotExist($this->tempDir . '/analise_90.json');
+        $this->assertFileExists($this->tempDir . '/analise_90.json');
+        $this->assertSame(1, DB::connection()->table('importacoes')->where('id', 90)->count());
     }
 
     /** @test */
