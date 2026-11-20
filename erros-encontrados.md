@@ -357,9 +357,9 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Severidade**: 🟡 MÉDIO
 **Categoria**: Segurança
 **Status**: Corrigido nesta rodada.
-**Descrição**: O sanitizador não neutralizava fórmulas iniciadas por LF, espaços de controle ou caracteres de largura completa. Além disso, o código do erro de importação e o código no backup da posição de verificação eram escritos no CSV sem sanitização.
+**Descrição**: O sanitizador não neutralizava fórmulas iniciadas por LF, espaços de controle ou caracteres de largura completa. Além disso, alguns campos externos eram escritos sem sanitização: código do erro de importação, código no backup da posição e códigos dos tipos de bem original/editado no CSV do formulário 14.6.
 **Risco/Impacto**: Dados importados ou editáveis podiam ser interpretados como fórmulas ao abrir os CSVs de erros, relatórios ou auditoria em um programa de planilhas.
-**Recomendação**: Neutralizar os iniciadores de fórmula no primeiro caractere não branco e aplicar a proteção a todos os campos externos escritos nas exportações. Coberto por testes unitários do sanitizador e regressões para os dois caminhos de exportação.
+**Recomendação**: Neutralizar os iniciadores de fórmula no primeiro caractere não branco e aplicar a proteção a todos os campos externos escritos nas exportações. Coberto por testes unitários do sanitizador e regressões para exportação de erros, posição de verificação e tipos de bem do formulário 14.6.
 **Padrão Recorrente**: Sim — cada campo externo em CSV precisa passar pela mesma proteção, inclusive códigos e valores que pareçam identificadores.
 **Prioridade de Correção**: ✅ Resolvido
 

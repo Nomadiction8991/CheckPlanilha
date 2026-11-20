@@ -442,8 +442,8 @@ class LegacyReportService implements LegacyReportServiceInterface
                     LegacyCsvSanitizer::sanitizeText((string) ($item['codigo'] ?? '')),
                     LegacyCsvSanitizer::sanitizeText((string) ($item['nome_original'] ?? '')),
                     LegacyCsvSanitizer::sanitizeText((string) ($item['nome_atual'] ?? '')),
-                    $originalType,
-                    $editedType,
+                    LegacyCsvSanitizer::sanitizeText($originalType),
+                    LegacyCsvSanitizer::sanitizeText($editedType),
                     LegacyCsvSanitizer::sanitizeText((string) ($item['dependencia_descricao'] ?? '')),
                     LegacyCsvSanitizer::sanitizeText((string) ($item['editado_dependencia_descricao'] ?? '') ?: (string) ($item['dependencia_descricao'] ?? '')),
                 ];

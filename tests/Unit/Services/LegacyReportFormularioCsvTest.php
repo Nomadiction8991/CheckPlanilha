@@ -275,6 +275,30 @@ final class LegacyReportFormularioCsvTest extends TestCase
         $this->assertSame("'-injected", $linhas[1][6]);
     }
 
+    public function testSanitizaCodigosDeTipoDeBemNoFormulario146(): void
+    {
+        $this->seedChurch();
+        $this->seedTipoBem(4, '=1+1', 'Tipo original');
+        $this->seedTipoBem(5, '+cmd|calc', 'Tipo editado');
+        $this->seedDependencia(2, 'SALA', 7);
+        $this->seedDependencia(3, 'COZINHA', 7);
+        $this->seedProdutoEditado([
+            'codigo' => '12-3456 / 0021',
+            'bem' => 'MESA',
+            'tipo_bem_id' => 4,
+            'dependencia_id' => 2,
+            'editado_bem' => 'MESA',
+            'editado_tipo_bem_id' => 5,
+            'editado_dependencia_id' => 3,
+        ]);
+
+        $file = $this->service->downloadFormularioCsv(7, '14.6');
+        $linhas = $this->parseCsv($file['content']);
+
+        $this->assertSame("'=1+1", $linhas[1][3]);
+        $this->assertSame("'+cmd|calc", $linhas[1][4]);
+    }
+
     public function testSanitizaCodigoNoBackupDaPosicaoDeVerificacao(): void
     {
         $this->seedChurch();
