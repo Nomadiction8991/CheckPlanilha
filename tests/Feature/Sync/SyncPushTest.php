@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Exceptions;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Testing\TestResponse;
 
 /**
  * Envio das alterações do notebook para o servidor: aplica, detecta conflito,
@@ -275,6 +276,26 @@ class SyncPushTest extends SincronizacaoTestCase
         $this->assertSame('Nome novo', DB::table('usuarios')->where('id', 9)->value('nome'));
     }
 
+    public function test_exclusao_de_registro_com_chave_sem_snapshot_anterior_e_recusada(): void
+    {
+        DB::table('produtos')->insert([
+            'id_produto' => 98,
+            'codigo' => 'P-98',
+            'comum_id' => 1,
+            'bem' => 'Registro alterado no servidor',
+        ]);
+        $uuid = '65656565-6565-4565-8565-656565656565';
+
+        $resposta = $this->enviar([
+            $this->alteracao($uuid, 'produtos', '98', 'delete', null, null),
+        ]);
+
+        $resposta->assertJsonPath('aplicadas', 0)
+            ->assertJsonPath('erros.0.uuid', $uuid);
+        $this->assertSame('Registro alterado no servidor', DB::table('produtos')->where('id_produto', 98)->value('bem'));
+        $this->assertFalse(DB::table('sincronizacao_envios')->where('uuid', $uuid)->exists());
+    }
+
     public function test_exclusao_de_registro_que_o_servidor_ja_apagou_e_ignorada(): void
     {
         $this->enviar([
@@ -297,7 +318,7 @@ class SyncPushTest extends SincronizacaoTestCase
 
     public function test_envio_sem_alteracoes_responde_422(): void
     {
-        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->postJson('/api/sincronizacao/enviar', [])
             ->assertUnprocessable();
     }
@@ -382,9 +403,9 @@ class SyncPushTest extends SincronizacaoTestCase
     /**
      * @param  list<array<string, mixed>>  $alteracoes
      */
-    private function enviar(array $alteracoes): \Illuminate\Testing\TestResponse
+    private function enviar(array $alteracoes): TestResponse
     {
-        return $this->withHeader('Authorization', 'Bearer ' . $this->token)
+        return $this->withHeader('Authorization', 'Bearer '.$this->token)
             ->postJson('/api/sincronizacao/enviar', ['alteracoes' => $alteracoes]);
     }
 }
