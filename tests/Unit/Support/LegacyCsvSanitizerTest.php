@@ -36,6 +36,9 @@ final class LegacyCsvSanitizerTest extends TestCase
             'at' => ['@', '@SUM(1+1)', "'@SUM(1+1)"],
             'tab' => ["\t", "\tcmd.exe", "'\tcmd.exe"],
             'carriage return' => ["\r", "\rpayload", "'\rpayload"],
+            'line feed' => ["\n", "\n=1+1", "'\n=1+1"],
+            'leading whitespace before formula' => [' ', "  =1+1", "'  =1+1"],
+            'full-width equals' => ['＝', '＝1+1', "'＝1+1"],
         ];
     }
 

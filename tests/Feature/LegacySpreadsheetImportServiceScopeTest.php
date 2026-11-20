@@ -158,6 +158,22 @@ final class LegacySpreadsheetImportServiceScopeTest extends TestCase
         self::assertSame('A-001', $linhas[1][0]);
     }
 
+    public function testDownloadedErrorCodeIsSanitizedBeforeItIsWrittenToCsv(): void
+    {
+        Session::put([
+            'usuario_id' => 501,
+            'is_admin' => false,
+            'administracoes_permitidas' => [self::ADMIN_A],
+        ]);
+        $this->createImportErrorsTable();
+        $this->seedImportErrors();
+        DB::table('import_erros')->where('importacao_id', 2)->update(['codigo' => '=1+1']);
+
+        $linhas = $this->collectRows((new LegacySpreadsheetImportService())->downloadImportErrorsCsv(null, 2)['rows']);
+
+        self::assertSame("'=1+1", $linhas[1][0]);
+    }
+
     /**
      * @return array<int, array<int, string>>
      */

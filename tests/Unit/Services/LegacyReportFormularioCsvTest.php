@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
+use App\Contracts\LegacyTransferServiceInterface;
 use App\Services\LegacyReportService;
 use App\Services\LegacyReportTemplateService;
 use Illuminate\Support\Facades\DB;
@@ -269,6 +270,24 @@ final class LegacyReportFormularioCsvTest extends TestCase
 
         $this->assertSame("'@evil", $linhas[1][5]);
         $this->assertSame("'-injected", $linhas[1][6]);
+    }
+
+    public function testSanitizaCodigoNoBackupDaPosicaoDeVerificacao(): void
+    {
+        $this->seedChurch();
+        $transfers = Mockery::mock(LegacyTransferServiceInterface::class);
+        $transfers->shouldReceive('historicoDaIgreja')->with(7)->andReturn([]);
+        $this->app->instance(LegacyTransferServiceInterface::class, $transfers);
+        $this->seedProduto141([
+            'codigo' => '=1+1',
+            'bem' => 'CADEIRA',
+            'checado' => 1,
+        ]);
+
+        $file = $this->service->downloadVerificationPositionCsv(7);
+        $linhas = $this->parseCsv($file['content']);
+
+        $this->assertSame("'=1+1", $linhas[1][0]);
     }
 
     /**

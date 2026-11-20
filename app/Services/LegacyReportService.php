@@ -662,7 +662,7 @@ class LegacyReportService implements LegacyReportServiceInterface
 
         foreach ($items as $item) {
             fputcsv($stream, [
-                (string) ($item['codigo'] ?? ''),
+                LegacyCsvSanitizer::sanitizeText((string) ($item['codigo'] ?? '')),
                 (string) ($item['status_label'] ?? ''),
                 LegacyCsvSanitizer::sanitizeText((string) ($item['nome_original'] ?? '')),
                 LegacyCsvSanitizer::sanitizeText((string) ($item['nome_atual'] ?? '')),

@@ -10,7 +10,7 @@ final class LegacyCsvSanitizer
     {
         $value ??= '';
 
-        if ($value !== '' && str_contains("=+-@\t\r", $value[0])) {
+        if ($value !== '' && preg_match('/^(?:[=+\-@\t\r\n]|[\p{Z}\x00-\x20]*[=+\-@＝＋－＠])/u', $value) === 1) {
             return "'" . $value;
         }
 

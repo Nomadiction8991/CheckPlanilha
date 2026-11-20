@@ -1060,7 +1060,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
 
             foreach ($errors as $error) {
                 $row = array_fill(0, 16, '');
-                $row[0] = (string) ($error->codigo ?? '');
+                $row[0] = LegacyCsvSanitizer::sanitizeText((string) ($error->codigo ?? ''));
 
                 $originalName = trim((string) ($error->descricao_csv ?? ''));
                 if ($originalName === '') {
