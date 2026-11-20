@@ -162,7 +162,7 @@ final class ChangeApplier
 
         $conflitos = array_values(array_filter(
             $campos,
-            fn (string $campo): bool => $this->normalizar($atual[$campo] ?? null) !== $this->normalizar($antes[$campo] ?? null),
+            fn (string $campo): bool => ! SyncValue::equals($atual[$campo] ?? null, $antes[$campo] ?? null),
         ));
 
         if ($conflitos !== []) {
@@ -191,7 +191,7 @@ final class ChangeApplier
 
         $mudou = array_values(array_filter(
             array_keys($antes),
-            fn (string $campo): bool => $this->normalizar($atual[$campo] ?? null) !== $this->normalizar($antes[$campo]),
+            fn (string $campo): bool => ! SyncValue::equals($atual[$campo] ?? null, $antes[$campo]),
         ));
 
         if ($mudou !== []) {
@@ -217,7 +217,7 @@ final class ChangeApplier
         $campos = [];
 
         foreach ($depois as $campo => $valor) {
-            if ($this->normalizar($antes[$campo] ?? null) !== $this->normalizar($valor)) {
+            if (! SyncValue::equals($antes[$campo] ?? null, $valor)) {
                 $campos[] = (string) $campo;
             }
         }
@@ -225,19 +225,4 @@ final class ChangeApplier
         return $campos;
     }
 
-    /**
-     * Compara valores sem depender do tipo que o JSON trouxe (true, 1 e \"1\" são iguais).
-     */
-    private function normalizar(mixed $valor): string
-    {
-        if ($valor === null) {
-            return 'null';
-        }
-
-        if (is_bool($valor)) {
-            return $valor ? '1' : '0';
-        }
-
-        return (string) $valor;
-    }
 }

@@ -209,6 +209,21 @@ class SyncPushTest extends SincronizacaoTestCase
         $this->assertSame(1, DB::table('sincronizacao_conflitos')->where('status', 'pendente')->count());
     }
 
+    public function test_valor_literal_null_no_servidor_e_diferente_de_nulo_ao_detectar_conflito(): void
+    {
+        DB::table('produtos')->insert(['id_produto' => 8, 'codigo' => 'P-8', 'bem' => 'null']);
+
+        $this->enviar([
+            $this->alteracao('45454545-4545-4545-8454-454545454545', 'produtos', '8', 'update',
+                ['id_produto' => 8, 'codigo' => 'P-8', 'bem' => null],
+                ['id_produto' => 8, 'codigo' => 'P-8', 'bem' => 'Armário'],
+            ),
+        ])->assertJsonPath('conflitos.0.uuid', '45454545-4545-4545-8454-454545454545')
+            ->assertJsonPath('aplicadas', 0);
+
+        $this->assertSame('null', DB::table('produtos')->where('id_produto', 8)->value('bem'));
+    }
+
     public function test_usuario_segue_o_servidor_quando_ha_conflito(): void
     {
         DB::table('usuarios')->insert(['id' => 9, 'nome' => 'Nome novo', 'email' => 'a@teste.local', 'senha' => 'x', 'comum_id' => 1, 'ativo' => 1]);

@@ -100,6 +100,27 @@ class SyncPullTest extends SincronizacaoTestCase
         $this->assertFalse(DB::table('produtos')->where('id_produto', 6)->exists());
     }
 
+    public function test_aplicacao_no_notebook_preserva_mudanca_de_nulo_para_texto_vazio(): void
+    {
+        Schema::create('produtos', function (Blueprint $table): void {
+            $table->increments('id_produto');
+            $table->string('codigo')->unique();
+            $table->string('bem')->nullable();
+        });
+        DB::table('produtos')->insert(['id_produto' => 5, 'codigo' => 'P-5', 'bem' => null]);
+
+        app(NotebookChangeApplier::class)->aplicarLote([[
+            'uuid' => 'abababab-2222-4222-8222-222222222222',
+            'tabela' => 'produtos',
+            'chave' => '5',
+            'operacao' => 'update',
+            'antes' => ['id_produto' => 5, 'codigo' => 'P-5', 'bem' => null],
+            'depois' => ['id_produto' => 5, 'codigo' => 'P-5', 'bem' => ''],
+        ]]);
+
+        $this->assertSame('', DB::table('produtos')->where('id_produto', 5)->value('bem'));
+    }
+
     private function registrar(string $origem, string $tabela, string $chave): int
     {
         return (int) DB::table('sincronizacao_alteracoes')->insertGetId([

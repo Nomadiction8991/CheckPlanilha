@@ -604,3 +604,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Comparar `null` separadamente de string vazia, preservando a equivalência de booleanos e números usada pela aplicação. Coberto por `test_manter_valor_vazio_do_notebook_substitui_valor_nulo`.
 **Padrão Recorrente**: Sim — alterações de sincronização devem distinguir ausência/nulo de texto vazio ao identificar campos modificados.
 **Prioridade de Correção**: ✅ Resolvido
+
+### SYNC-002 - Comparação de sincronização confundia nulo com valores textuais
+**Arquivo**: `app/Sync/SyncValue.php` e comparadores de `app/Sync/`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / Sincronização
+**Status**: Corrigido nesta rodada.
+**Descrição**: Comparadores convertiam valores para texto e usavam a palavra `null` como marcador do valor nulo; a aplicação no notebook também convertia `null` e texto vazio para a mesma string. Isso ocultava mudanças como `NULL` para `"null"` ao resolver conflitos, podia deixar de detectar conflitos no servidor e impedia a aplicação de `NULL` para `""` no notebook.
+**Risco/Impacto**: Escolhas de conflito podiam ser marcadas como resolvidas sem aplicar o valor selecionado, alterações concorrentes podiam sobrescrever dados sem conflito e notebooks podiam divergir do servidor.
+**Recomendação**: Comparar `null` antes de normalizar escalares e reutilizar a mesma regra nos fluxos de envio, resolução e recebimento. Coberto por `ConflitosTest`, `SyncPushTest` e `SyncPullTest`.
+**Padrão Recorrente**: Sim — os três caminhos de sincronização precisam preservar a distinção entre ausência, nulo e texto.
+**Prioridade de Correção**: ✅ Resolvido

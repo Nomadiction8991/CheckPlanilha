@@ -77,6 +77,20 @@ class ConflitosTest extends SincronizacaoTestCase
         );
     }
 
+    public function test_manter_valor_literal_null_do_notebook_substitui_valor_nulo(): void
+    {
+        DB::table('produtos')->where('id_produto', 8)->update(['bem' => null]);
+        DB::table('sincronizacao_conflitos')->where('id', $this->conflitoId)->update([
+            'antes' => json_encode(['id_produto' => 8, 'codigo' => 'P-8', 'bem' => null]),
+            'depois' => json_encode(['id_produto' => 8, 'codigo' => 'P-8', 'bem' => 'null']),
+        ]);
+
+        $this->comoAdministrador()->post("/conflitos/{$this->conflitoId}/notebook")
+            ->assertRedirect(route('migration.conflitos.index'));
+
+        $this->assertSame('null', DB::table('produtos')->where('id_produto', 8)->value('bem'));
+    }
+
     public function test_manter_o_valor_do_servidor_deixa_o_produto_como_esta(): void
     {
         $this->comoAdministrador()->post("/conflitos/{$this->conflitoId}/servidor")
