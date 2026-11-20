@@ -40,6 +40,31 @@ final class CnpjLookupTest extends TestCase
         ]);
     }
 
+    public function test_lookup_falls_back_to_trade_name_when_legal_name_is_empty(): void
+    {
+        Http::fake([
+            'https://www.cnpj.dev/api/v1/cnpj/12345678000190' => Http::response([
+                'razao_social' => '',
+                'nome_fantasia' => 'Igreja Central',
+                'municipio' => 'Cuiabá',
+            ], 200),
+        ]);
+
+        $response = $this->withSession([
+            '_enforce_legacy_auth' => true,
+            'usuario_id' => 9,
+            'usuario_nome' => 'Maria Silva',
+            'usuario_email' => 'MARIA@EXEMPLO.COM',
+            'comum_id' => 7,
+            'is_admin' => true,
+        ])->postJson(route('migration.api.cnpj.lookup'), [
+            'cnpj' => '12345678000190',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.nome', 'Igreja Central');
+    }
+
     public function testLookupReturnsLegacyErrorWhenCnpjIsInvalid(): void
     {
         $response = $this->withSession([

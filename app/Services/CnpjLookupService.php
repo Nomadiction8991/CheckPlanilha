@@ -30,11 +30,15 @@ final class CnpjLookupService
 
             $payload = json_decode($response->body(), true);
 
-            if (!is_array($payload)) {
+            if (! is_array($payload)) {
                 return null;
             }
 
-            $name = trim((string) ($payload['razao_social'] ?? $payload['nome_fantasia'] ?? ''));
+            $name = trim((string) ($payload['razao_social'] ?? ''));
+
+            if ($name === '') {
+                $name = trim((string) ($payload['nome_fantasia'] ?? ''));
+            }
 
             if ($name === '') {
                 return null;
