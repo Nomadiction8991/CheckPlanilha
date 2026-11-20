@@ -34,10 +34,10 @@ final class CnpjLookupService
                 return null;
             }
 
-            $name = trim((string) ($payload['razao_social'] ?? ''));
+            $name = $this->textField($payload['razao_social'] ?? null);
 
             if ($name === '') {
-                $name = trim((string) ($payload['nome_fantasia'] ?? ''));
+                $name = $this->textField($payload['nome_fantasia'] ?? null);
             }
 
             if ($name === '') {
@@ -46,10 +46,15 @@ final class CnpjLookupService
 
             return [
                 'nome' => $name,
-                'cidade' => trim((string) ($payload['municipio'] ?? '')),
+                'cidade' => $this->textField($payload['municipio'] ?? null),
             ];
         } catch (Throwable) {
             return null;
         }
+    }
+
+    private function textField(mixed $value): string
+    {
+        return is_string($value) ? trim($value) : '';
     }
 }

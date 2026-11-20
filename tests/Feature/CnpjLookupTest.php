@@ -65,6 +65,38 @@ final class CnpjLookupTest extends TestCase
         $response->assertJsonPath('data.nome', 'Igreja Central');
     }
 
+    public function test_lookup_ignores_malformed_external_fields_and_falls_back_to_trade_name(): void
+    {
+        Http::fake([
+            'https://www.cnpj.dev/api/v1/cnpj/12345678000190' => Http::response([
+                'razao_social' => ['valor inesperado'],
+                'nome_fantasia' => 'Igreja Central',
+                'municipio' => ['Cuiabá'],
+            ], 200),
+        ]);
+
+        $response = $this->withSession([
+            '_enforce_legacy_auth' => true,
+            'usuario_id' => 9,
+            'usuario_nome' => 'Maria Silva',
+            'usuario_email' => 'MARIA@EXEMPLO.COM',
+            'comum_id' => 7,
+            'is_admin' => true,
+        ])->postJson(route('migration.api.cnpj.lookup'), [
+            'cnpj' => '12345678000190',
+        ]);
+
+        $response->assertOk();
+        $response->assertExactJson([
+            'success' => true,
+            'data' => [
+                'nome' => 'Igreja Central',
+                'cidade' => '',
+            ],
+            'source' => 'cnpj.dev',
+        ]);
+    }
+
     public function testLookupReturnsLegacyErrorWhenCnpjIsInvalid(): void
     {
         $response = $this->withSession([
