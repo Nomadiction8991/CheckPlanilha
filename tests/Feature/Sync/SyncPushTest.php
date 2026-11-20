@@ -83,6 +83,28 @@ class SyncPushTest extends SincronizacaoTestCase
         $this->assertSame('Mesa', DB::table('produtos')->where('id_produto', 5)->value('bem'));
     }
 
+    public function test_envio_recusa_insercao_quando_a_chave_nao_confere_com_a_linha(): void
+    {
+        $uuid = 'abababab-1111-4111-8111-111111111111';
+
+        $this->enviar([
+            $this->alteracao($uuid, 'produtos', '5', 'insert', null, [
+                'id_produto' => 6,
+                'codigo' => 'P-6',
+                'comum_id' => 1,
+                'bem' => 'Mesa',
+                'checado' => false,
+            ]),
+        ])
+            ->assertOk()
+            ->assertJsonPath('aplicadas', 0)
+            ->assertJsonPath('erros.0.uuid', $uuid);
+
+        $this->assertFalse(DB::table('produtos')->where('id_produto', 5)->exists());
+        $this->assertFalse(DB::table('produtos')->where('id_produto', 6)->exists());
+        $this->assertFalse(DB::table('sincronizacao_envios')->where('uuid', $uuid)->exists());
+    }
+
     public function test_envio_repetido_nao_aplica_de_novo(): void
     {
         $alteracao = $this->alteracao('22222222-2222-4222-8222-222222222222', 'produtos', '6', 'insert', null, [

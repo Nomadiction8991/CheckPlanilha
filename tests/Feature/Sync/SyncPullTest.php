@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Tests\Feature\Sync;
 
 use App\Sync\DeviceRegistry;
+use App\Sync\NotebookChangeApplier;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 /**
  * Recebimento: o notebook pede as alterações feitas em outros lugares,
@@ -60,6 +64,40 @@ class SyncPullTest extends SincronizacaoTestCase
         $this->withHeader('Authorization', 'Bearer ' . $this->token)
             ->getJson('/api/sincronizacao/receber?depois=abc')
             ->assertUnprocessable();
+    }
+
+    public function test_aplicacao_no_notebook_recusa_chave_primaria_inconsistente(): void
+    {
+        Schema::create('produtos', function (Blueprint $table): void {
+            $table->increments('id_produto');
+            $table->string('codigo')->unique();
+            $table->integer('comum_id')->nullable();
+            $table->string('bem')->nullable();
+            $table->boolean('checado')->default(false);
+        });
+
+        try {
+            app(NotebookChangeApplier::class)->aplicarLote([[
+                'uuid' => 'abababab-1111-4111-8111-111111111111',
+                'tabela' => 'produtos',
+                'chave' => '5',
+                'operacao' => 'insert',
+                'antes' => null,
+                'depois' => [
+                    'id_produto' => 6,
+                    'codigo' => 'P-6',
+                    'comum_id' => 1,
+                    'bem' => 'Mesa',
+                    'checado' => false,
+                ],
+            ]]);
+            $this->fail('Era esperado RuntimeException para a chave inconsistente.');
+        } catch (RuntimeException $erro) {
+            $this->assertSame('A chave do evento não corresponde ao registro recebido.', $erro->getMessage());
+        }
+
+        $this->assertFalse(DB::table('produtos')->where('id_produto', 5)->exists());
+        $this->assertFalse(DB::table('produtos')->where('id_produto', 6)->exists());
     }
 
     private function registrar(string $origem, string $tabela, string $chave): int

@@ -75,7 +75,23 @@ final class ChangeApplier
         $antes = (array) ($alteracao['antes'] ?? []);
         $depois = (array) ($alteracao['depois'] ?? []);
         $chavePrimaria = TableKeys::primaryKey($tabela);
-        $consulta = TableKeys::query($tabela, $chavePrimaria, (string) $alteracao['chave']);
+        $chave = (string) $alteracao['chave'];
+
+        if (in_array($operacao, ['insert', 'update'], true)
+            && ! TableKeys::corresponde($chavePrimaria, $chave, $depois)) {
+            return ['status' => self::ERRO, 'motivo' => 'A chave do evento não corresponde ao registro enviado.'];
+        }
+
+        if ($operacao === 'insert' && $antes !== []) {
+            return ['status' => self::ERRO, 'motivo' => 'Uma inclusão não pode conter um registro anterior.'];
+        }
+
+        if ($operacao !== 'insert' && $antes !== []
+            && ! TableKeys::corresponde($chavePrimaria, $chave, $antes)) {
+            return ['status' => self::ERRO, 'motivo' => 'A chave do evento não corresponde ao registro anterior.'];
+        }
+
+        $consulta = TableKeys::query($tabela, $chavePrimaria, $chave);
         $linha = (clone $consulta)->first();
         $atual = $linha === null ? null : $this->camposCifrados->decifrar($tabela, (array) $linha);
         $servidorVence = in_array($tabela, (array) config('sincronizacao.servidor_vence'), true);

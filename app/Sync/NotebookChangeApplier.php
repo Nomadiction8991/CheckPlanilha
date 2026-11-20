@@ -58,7 +58,19 @@ final class NotebookChangeApplier
         $antes = (array) ($alteracao['antes'] ?? []);
         $depois = (array) ($alteracao['depois'] ?? []);
         $chavePrimaria = TableKeys::primaryKey($tabela);
-        $consulta = TableKeys::query($tabela, $chavePrimaria, (string) $alteracao['chave']);
+        $chave = (string) $alteracao['chave'];
+
+        if (in_array($operacao, ['insert', 'update'], true)
+            && ! TableKeys::corresponde($chavePrimaria, $chave, $depois)) {
+            throw new \RuntimeException('A chave do evento não corresponde ao registro recebido.');
+        }
+
+        if ($operacao !== 'insert' && $antes !== []
+            && ! TableKeys::corresponde($chavePrimaria, $chave, $antes)) {
+            throw new \RuntimeException('A chave do evento não corresponde ao registro anterior recebido.');
+        }
+
+        $consulta = TableKeys::query($tabela, $chavePrimaria, $chave);
 
         if ($operacao === 'delete') {
             $consulta->delete();

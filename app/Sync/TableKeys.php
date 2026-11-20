@@ -52,4 +52,38 @@ final class TableKeys
 
         return $consulta;
     }
+
+    /**
+     * Confere se os campos de chave presentes na linha correspondem à chave do evento.
+     * Uma chave vazia só é aceita quando a tabela não tem chave primária.
+     *
+     * @param  list<string>  $chavePrimaria
+     * @param  array<string, mixed>  $linha
+     */
+    public static function corresponde(array $chavePrimaria, string $chave, array $linha): bool
+    {
+        if ($chavePrimaria === []) {
+            return $chave === '*';
+        }
+
+        if (count($chavePrimaria) === 1) {
+            $valores = [$chavePrimaria[0] => $chave];
+        } else {
+            $valores = json_decode($chave, true);
+
+            if (! is_array($valores)) {
+                return false;
+            }
+        }
+
+        foreach ($chavePrimaria as $coluna) {
+            if (! array_key_exists($coluna, $valores)
+                || ! array_key_exists($coluna, $linha)
+                || (string) $valores[$coluna] !== (string) $linha[$coluna]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
