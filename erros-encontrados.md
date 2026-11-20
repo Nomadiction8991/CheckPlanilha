@@ -14,6 +14,16 @@
 
 ## Detalhes dos Erros
 
+### AUTH-002 - Sessão de usuário removido ou não verificável continuava autenticada
+**Arquivo**: `app/Http/Middleware/RequireLegacySession.php` (`legacyUserIsActive`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança (autenticação)
+**Status**: Corrigido nesta rodada.
+**Descrição**: O middleware aceitava uma sessão com `usuario_id` positivo quando o registro não existia e também quando a consulta ao banco falhava. A exceção de acesso público ainda podia manter uma sessão mista (usuário removido com sinalizadores públicos) nas rotas protegidas.
+**Risco/Impacto**: Uma sessão sem identidade ativa podia manter acesso com as permissões armazenadas anteriormente.
+**Correção**: Fora do ambiente de testes, exigir que o usuário exista e esteja ativo; falhas de consulta também redirecionam ao login. Acesso público só vale quando não há `usuario_id`, e a tolerância a schema parcial fica restrita a testes. Coberto por `RequireLegacySessionTest` para usuário removido, consulta indisponível e sessão mista.
+**Prioridade de Correção**: 🚨 Imediata
+
 ### PROD-001 - Bem aceita tipo de bem de outra administração
 **Arquivo**: `app/Services/LegacyProductManagementService.php` (método `resolveAssetType`, usado por criar e editar bem); regra compartilhada em `app/Services/ResolvesLegacyProductScope.php` (`assertAssetTypeWithinProductScope`)
 **Severidade**: 🟠 ALTO

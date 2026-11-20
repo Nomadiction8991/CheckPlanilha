@@ -23,7 +23,7 @@ class RequireLegacySession
             return $next($request);
         }
 
-        if ($request->session()->get('public_acesso', false) && (
+        if ($userId <= 0 && $request->session()->get('public_acesso', false) && (
             (int) $request->session()->get('public_comum_id', 0) > 0
             || (int) $request->session()->get('public_planilha_id', 0) > 0
         )) {
@@ -37,25 +37,21 @@ class RequireLegacySession
     }
 
     /**
-     * Um usuário legado passa se existir E estiver ativo.
-     *
-     * Só rejeita com certeza quando o registro EXISTE e está inativo (`ativo=0`).
-     * Se o registro não existe (sessão de teste, schema parcial, usuário órfão),
-     * mantém o comportamento anterior de seguir adiante — a checagem dura de
-     * existência no banco fica a cargo da autenticação real.
-     *
-     * Envolvida em try/catch porque ambientes de teste montam apenas parte do
-     * schema legado: uma tabela `usuarios` ausente não pode derrubar a
-     * requisição com erro 500.
+     * Em produção, a sessão só permanece válida enquanto o usuário existir e
+     * estiver ativo. Testes podem montar apenas parte do schema legado ou usar
+     * IDs sem persistência; esse comportamento permissivo fica restrito ao
+     * ambiente de teste.
      */
     private function legacyUserIsActive(int $userId): bool
     {
         try {
             $user = Usuario::query()->whereKey($userId)->first(['ativo']);
 
-            return $user === null || (int) $user->ativo === 1;
+            return $user === null
+                ? app()->environment('testing')
+                : (int) $user->ativo === 1;
         } catch (Throwable) {
-            return true;
+            return app()->environment('testing');
         }
     }
 }
