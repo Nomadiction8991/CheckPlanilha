@@ -33,7 +33,9 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 
 Route::middleware(['legacy.bridge', 'legacy.audit'])->group(function (): void {
     Route::get('/login', [LegacyAuthController::class, 'showLogin'])->name('migration.login');
-    Route::post('/login', [LegacyAuthController::class, 'login'])->name('migration.login.store');
+    Route::post('/login', [LegacyAuthController::class, 'login'])
+        ->middleware('throttle:5,1')
+        ->name('migration.login.store');
     Route::get('/esqueci-minha-senha', [LegacyAuthController::class, 'showForgotPassword'])
         ->name('migration.password.request');
     Route::post('/esqueci-minha-senha', [LegacyAuthController::class, 'sendForgotPassword'])

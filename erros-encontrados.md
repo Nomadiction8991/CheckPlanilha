@@ -615,3 +615,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Comparar `null` antes de normalizar escalares e reutilizar a mesma regra nos fluxos de envio, resolução e recebimento. Coberto por `ConflitosTest`, `SyncPushTest` e `SyncPullTest`.
 **Padrão Recorrente**: Sim — os três caminhos de sincronização precisam preservar a distinção entre ausência, nulo e texto.
 **Prioridade de Correção**: ✅ Resolvido
+
+### AUTH-003 - Login aceitava tentativas ilimitadas de senha
+**Arquivo**: `routes/web.php` (`migration.login.store`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança (autenticação)
+**Status**: Corrigido nesta rodada.
+**Descrição**: A rota de login não aplicava limite de tentativas, embora o formulário de recuperação de senha já limitasse solicitações a cinco por minuto.
+**Risco/Impacto**: Um endereço podia enviar tentativas de senha sem restrição na aplicação.
+**Correção**: Aplicar `throttle:5,1` à rota de login, com teste de regressão que confirma o HTTP 429 quando o limite já foi atingido.
+**Prioridade de Correção**: ✅ Resolvido
