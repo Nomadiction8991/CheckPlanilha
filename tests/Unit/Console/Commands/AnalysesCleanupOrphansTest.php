@@ -17,7 +17,8 @@ final class AnalysesCleanupOrphansTest extends TestCase
     {
         parent::setUp();
 
-        // Override pgsql connection to use SQLite in-memory for testing
+        // Keep the named legacy connection empty so these tests enforce use
+        // of the configured default connection by the cleanup command.
         Config::set('database.connections.pgsql', [
             'driver'   => 'sqlite',
             'database' => ':memory:',
@@ -25,7 +26,7 @@ final class AnalysesCleanupOrphansTest extends TestCase
         ]);
 
         // Create the importacoes table (matching production schema)
-        DB::connection('pgsql')->statement('
+        DB::connection()->statement('
             CREATE TABLE importacoes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 usuario_id INTEGER NOT NULL DEFAULT 1,
@@ -48,7 +49,7 @@ final class AnalysesCleanupOrphansTest extends TestCase
         ');
 
         // Create the import_erros table (for --force-delete tests)
-        DB::connection('pgsql')->statement('
+        DB::connection()->statement('
             CREATE TABLE import_erros (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 importacao_id INTEGER NOT NULL,
@@ -101,11 +102,11 @@ final class AnalysesCleanupOrphansTest extends TestCase
     }
 
     /**
-     * Insert an import record into the pgsql (SQLite in-memory) table.
+     * Insert an import record into the application's default connection.
      */
     private function criarImportacao(int $id, string $status = 'concluida'): void
     {
-        DB::connection('pgsql')->insert(
+        DB::connection()->insert(
             'INSERT INTO importacoes (id, usuario_id, arquivo_nome, arquivo_caminho, status, iniciada_em)
              VALUES (?, 1, \'test.csv\', \'/tmp/test.csv\', ?, datetime(\'now\'))',
             [$id, $status]
@@ -117,7 +118,7 @@ final class AnalysesCleanupOrphansTest extends TestCase
      */
     private function criarErroImportacao(int $importacaoId, int $linha = 1): void
     {
-        DB::connection('pgsql')->insert(
+        DB::connection()->insert(
             'INSERT INTO import_erros (importacao_id, linha, coluna, mensagem)
              VALUES (?, ?, \'A\', \'Erro de teste\')',
             [$importacaoId, $linha]
@@ -245,7 +246,7 @@ final class AnalysesCleanupOrphansTest extends TestCase
             ->assertSuccessful();
 
         $this->assertFileExists($this->tempDir . '/analise_25.json');
-        $this->assertSame(1, DB::connection('pgsql')->table('importacoes')->where('id', 25)->count());
+        $this->assertSame(1, DB::connection()->table('importacoes')->where('id', 25)->count());
     }
 
     /** @test */
@@ -261,8 +262,8 @@ final class AnalysesCleanupOrphansTest extends TestCase
             ->assertSuccessful();
 
         $this->assertFileExists($this->tempDir . '/analise_26.json');
-        $this->assertSame(1, DB::connection('pgsql')->table('importacoes')->where('id', 26)->count());
-        $this->assertSame(1, DB::connection('pgsql')->table('import_erros')->where('importacao_id', 26)->count());
+        $this->assertSame(1, DB::connection()->table('importacoes')->where('id', 26)->count());
+        $this->assertSame(1, DB::connection()->table('import_erros')->where('importacao_id', 26)->count());
     }
 
     /** @test */
@@ -306,8 +307,8 @@ final class AnalysesCleanupOrphansTest extends TestCase
         $this->criarErroImportacao(40, 2);
 
         // Confirm records exist before
-        $this->assertSame(1, DB::connection('pgsql')->table('importacoes')->where('id', 40)->count());
-        $this->assertSame(2, DB::connection('pgsql')->table('import_erros')->where('importacao_id', 40)->count());
+        $this->assertSame(1, DB::connection()->table('importacoes')->where('id', 40)->count());
+        $this->assertSame(2, DB::connection()->table('import_erros')->where('importacao_id', 40)->count());
 
         $this->artisan('analyses:cleanup-orphans', ['--force-delete' => true])
             ->expectsOutputToContain('DB record(s) deleted')
@@ -317,8 +318,8 @@ final class AnalysesCleanupOrphansTest extends TestCase
         $this->assertFileDoesNotExist($this->tempDir . '/analise_40.json');
 
         // DB records should be purged
-        $this->assertSame(0, DB::connection('pgsql')->table('importacoes')->where('id', 40)->count());
-        $this->assertSame(0, DB::connection('pgsql')->table('import_erros')->where('importacao_id', 40)->count());
+        $this->assertSame(0, DB::connection()->table('importacoes')->where('id', 40)->count());
+        $this->assertSame(0, DB::connection()->table('import_erros')->where('importacao_id', 40)->count());
     }
 
     /** @test */
@@ -351,8 +352,8 @@ final class AnalysesCleanupOrphansTest extends TestCase
         $this->assertFileDoesNotExist($this->tempDir . '/analise_60.json');
 
         // DB records kept
-        $this->assertSame(1, DB::connection('pgsql')->table('importacoes')->where('id', 60)->count());
-        $this->assertSame(1, DB::connection('pgsql')->table('import_erros')->where('importacao_id', 60)->count());
+        $this->assertSame(1, DB::connection()->table('importacoes')->where('id', 60)->count());
+        $this->assertSame(1, DB::connection()->table('import_erros')->where('importacao_id', 60)->count());
     }
 
     /** @test */
@@ -420,9 +421,9 @@ final class AnalysesCleanupOrphansTest extends TestCase
         $this->bindCommandWithTempDir();
         $this->criarArquivoAnalise(80);
 
-        // Break the pgsql connection so the DB query throws
-        DB::connection('pgsql')->statement('DROP TABLE importacoes');
-        DB::connection('pgsql')->statement('DROP TABLE import_erros');
+        // Break the default connection so the DB query throws
+        DB::connection()->statement('DROP TABLE importacoes');
+        DB::connection()->statement('DROP TABLE import_erros');
 
         $this->artisan('analyses:cleanup-orphans')
             ->expectsOutputToContain('DB error')
@@ -446,7 +447,7 @@ final class AnalysesCleanupOrphansTest extends TestCase
         // The first file unlink should succeed, then DB transaction fails
         // We need to make the DB transaction throw
         // By dropping the importacoes table, the delete will fail
-        DB::connection('pgsql')->statement('DROP TABLE import_erros');
+        DB::connection()->statement('DROP TABLE import_erros');
 
         $this->artisan('analyses:cleanup-orphans', ['--force-delete' => true])
             ->expectsOutputToContain('Failed to delete DB records')

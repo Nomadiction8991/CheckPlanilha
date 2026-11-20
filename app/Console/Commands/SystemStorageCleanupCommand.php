@@ -123,7 +123,7 @@ class SystemStorageCleanupCommand extends Command
         $importId = (int) $matches[1];
 
         try {
-            $import = DB::connection('pgsql')
+            $import = DB::connection()
                 ->table('importacoes')
                 ->where('id', $importId)
                 ->first();

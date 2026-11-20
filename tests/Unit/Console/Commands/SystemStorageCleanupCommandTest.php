@@ -28,8 +28,8 @@ final class SystemStorageCleanupCommandTest extends TestCase
     {
         parent::setUp();
 
-        // pgsql is remapped to an in-memory SQLite database, mirroring the
-        // production schema the commands read from (see AnalysesCleanupOrphansTest).
+        // Keep pgsql isolated so the regression case can prove the command
+        // reads the application's default connection instead.
         Config::set('database.connections.pgsql', [
             'driver'   => 'sqlite',
             'database' => ':memory:',
@@ -58,8 +58,7 @@ final class SystemStorageCleanupCommandTest extends TestCase
             )
         ');
 
-        // Same table on the default (sqlite) connection so the assertions hold
-        // regardless of which connection the cleanup command consults.
+        // The application uses the default connection for import records.
         DB::connection()->statement('
             CREATE TABLE importacoes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -166,6 +165,19 @@ final class SystemStorageCleanupCommandTest extends TestCase
             $analisePath,
             'A análise de uma importação ainda aguardando não pode ser removida pelo cleanup genérico.'
         );
+    }
+
+    /** @test */
+    public function test_completed_analysis_is_removed_using_the_default_database_connection(): void
+    {
+        $this->criarImportacao(4243, 'concluida');
+        DB::connection('pgsql')->statement('DROP TABLE importacoes');
+        $analisePath = $this->criarArquivoAnaliseAntigo(4243, 10);
+
+        $this->artisan('system:storage-cleanup', ['--days' => 7])
+            ->assertSuccessful();
+
+        $this->assertFileDoesNotExist($analisePath);
     }
 
     /**

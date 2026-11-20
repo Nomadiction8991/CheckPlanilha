@@ -84,7 +84,7 @@ class AnalysesCleanupOrphans extends Command
             $importId = (int) $m[1];
 
             try {
-                $import = DB::connection('pgsql')
+                $import = DB::connection()
                     ->table('importacoes')
                     ->where('id', $importId)
                     ->first();
@@ -128,12 +128,12 @@ class AnalysesCleanupOrphans extends Command
 
             if ($forceDelete && ($orphan['removable'] ?? false) && $orphan['status'] !== 'sem registro') {
                 try {
-                    DB::connection('pgsql')->transaction(function () use ($orphan): void {
-                        DB::connection('pgsql')->table('import_erros')
+                    DB::connection()->transaction(function () use ($orphan): void {
+                        DB::connection()->table('import_erros')
                             ->where('importacao_id', $orphan['id'])
                             ->delete();
 
-                        DB::connection('pgsql')->table('importacoes')
+                        DB::connection()->table('importacoes')
                             ->where('id', $orphan['id'])
                             ->delete();
                     });

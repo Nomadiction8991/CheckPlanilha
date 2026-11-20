@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 12
+- Médios: 13
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (3)
-### Lógica (21)
+### Lógica (22)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -613,6 +613,16 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Usuários autorizados não conseguiam consultar nem resolver erros de importações históricas, embora a igreja responsável ainda estivesse vinculada à administração permitida.
 **Recomendação**: Para registros com `administracao_id` nulo, derivar o escopo da igreja vinculada e aplicar a mesma regra em todos os caminhos de consulta e alteração. Coberto por `testNonAdminSeesLegacyImportThroughPermittedChurchWhenAdministrationIdIsNull`.
 **Padrão Recorrente**: Sim — campos de escopo adicionados após a criação dos registros precisam de fallback seguro quando os dados antigos ainda não foram preenchidos.
+**Prioridade de Correção**: ✅ Resolvido
+
+### IMP-024 - Limpeza de análises consultava uma conexão de banco diferente da aplicação
+**Arquivo**: `app/Console/Commands/AnalysesCleanupOrphans.php` e `app/Console/Commands/SystemStorageCleanupCommand.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação de planilhas / Limpeza de arquivos
+**Status**: Corrigido nesta rodada.
+**Descrição**: Os dois comandos consultavam `importacoes` pela conexão fixa `pgsql`. A configuração de produção usa a conexão padrão MySQL; assim, análises de importações concluídas não eram removidas, e o comando de órfãos podia ignorar todas as linhas após falha de conexão.
+**Risco/Impacto**: Arquivos temporários de análises concluídas acumulavam no servidor, enquanto a limpeza manual de órfãos não conseguia liberar espaço.
+**Correção**: Consultas, transações e exclusões do comando de órfãos agora usam a conexão padrão da aplicação. Os testes cobrem registros nessa conexão com a conexão legada vazia ou indisponível.
 **Prioridade de Correção**: ✅ Resolvido
 
 ### SYNC-001 - Resolver conflito não aplicava campo vazio sobre valor nulo
