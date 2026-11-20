@@ -132,7 +132,11 @@ class LegacyProductBrowserService implements LegacyProductBrowserServiceInterfac
                             $nested
                                 ->whereNull('nota_numero')
                                 ->orWhere('nota_numero', '=', '');
-                        })->where('imprimir_14_1', 0),
+                        })->where(function ($nested): void {
+                            $nested
+                                ->where('imprimir_14_1', '=', 0)
+                                ->orWhereNull('imprimir_14_1');
+                        }),
                         default => null,
                     };
                 }

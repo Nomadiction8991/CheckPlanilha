@@ -73,7 +73,8 @@ final class LegacyProductBrowserServiceTest extends TestCase
             $table->integer('novo')->default(0);
             $table->integer('editado')->default(0);
             $table->integer('ativo')->default(1);
-            $table->integer('imprimir_14_1')->default(0);
+            // Bancos legados podem conter NULL apesar do default atual.
+            $table->integer('imprimir_14_1')->nullable()->default(0);
             $table->string('nota_numero')->nullable();
         });
 
@@ -803,5 +804,45 @@ final class LegacyProductBrowserServiceTest extends TestCase
         ));
         self::assertSame(1, $percent->total());
         self::assertSame('MESA 100%', $percent->items()[0]->bem);
+    }
+
+    public function testSemStatusIncluiProdutoLegadoComFlag14_1Nula(): void
+    {
+        DB::table('produtos')->insert([
+            [
+                'id_produto' => 901,
+                'comum_id' => 100,
+                'codigo' => 'P-901',
+                'bem' => 'Bem legado sem classificação',
+                'ativo' => 1,
+                'imprimir_14_1' => null,
+                'nota_numero' => null,
+            ],
+            [
+                'id_produto' => 902,
+                'comum_id' => 100,
+                'codigo' => 'P-902',
+                'bem' => 'Bem legado com nota',
+                'ativo' => 1,
+                'imprimir_14_1' => null,
+                'nota_numero' => 'NF-1',
+            ],
+        ]);
+
+        $result = $this->service->paginate(new ProductFilters(
+            administrationId: null,
+            comumId: null,
+            search: '',
+            dependencyId: null,
+            assetTypeId: null,
+            state: null,
+            status: 'sem_status',
+            onlyNew: false,
+            page: 1,
+            perPage: 10,
+        ));
+
+        self::assertSame(1, $result->total());
+        self::assertSame(901, $result->items()[0]->id_produto);
     }
 }
