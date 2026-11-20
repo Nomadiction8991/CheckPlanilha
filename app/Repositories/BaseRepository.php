@@ -58,6 +58,10 @@ abstract class BaseRepository implements RepositoryInterface
     public function atualizar(int $id, array $dados): bool
     {
         $dados = $this->filterColumns($dados);
+        if ($dados === []) {
+            return false;
+        }
+
         $sets = [];
         foreach (array_keys($dados) as $coluna) {
             $sets[] = "{$coluna} = :{$coluna}";

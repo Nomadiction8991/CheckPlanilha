@@ -292,4 +292,32 @@ final class BaseRepositoryTest extends TestCase
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $this->assertSame('atualizado@test.com', $row['email']);
     }
+
+    /** @test */
+    public function testUpdateWithOnlyUnknownColumnsDoesNotBuildAnEmptyUpdate(): void
+    {
+        $this->pdo->exec("INSERT INTO test_table (nome, email, ativo) VALUES ('Original', 'o@t.com', 1)");
+        $id = (int) $this->pdo->lastInsertId();
+
+        $success = $this->repo->atualizar($id, ['coluna_inexistente' => 'tentativa']);
+
+        $this->assertFalse($success);
+        $stmt = $this->pdo->query("SELECT nome, email FROM test_table WHERE id = {$id}");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame('Original', $row['nome']);
+        $this->assertSame('o@t.com', $row['email']);
+    }
+
+    /** @test */
+    public function testUpdateWithEmptyDataReturnsFalseWithoutChangingTheRecord(): void
+    {
+        $this->pdo->exec("INSERT INTO test_table (nome, email, ativo) VALUES ('Original', 'o@t.com', 1)");
+        $id = (int) $this->pdo->lastInsertId();
+
+        $success = $this->repo->atualizar($id, []);
+
+        $this->assertFalse($success);
+        $stmt = $this->pdo->query("SELECT nome FROM test_table WHERE id = {$id}");
+        $this->assertSame('Original', $stmt->fetchColumn());
+    }
 }

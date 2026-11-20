@@ -530,6 +530,17 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Padrão Recorrente**: Sim — mesmo padrão de DEP-002.
 **Prioridade de Correção**: ✅ Resolvido
 
+### REP-001 - Atualização sem colunas permitidas gerava SQL inválido
+**Arquivo**: `app/Repositories/BaseRepository.php` (`atualizar`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Estabilidade
+**Status**: Corrigido nesta rodada.
+**Descrição**: Quando todos os campos recebidos eram removidos pela lista de colunas permitidas, ou o array estava vazio, o repositório montava `UPDATE ... SET WHERE` e o banco lançava erro de sintaxe.
+**Risco/Impacto**: Uma entrada sem campos editáveis podia terminar em erro interno em vez de ser ignorada com segurança.
+**Recomendação**: Retornar `false` antes de montar a consulta quando não houver colunas permitidas. Coberto por `testUpdateWithOnlyUnknownColumnsDoesNotBuildAnEmptyUpdate` e `testUpdateWithEmptyDataReturnsFalseWithoutChangingTheRecord`.
+**Padrão Recorrente**: Sim — uma atualização sem campos válidos não deve emitir SQL de escrita; o caminho específico de atualização de produto já aplica essa guarda.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### IMP-021 - Download de erros de importação ignorava o escopo quando recebia o id da importação
 **Arquivo**: `app/Services/LegacySpreadsheetImportService.php` (`downloadImportErrorsCsv`)
 **Severidade**: 🟠 ALTO
