@@ -30,8 +30,7 @@ final class ChangeApplier
 
     public function __construct(
         private readonly SensitiveFields $camposCifrados,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  array<string, mixed>  $alteracao
@@ -84,6 +83,10 @@ final class ChangeApplier
 
         if ($operacao === 'insert' && $antes !== []) {
             return ['status' => self::ERRO, 'motivo' => 'Uma inclusão não pode conter um registro anterior.'];
+        }
+
+        if ($operacao === 'delete' && $antes === []) {
+            return ['status' => self::ERRO, 'motivo' => 'Uma exclusão exige o registro anterior.'];
         }
 
         if ($chavePrimaria === [] && $operacao !== 'insert' && $antes === []) {
@@ -228,5 +231,4 @@ final class ChangeApplier
 
         return $campos;
     }
-
 }
