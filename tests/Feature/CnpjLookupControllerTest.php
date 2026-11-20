@@ -59,7 +59,7 @@ final class CnpjLookupControllerTest extends TestCase
         ]);
     }
 
-    public function testExternalApiFailure(): void
+    public function testExternalApiFailureIsNotReportedAsMissingCompany(): void
     {
         Http::fake([
             'https://www.cnpj.dev/api/v1/cnpj/*' => Http::response([], 500),
@@ -70,17 +70,38 @@ final class CnpjLookupControllerTest extends TestCase
                 'cnpj' => self::VALID_CNPJ,
             ]);
 
-        // Controller must return a friendly 404 without leaking API details
-        $response->assertNotFound();
+        // An upstream failure must not be confused with a CNPJ that does not exist.
+        $response->assertStatus(502);
         $response->assertExactJson([
             'success' => false,
             'data' => null,
-            'message' => 'CNPJ não encontrado',
+            'message' => 'Serviço de consulta indisponível. Tente novamente.',
         ]);
         $response->assertJsonMissing(['error']);
         $response->assertJsonMissing(['trace']);
         $response->assertJsonMissing(['exception']);
         $response->assertJsonMissing(['Internal Server Error']);
+    }
+
+    public function testExternalTimeoutIsReportedAsTemporaryFailure(): void
+    {
+        Http::fake([
+            'https://www.cnpj.dev/api/v1/cnpj/*' => static function (): never {
+                throw new \Illuminate\Http\Client\ConnectionException('provider timeout');
+            },
+        ]);
+
+        $response = $this->withSession(self::AUTH_SESSION)
+            ->postJson(route('migration.api.cnpj.lookup'), [
+                'cnpj' => self::VALID_CNPJ,
+            ]);
+
+        $response->assertStatus(502);
+        $response->assertExactJson([
+            'success' => false,
+            'data' => null,
+            'message' => 'Serviço de consulta indisponível. Tente novamente.',
+        ]);
     }
 
     public function testAuthentication(): void

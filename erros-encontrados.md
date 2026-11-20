@@ -80,6 +80,16 @@
 **Correção**: Consultar `LegacyPermissionServiceInterface::can('reports.changes.view')`, que resolve a permissão atual também usada pela autorização das rotas. Coberto por `testListAvailableReportsHidesPositionWhenPermissionWasRevokedDespiteStaleSession`.
 **Prioridade de Correção**: ✅ Resolvido
 
+### CNPJ-001 - Indisponibilidade do provedor era exibida como CNPJ inexistente
+**Arquivos**: `app/Services/CnpjLookupService.php`, `app/Http/Controllers/CnpjLookupController.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: A consulta tratava qualquer resposta diferente de 2xx, timeout e falha de conexão como ausência do cadastro. Uma falha HTTP 500 ou uma indisponibilidade do provedor retornava a mesma resposta 404 usada para CNPJ não encontrado.
+**Risco/Impacto**: O usuário podia concluir que o CNPJ não existe e deixar de tentar novamente, mesmo quando a consulta externa estava temporariamente indisponível.
+**Correção**: Somente o 404 do provedor continua significando cadastro inexistente. Falhas de conexão, respostas HTTP não exitosas e payloads inválidos agora retornam erro 502 com mensagem acionável e sem detalhes externos. Testes cobrem resposta 500, timeout e a resposta 404 legítima.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### PAG-001 - Número de página extremo fazia a listagem retornar a primeira página
 **Arquivo**: `app/Support/QueryParameter.php` e DTOs de filtros de listagem
 **Severidade**: 🟡 MÉDIO
