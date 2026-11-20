@@ -39,8 +39,16 @@ class LegacyChurchController extends Controller
 
     public function edit(Comum $church): View
     {
+        try {
+            $scopedChurch = $this->churchManager->findChurch((int) $church->id);
+        } catch (RuntimeException) {
+            abort(404);
+        }
+
+        abort_if($scopedChurch === null, 404);
+
         return view('churches.edit', [
-            'church' => $church,
+            'church' => $scopedChurch,
             'administrations' => $this->churchs->administrationOptions(),
             'states' => (array) config('brazil.states', []),
         ]);

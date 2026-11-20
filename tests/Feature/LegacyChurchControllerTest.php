@@ -321,6 +321,10 @@ final class LegacyChurchControllerTest extends TestCase
 
     public function testEditPageRendersForm(): void
     {
+        $this->mock(LegacyChurchManagementServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('findChurch')->once()->with(7)->andReturn($this->boundChurch);
+        });
+
         $this->app->instance(
             LegacyChurchBrowserServiceInterface::class,
             new class implements LegacyChurchBrowserServiceInterface
@@ -357,6 +361,21 @@ final class LegacyChurchControllerTest extends TestCase
         $response->assertSee('Salvar alterações');
         $response->assertSee('12-3456');
         $response->assertSee('data-mask="cnpj"', false);
+    }
+
+    public function testEditHidesChurchOutsideUserAdministrationScope(): void
+    {
+        $this->mock(LegacyChurchManagementServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('findChurch')->once()->with(7)
+                ->andThrow(new RuntimeException('A igreja selecionada está fora do seu escopo permitido.'));
+        });
+        $this->mock(LegacyChurchBrowserServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('administrationOptions')->andReturn(collect());
+        });
+
+        $response = $this->get(route('migration.churches.edit', ['church' => 7]));
+
+        $response->assertNotFound();
     }
 
     // ─── Update (POST) ──────────────────────────────────────────────────────
@@ -904,6 +923,10 @@ final class LegacyChurchControllerTest extends TestCase
 
         $this->mock(LegacyNavigationServiceInterface::class, function (MockInterface $mock): void {
             $mock->shouldReceive('navigation')->andReturn([]);
+        });
+
+        $this->mock(LegacyChurchManagementServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('findChurch')->once()->with(7)->andReturn($this->boundChurch);
         });
 
         $this->app->instance(

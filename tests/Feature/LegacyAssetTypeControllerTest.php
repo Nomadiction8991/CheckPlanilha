@@ -272,6 +272,17 @@ final class LegacyAssetTypeControllerTest extends TestCase
         $response->assertViewHas('states', (array) config('brazil.states', []));
     }
 
+    public function testEditHidesAssetTypeOutsideUserAdministrationScope(): void
+    {
+        $response = $this->withSession([
+            'is_admin' => false,
+            'administracao_id' => 88,
+            'administracoes_permitidas' => [88],
+        ])->get(route('migration.asset-types.edit', ['assetType' => $this->boundAssetType->id]));
+
+        $response->assertNotFound();
+    }
+
     // ─── Update ──────────────────────────────────────────────────────
 
     public function testUpdateChangesAssetType(): void

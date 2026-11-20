@@ -62,9 +62,21 @@ class LegacyAssetTypeController extends Controller
 
     public function edit(TipoBem $assetType): View
     {
+        $administrations = $this->administrations();
+        $administrationId = (int) ($assetType->administracao_id ?? 0);
+
+        if ($administrationId > 0 && !LegacyAdministratorAccess::sessionIsAdministrator()) {
+            abort_unless(
+                $administrations->contains(
+                    static fn (object $administration): bool => (int) $administration->id === $administrationId,
+                ),
+                404,
+            );
+        }
+
         return view('asset-types.edit', [
             'assetType' => $assetType,
-            'administrations' => $this->administrations(),
+            'administrations' => $administrations,
             'selectedAdministrationId' => (int) ($assetType->administracao_id ?? 0) > 0
                 ? (int) $assetType->administracao_id
                 : $this->currentAdministrationId(),

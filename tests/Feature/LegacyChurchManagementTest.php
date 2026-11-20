@@ -65,6 +65,10 @@ final class LegacyChurchManagementTest extends TestCase
 
     public function testEditPageRendersForm(): void
     {
+        $this->mock(LegacyChurchManagementServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('findChurch')->once()->with(7)->andReturn($this->boundChurch);
+        });
+
         $response = $this->get(route('migration.churches.edit', ['church' => 7]));
 
         $response->assertOk();

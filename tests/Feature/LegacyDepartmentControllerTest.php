@@ -354,6 +354,18 @@ final class LegacyDepartmentControllerTest extends TestCase
         $response->assertViewHas('states', (array) config('brazil.states', []));
     }
 
+    public function testEditHidesDepartmentOutsideUserChurchScope(): void
+    {
+        $this->mock(LegacyDepartmentBrowserServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('churchOptions')->andReturn(collect());
+        });
+
+        $response = $this->withSession($this->authSession())
+            ->get(route('migration.departments.edit', ['department' => $this->boundDepartment->id]));
+
+        $response->assertNotFound();
+    }
+
     public function testEditPageRedirectsGuestsToLogin(): void
     {
         $response = $this->withSession(['_enforce_legacy_auth' => true])

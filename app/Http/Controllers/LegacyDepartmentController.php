@@ -67,9 +67,17 @@ class LegacyDepartmentController extends Controller
 
     public function edit(Dependencia $department): View
     {
+        $churches = $this->departments->churchOptions();
+        abort_unless(
+            $churches->contains(
+                static fn (object $church): bool => (int) $church->id === (int) $department->comum_id,
+            ),
+            404,
+        );
+
         return view('departments.edit', [
             'department' => $department->load('comum:id,codigo,descricao'),
-            'churches' => $this->departments->churchOptions(),
+            'churches' => $churches,
             'states' => (array) config('brazil.states', []),
         ]);
     }

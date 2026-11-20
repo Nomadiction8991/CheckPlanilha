@@ -17,6 +17,9 @@ final class DesignSystemUsuariosIgrejasTest extends TestCase
         $this->mock(\App\Contracts\LegacyChurchBrowserServiceInterface::class, function (\Mockery\MockInterface $mock): void {
             $mock->shouldReceive('administrationOptions')->andReturn(collect());
         });
+        $this->mock(\App\Contracts\LegacyChurchManagementServiceInterface::class, function (\Mockery\MockInterface $mock) use ($church): void {
+            $mock->shouldReceive('findChurch')->with(7)->andReturn($church);
+        });
         $url = route('migration.churches.edit', ['church' => 7]);
         $this->from($url)->put(route('migration.churches.update', ['church' => 7]), [])->assertRedirect($url);
         $response = $this->get($url);
