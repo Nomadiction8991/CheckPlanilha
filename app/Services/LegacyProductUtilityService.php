@@ -148,11 +148,30 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
         $processed = 0;
 
         DB::transaction(function () use ($churchId, $items, &$processed): void {
-            foreach ($items as $item) {
-                if (!$item instanceof ProductVerificationItemData) {
-                    continue;
-                }
+            $validItems = array_values(array_filter(
+                $items,
+                static fn (mixed $item): bool => $item instanceof ProductVerificationItemData,
+            ));
+            $requestedIds = array_values(array_unique(array_map(
+                static fn (ProductVerificationItemData $item): int => $item->productId,
+                $validItems,
+            )));
+            sort($requestedIds);
 
+            $churchProductIds = Produto::query()
+                ->where('comum_id', $churchId)
+                ->whereIn('id_produto', $requestedIds)
+                ->lockForUpdate()
+                ->pluck('id_produto')
+                ->map(static fn (mixed $id): int => (int) $id)
+                ->all();
+            sort($churchProductIds);
+
+            if ($churchProductIds !== $requestedIds) {
+                throw new RuntimeException('O produto informado não pertence à igreja selecionada.');
+            }
+
+            foreach ($validItems as $item) {
                 $shouldCheck = $item->verified
                     || $item->printLabel
                     || trim($item->observation) !== '';

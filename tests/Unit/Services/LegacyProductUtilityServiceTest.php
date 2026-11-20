@@ -11,6 +11,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
+use RuntimeException;
 use Tests\TestCase;
 
 final class LegacyProductUtilityServiceTest extends TestCase
@@ -39,6 +40,8 @@ final class LegacyProductUtilityServiceTest extends TestCase
             $table->string('codigo')->nullable();
             $table->integer('editado')->nullable();
             $table->integer('imprimir_etiqueta')->nullable();
+            $table->integer('checado')->nullable();
+            $table->string('observacao')->nullable();
         });
     }
 
@@ -150,6 +153,13 @@ final class LegacyProductUtilityServiceTest extends TestCase
     public function testPrintLabelMarksProductAsCheckedWhenSavingVerificationChecklist(): void
     {
         session(['is_admin' => true]);
+        DB::table('produtos')->insert([
+            'id_produto' => 19,
+            'comum_id' => 7,
+            'imprimir_etiqueta' => 0,
+            'checado' => 0,
+            'observacao' => '',
+        ]);
         $connection = DB::connection();
         DB::shouldReceive('transaction')
             ->once()
@@ -185,5 +195,48 @@ final class LegacyProductUtilityServiceTest extends TestCase
         ]);
 
         $this->assertSame(1, $processed);
+    }
+
+    public function testChecklistRejectsProductsOutsideTheSelectedChurchWithoutSavingPartialChanges(): void
+    {
+        session(['is_admin' => true]);
+        DB::table('comums')->insert([
+            ['id' => 7, 'administracao_id' => 4, 'descricao' => 'Central Cuiabá'],
+            ['id' => 8, 'administracao_id' => 4, 'descricao' => 'Igreja vizinha'],
+        ]);
+        DB::table('produtos')->insert([
+            ['id_produto' => 19, 'comum_id' => 7, 'imprimir_etiqueta' => 0, 'checado' => 0, 'observacao' => ''],
+            ['id_produto' => 20, 'comum_id' => 8, 'imprimir_etiqueta' => 0, 'checado' => 0, 'observacao' => ''],
+        ]);
+
+        try {
+            (new LegacyProductUtilityService())->saveVerificationChecklist(7, [
+                new ProductVerificationItemData(
+                    productId: 19,
+                    printLabel: true,
+                    verified: true,
+                    observation: 'válido',
+                ),
+                new ProductVerificationItemData(
+                    productId: 20,
+                    printLabel: true,
+                    verified: true,
+                    observation: 'fora da igreja',
+                ),
+                new ProductVerificationItemData(
+                    productId: 999,
+                    printLabel: true,
+                    verified: true,
+                    observation: 'inexistente',
+                ),
+            ]);
+            self::fail('O checklist deve rejeitar itens fora da igreja selecionada.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('O produto informado não pertence à igreja selecionada.', $exception->getMessage());
+        }
+
+        $this->assertSame(0, (int) DB::table('produtos')->where('id_produto', 19)->value('imprimir_etiqueta'));
+        $this->assertSame(0, (int) DB::table('produtos')->where('id_produto', 19)->value('checado'));
+        $this->assertSame('', DB::table('produtos')->where('id_produto', 19)->value('observacao'));
     }
 }

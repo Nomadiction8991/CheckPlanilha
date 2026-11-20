@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 10
-- Médios: 11
+- Médios: 12
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (2)
-### Lógica (20)
+### Lógica (21)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -330,6 +330,17 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Códigos patrimoniais que usam zeros à esquerda podiam deixar de corresponder ao cadastro existente ou perder a identificação original.
 **Recomendação**: Aplicar formatos compostos somente por zeros aos valores inteiros das células numéricas. Coberto por `test_le_xlsx_preservando_zeros_a_esquerda_definidos_no_formato_da_celula`.
 **Padrão Recorrente**: Sim — a importação deve preservar a representação exibida dos identificadores numéricos.
+**Prioridade de Correção**: ✅ Resolvido
+
+### PROD-003 - Checklist em lote aceitava produto de outra igreja ou inexistente
+**Arquivo**: `app/Services/LegacyProductUtilityService.php` (`saveVerificationChecklist`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica (integridade do checklist)
+**Status**: Corrigido nesta rodada.
+**Descrição**: O salvamento em lote ignorava o resultado das atualizações filtradas pela igreja e contava o item como processado mesmo quando o produto não existia ou pertencia a outra igreja. O endpoint de atualização individual já respondia 404 para um produto fora da igreja.
+**Risco/Impacto**: A tela podia confirmar que o checklist foi salvo enquanto deixava itens sem persistir; mudanças anteriores do mesmo lote podiam ser parcialmente gravadas.
+**Recomendação**: Validar todos os produtos dentro da igreja selecionada antes de atualizar qualquer item, mantendo a transação atômica. Coberto por `testChecklistRejectsProductsOutsideTheSelectedChurchWithoutSavingPartialChanges`.
+**Padrão Recorrente**: Sim — IDs de produto enviados pelo cliente precisam pertencer à igreja do lote, como já ocorre na atualização individual.
 **Prioridade de Correção**: ✅ Resolvido
 
 ### AUTH-001 - Recuperação aceitava telefone sem dígitos em cadastro sem telefone
