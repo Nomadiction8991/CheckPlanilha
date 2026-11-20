@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
-use InvalidArgumentException;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\RateLimiter;
 use Mockery\MockInterface;
 use RuntimeException;
 use Tests\TestCase;
@@ -68,6 +69,31 @@ final class LegacyAuthControllerTest extends TestCase
         $response->assertSessionHas('status', 'E-mail ou senha inválidos.');
         $response->assertSessionHas('status_type', 'error');
         $response->assertSessionMissing('usuario_id');
+    }
+
+    public function test_login_limits_repeated_attempts_from_same_address(): void
+    {
+        $route = app('router')->getRoutes()->getByName('migration.login.store');
+
+        self::assertNotNull($route);
+        self::assertContains('throttle:5,1', $route->middleware());
+
+        $limiterKey = '|127.0.0.1';
+        ThrottleRequests::shouldHashKeys(false);
+
+        try {
+            for ($attempt = 0; $attempt < 5; $attempt++) {
+                RateLimiter::hit($limiterKey, 60);
+            }
+
+            $this->post(route('migration.login.store'), [
+                'email' => 'maria@exemplo.com',
+                'senha' => 'segredo',
+            ])->assertTooManyRequests();
+        } finally {
+            RateLimiter::clear($limiterKey);
+            ThrottleRequests::shouldHashKeys();
+        }
     }
 
     public function test_login_fails_when_service_throws_unexpected_exception(): void
