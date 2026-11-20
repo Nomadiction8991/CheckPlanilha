@@ -116,10 +116,6 @@ class LegacyProductController extends Controller
 
     public function store(StoreLegacyProductRequest $request): RedirectResponse
     {
-        if ($request->integer('comum_id') > 0) {
-            Session::put('comum_id', $request->integer('comum_id'));
-        }
-
         try {
             $createdCount = $this->productManager->createMany($request->toDto());
         } catch (RuntimeException $exception) {
@@ -129,6 +125,8 @@ class LegacyProductController extends Controller
                 ->with('status', $exception->getMessage())
                 ->with('status_type', 'error');
         }
+
+        Session::put('comum_id', $request->integer('comum_id'));
 
         return redirect()
             ->route('migration.products.index', ['comum_id' => $request->integer('comum_id')])
@@ -195,10 +193,6 @@ class LegacyProductController extends Controller
 
     public function storeVerification(StoreProductVerificationRequest $request): RedirectResponse
     {
-        if ($request->integer('comum_id') > 0) {
-            Session::put('comum_id', $request->integer('comum_id'));
-        }
-
         try {
             $this->productUtility->saveVerificationChecklist(
                 $request->integer('comum_id'),
@@ -210,6 +204,8 @@ class LegacyProductController extends Controller
                 ->with('status', $exception->getMessage())
                 ->with('status_type', 'error');
         }
+
+        Session::put('comum_id', $request->integer('comum_id'));
 
         return redirect()
             ->route('migration.products.verification', $request->toReturnQuery())

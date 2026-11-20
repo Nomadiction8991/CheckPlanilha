@@ -18,7 +18,9 @@ use App\Models\Legacy\Produto;
 use App\Models\Legacy\TipoBem;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Session;
 use Mockery\MockInterface;
+use RuntimeException;
 use Tests\TestCase;
 
 final class LegacyProductManagementTest extends TestCase
@@ -389,6 +391,28 @@ final class LegacyProductManagementTest extends TestCase
         $response->assertSessionHas('status', '2 produtos cadastrados com sucesso.');
     }
 
+    public function testFalhaAoCadastrarProdutoNaoAlteraIgrejaAtualDaSessao(): void
+    {
+        $this->mock(
+            LegacyProductManagementServiceInterface::class,
+            function (MockInterface $mock): void {
+                $mock->shouldReceive('createMany')
+                    ->once()
+                    ->andThrow(new RuntimeException('A igreja selecionada está fora do seu escopo permitido.'));
+            }
+        );
+
+        $this->withSession(['comum_id' => 7])->post(route('migration.products.store'), [
+            'comum_id' => 99,
+            'id_tipo_ben' => 4,
+            'tipo_ben' => 'CADEIRA',
+            'id_dependencia' => 2,
+            'multiplicador' => 1,
+        ])->assertRedirect();
+
+        self::assertSame(7, Session::get('comum_id'));
+    }
+
     public function testVerificationStoreUpdatesChecklist(): void
     {
         $this->mock(
@@ -442,6 +466,25 @@ final class LegacyProductManagementTest extends TestCase
             'status' => 'com_nota',
         ]));
         $response->assertSessionHas('status', 'Checklist salvo com sucesso.');
+    }
+
+    public function testFalhaAoSalvarChecklistNaoAlteraIgrejaAtualDaSessao(): void
+    {
+        $this->mock(
+            LegacyProductUtilityServiceInterface::class,
+            function (MockInterface $mock): void {
+                $mock->shouldReceive('saveVerificationChecklist')
+                    ->once()
+                    ->andThrow(new RuntimeException('A igreja selecionada está fora do seu escopo permitido.'));
+            }
+        );
+
+        $this->withSession(['comum_id' => 7])->post(route('migration.products.verification.store'), [
+            'comum_id' => 99,
+            'itens' => [['produto_id' => 19]],
+        ])->assertRedirect();
+
+        self::assertSame(7, Session::get('comum_id'));
     }
 
     public function testVerificationAutosaveUpdatesSingleRow(): void
