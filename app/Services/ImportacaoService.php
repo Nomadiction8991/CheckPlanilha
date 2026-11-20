@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Repositories\ImportacaoRepository;
+use App\Support\ProductCodeConflict;
 use App\ValueObjects\ProcessingResult;
 use App\Core\ConnectionManager;
 use Illuminate\Support\Facades\Schema;
@@ -286,11 +287,14 @@ class ImportacaoService
                         $resultado->adicionarSucesso();
                     }
                 } catch (Exception $e) {
+                    $mensagemErro = $e instanceof \PDOException && ProductCodeConflict::isDuplicate($e)
+                        ? ProductCodeConflict::MESSAGE
+                        : $e->getMessage();
                     $resultado->adicionarErro();
-                    $resultado->adicionarErroMsg((int) ($registro['linha_csv'] ?? 0), $e->getMessage());
+                    $resultado->adicionarErroMsg((int) ($registro['linha_csv'] ?? 0), $mensagemErro);
                     // Persiste o erro na tabela import_erros
                     if ($importacaoId > 0) {
-                        $this->salvarErroImportacao($importacaoId, $registro, $e->getMessage());
+                        $this->salvarErroImportacao($importacaoId, $registro, $mensagemErro);
                     }
                 }
             }

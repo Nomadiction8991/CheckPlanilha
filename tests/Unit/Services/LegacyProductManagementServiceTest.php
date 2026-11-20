@@ -151,6 +151,31 @@ final class LegacyProductManagementServiceTest extends TestCase
         $this->assertSame('ABC-4', DB::table('produtos')->value('codigo'));
     }
 
+    public function testConverteColisaoConcorrenteDeCodigoEmMensagemAcionavel(): void
+    {
+        Produto::creating(static function (Produto $produto): void {
+            if ($produto->codigo === 'ABC-RACE') {
+                DB::table('produtos')->insert([
+                    'comum_id' => 7,
+                    'codigo' => 'ABC-RACE',
+                    'tipo_bem_id' => 4,
+                    'bem' => 'CADEIRA',
+                    'dependencia_id' => 2,
+                    'ativo' => 1,
+                ]);
+            }
+        });
+
+        try {
+            $this->service()->createMany($this->dados(code: 'ABC-RACE', multiplier: 1));
+            $this->fail('A colisão simulada deveria ser recusada.');
+        } catch (RuntimeException $erro) {
+            $this->assertSame('Este código já está em uso por outro bem.', $erro->getMessage());
+        }
+
+        $this->assertSame(0, DB::table('produtos')->count(), 'A transação da operação deve ser revertida.');
+    }
+
     public function testRejeitaTipoDeBemDeOutraAdministracaoParaUsuarioSemAcessoGlobal(): void
     {
         DB::table('tipos_bens')->insert(['id' => 5, 'administracao_id' => 2, 'codigo' => '2', 'descricao' => 'CADEIRA']);

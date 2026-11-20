@@ -11,6 +11,7 @@ use App\Models\Legacy\Produto;
 use App\Models\Legacy\TipoBem;
 use App\Models\Legacy\Transferencia;
 use App\Models\Legacy\TransferenciaItem;
+use App\Support\ProductCodeConflict;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -110,7 +111,7 @@ final class LegacyTransferService implements LegacyTransferServiceInterface
             throw new RuntimeException('O código pode ter no máximo 50 caracteres.');
         }
 
-        DB::transaction(function () use ($produtoId, $comumId, $codigoLimpo): void {
+        ProductCodeConflict::handle(fn () => DB::transaction(function () use ($produtoId, $comumId, $codigoLimpo): void {
             $produto = Produto::query()
                 ->whereKey($produtoId)
                 ->where('comum_id', $comumId)
@@ -142,7 +143,7 @@ final class LegacyTransferService implements LegacyTransferServiceInterface
                 ->exists();
 
             if ($emUso) {
-                throw new RuntimeException('Este código já está em uso por outro bem.');
+                throw new RuntimeException(ProductCodeConflict::MESSAGE);
             }
 
             // Com código novo, o bem deixa de ser pendente e vai para a lista de etiquetas.
@@ -153,7 +154,7 @@ final class LegacyTransferService implements LegacyTransferServiceInterface
             ])->save();
 
             $itemPendente->update(['codigo_novo' => $codigoLimpo]);
-        });
+        }));
     }
 
     public function pendentesDeCodigo(int $comumId): Collection

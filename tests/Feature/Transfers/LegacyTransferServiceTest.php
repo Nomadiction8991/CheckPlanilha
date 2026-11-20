@@ -177,6 +177,28 @@ final class LegacyTransferServiceTest extends TransferenciasTestCase
         $this->assertNull(Produto::query()->findOrFail(1001)->codigo);
     }
 
+    public function testConverteColisaoConcorrenteDeCodigoEmMensagemAcionavel(): void
+    {
+        $this->criarBem(1002, 8, null, 'Piano');
+        $this->servico->transferir(7, 8, 80, [1001], 9);
+
+        Produto::updating(static function (Produto $produto): void {
+            if ((int) $produto->id_produto === 1001) {
+                DB::table('produtos')->where('id_produto', 1002)->update(['codigo' => 'B-RACE']);
+            }
+        });
+
+        try {
+            $this->servico->informarCodigo(1001, 8, 'B-RACE');
+            $this->fail('A colisão simulada deveria ser recusada.');
+        } catch (RuntimeException $erro) {
+            $this->assertSame('Este código já está em uso por outro bem.', $erro->getMessage());
+        }
+
+        $this->assertNull(Produto::query()->findOrFail(1001)->codigo);
+        $this->assertNull(Produto::query()->findOrFail(1002)->codigo);
+    }
+
     public function testRecusaCodigoDeBemQueNaoEstaPendente(): void
     {
         $this->expectException(RuntimeException::class);

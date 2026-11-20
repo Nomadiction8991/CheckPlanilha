@@ -12,6 +12,7 @@ use App\Models\Legacy\Dependencia;
 use App\Models\Legacy\Produto;
 use App\Models\Legacy\TipoBem;
 use App\Support\LegacyProductTypeOptionSupport;
+use App\Support\ProductCodeConflict;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -35,7 +36,7 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
             ? mb_strtoupper(trim($data->invoiceSupplier), 'UTF-8')
             : null;
 
-        DB::transaction(function () use ($data, $church, $assetType, $dependency, $itemName, $code, $complement, $brand, $invoiceSupplier): void {
+        ProductCodeConflict::handle(fn () => DB::transaction(function () use ($data, $church, $assetType, $dependency, $itemName, $code, $complement, $brand, $invoiceSupplier): void {
             for ($index = 0; $index < $data->multiplier; $index++) {
                 Produto::query()->create([
                     'comum_id' => (int) $church->id,
@@ -63,7 +64,7 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
                     'ativo' => 1,
                 ]);
             }
-        });
+        }));
 
         return $data->multiplier;
     }
