@@ -60,6 +60,12 @@ final class ConflictResolver
 
             $tabela = (string) $conflito->tabela;
             $chavePrimaria = TableKeys::primaryKey($tabela);
+            $antes = $this->decodificar($conflito->antes) ?? [];
+
+            if ($chavePrimaria === [] && $conflito->operacao !== 'insert' && $antes === []) {
+                throw new ConflitoNaoAplicavelException('A alteração de uma tabela sem chave exige o registro anterior.');
+            }
+
             $consulta = TableKeys::query($tabela, $chavePrimaria, (string) $conflito->chave);
 
             if ($conflito->operacao === 'delete') {
@@ -68,7 +74,6 @@ final class ConflictResolver
                 // O servidor recusou a inclusão. Manter o valor do notebook é tentar incluir de novo.
                 $this->incluirDoNotebook($tabela, $this->decodificar($conflito->depois) ?? []);
             } else {
-                $antes = $this->decodificar($conflito->antes) ?? [];
                 $depois = $this->decodificar($conflito->depois) ?? [];
                 $campos = array_values(array_diff($this->camposAlterados($antes, $depois), $chavePrimaria));
 

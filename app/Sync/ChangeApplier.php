@@ -86,6 +86,10 @@ final class ChangeApplier
             return ['status' => self::ERRO, 'motivo' => 'Uma inclusão não pode conter um registro anterior.'];
         }
 
+        if ($chavePrimaria === [] && $operacao !== 'insert' && $antes === []) {
+            return ['status' => self::ERRO, 'motivo' => 'A alteração de uma tabela sem chave exige o registro anterior.'];
+        }
+
         if ($operacao !== 'insert' && $antes !== []
             && ! TableKeys::corresponde($chavePrimaria, $chave, $antes)) {
             return ['status' => self::ERRO, 'motivo' => 'A chave do evento não corresponde ao registro anterior.'];

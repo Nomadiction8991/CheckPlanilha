@@ -67,6 +67,41 @@ class SyncPushTest extends SincronizacaoTestCase
         $this->assertSame('senha-2', Crypt::decryptString((string) DB::table('configuracoes')->value('mail_password')));
     }
 
+    public function test_exclusao_de_configuracao_sem_snapshot_anterior_e_recusada(): void
+    {
+        DB::table('configuracoes')->insert(['mail_host' => 'smtp.teste.local']);
+        $uuid = '88888888-9999-4999-8999-888888888888';
+
+        $resposta = $this->enviar([
+            $this->alteracao($uuid, 'configuracoes', '*', 'delete', null, null),
+        ]);
+
+        $resposta->assertJsonPath('aplicadas', 0)->assertJsonPath('erros.0.uuid', $uuid);
+        $this->assertSame('smtp.teste.local', DB::table('configuracoes')->value('mail_host'));
+    }
+
+    public function test_atualizacao_de_configuracoes_duplicadas_e_recusada_sem_alterar_linhas(): void
+    {
+        DB::table('configuracoes')->insert([
+            ['mail_host' => 'smtp.um.local', 'mail_password' => null],
+            ['mail_host' => 'smtp.dois.local', 'mail_password' => null],
+        ]);
+        $uuid = '88888888-7777-4777-8777-888888888888';
+
+        $resposta = $this->enviar([
+            $this->alteracao($uuid, 'configuracoes', '*', 'update',
+                ['mail_host' => 'smtp.um.local', 'mail_password' => null],
+                ['mail_host' => 'smtp.novo.local', 'mail_password' => null],
+            ),
+        ]);
+
+        $resposta->assertJsonPath('aplicadas', 0)->assertJsonPath('erros.0.uuid', $uuid);
+        $this->assertSame(
+            ['smtp.dois.local', 'smtp.um.local'],
+            DB::table('configuracoes')->orderBy('mail_host')->pluck('mail_host')->all(),
+        );
+    }
+
     public function test_envio_aplica_insercao_no_servidor(): void
     {
         $resposta = $this->enviar([

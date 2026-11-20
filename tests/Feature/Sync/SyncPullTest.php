@@ -121,6 +121,31 @@ class SyncPullTest extends SincronizacaoTestCase
         $this->assertSame('', DB::table('produtos')->where('id_produto', 5)->value('bem'));
     }
 
+    public function test_aplicacao_no_notebook_recusa_exclusao_de_configuracao_sem_snapshot(): void
+    {
+        Schema::create('configuracoes', function (Blueprint $table): void {
+            $table->string('mail_host')->nullable();
+            $table->text('mail_password')->nullable();
+        });
+        DB::table('configuracoes')->insert(['mail_host' => 'smtp.teste.local']);
+
+        try {
+            app(NotebookChangeApplier::class)->aplicarLote([[
+                'uuid' => 'abababab-3333-4333-8333-333333333333',
+                'tabela' => 'configuracoes',
+                'chave' => '*',
+                'operacao' => 'delete',
+                'antes' => null,
+                'depois' => null,
+            ]]);
+            $this->fail('Era esperado RuntimeException para exclusão sem snapshot.');
+        } catch (RuntimeException $erro) {
+            $this->assertSame('A alteração de uma tabela sem chave exige o registro anterior.', $erro->getMessage());
+        }
+
+        $this->assertSame('smtp.teste.local', DB::table('configuracoes')->value('mail_host'));
+    }
+
     private function registrar(string $origem, string $tabela, string $chave): int
     {
         return (int) DB::table('sincronizacao_alteracoes')->insertGetId([

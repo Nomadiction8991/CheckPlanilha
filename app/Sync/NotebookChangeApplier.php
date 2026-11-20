@@ -65,6 +65,10 @@ final class NotebookChangeApplier
             throw new \RuntimeException('A chave do evento não corresponde ao registro recebido.');
         }
 
+        if ($chavePrimaria === [] && $operacao !== 'insert' && $antes === []) {
+            throw new \RuntimeException('A alteração de uma tabela sem chave exige o registro anterior.');
+        }
+
         if ($operacao !== 'insert' && $antes !== []
             && ! TableKeys::corresponde($chavePrimaria, $chave, $antes)) {
             throw new \RuntimeException('A chave do evento não corresponde ao registro anterior recebido.');

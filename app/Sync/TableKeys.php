@@ -7,6 +7,7 @@ namespace App\Sync;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use RuntimeException;
 
 /**
  * Descobre a chave primária de uma tabela e monta a consulta da linha a partir da chave
@@ -35,7 +36,15 @@ final class TableKeys
     {
         $consulta = DB::table($tabela);
 
-        if ($chavePrimaria === [] || $chave === '*') {
+        if ($chavePrimaria === []) {
+            if ($chave !== '*') {
+                throw new RuntimeException('A chave para uma tabela sem chave primária é inválida.');
+            }
+
+            if ($consulta->count() > 1) {
+                throw new RuntimeException('A tabela sem chave primária contém mais de um registro; sincronização recusada.');
+            }
+
             return $consulta;
         }
 
