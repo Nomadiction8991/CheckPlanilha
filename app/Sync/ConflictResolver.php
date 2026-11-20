@@ -181,12 +181,25 @@ final class ConflictResolver
         $campos = [];
 
         foreach ($depois as $campo => $valor) {
-            if (! array_key_exists($campo, $antes) || (string) $antes[$campo] !== (string) $valor) {
+            if ($this->normalizar($antes[$campo] ?? null) !== $this->normalizar($valor)) {
                 $campos[] = (string) $campo;
             }
         }
 
         return $campos;
+    }
+
+    private function normalizar(mixed $valor): string
+    {
+        if ($valor === null) {
+            return 'null';
+        }
+
+        if (is_bool($valor)) {
+            return $valor ? '1' : '0';
+        }
+
+        return (string) $valor;
     }
 
     /**

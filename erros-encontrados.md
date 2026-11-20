@@ -593,3 +593,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Recomendação**: Aplicar no ramo `importacao_id` o mesmo escopo da listagem: `whereIn` nas administrações permitidas ou filtro por igreja. Coberto por `testNonAdminCannotDownloadErrorsOfImportOutsideItsAdministration`, `testUserWithoutAdministrationScopeCannotDownloadErrorsOfAnyImport` e `testNonAdminDownloadsErrorsOfImportInsidePermittedAdministration`.
 **Padrão Recorrente**: Sim — ações que recebem o id da importação sem checar escopo. Resolvido: `preview`, `confirm`, `savePreviewActions`, `bulkPreviewAction` e `processing` agora aplicam a mesma validação de responsável já usada no início e acompanhamento do processamento. Coberto por `testPreviewActionsAreDeniedForAnotherUsersImport`, `testOtherUserCannotReadPreviewOrProcessingPage` e `testOtherUserCannotApplyBulkActionOrConfirmImport`.
 **Prioridade de Correção**: ✅ Resolvido
+
+### SYNC-001 - Resolver conflito não aplicava campo vazio sobre valor nulo
+**Arquivo**: `app/Sync/ConflictResolver.php` (`camposAlterados`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / Sincronização
+**Status**: Corrigido nesta rodada.
+**Descrição**: Ao escolher manter o valor do notebook, o resolvedor comparava os valores convertendo-os para string. Assim, `null` e `""` eram considerados iguais e o campo não era incluído na atualização.
+**Risco/Impacto**: O conflito podia ser marcado como resolvido sem gravar a escolha feita; o valor antigo permanecia no servidor e seria reenviado aos notebooks.
+**Recomendação**: Comparar `null` separadamente de string vazia, preservando a equivalência de booleanos e números usada pela aplicação. Coberto por `test_manter_valor_vazio_do_notebook_substitui_valor_nulo`.
+**Padrão Recorrente**: Sim — alterações de sincronização devem distinguir ausência/nulo de texto vazio ao identificar campos modificados.
+**Prioridade de Correção**: ✅ Resolvido
