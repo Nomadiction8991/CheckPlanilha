@@ -33,8 +33,16 @@ class ProcessarImportacoes extends Command
         $importId = $this->argument('importacao');
         $todas = $this->option('todas');
 
-        if ($importId) {
-            $importacoes = [(int) $importId];
+        if ($importId !== null && $importId !== '') {
+            $validatedImportId = filter_var($importId, FILTER_VALIDATE_INT);
+
+            if ($validatedImportId === false || $validatedImportId <= 0) {
+                $this->error('ID da importação inválido. Informe um número inteiro maior que zero.');
+
+                return Command::FAILURE;
+            }
+
+            $importacoes = [$validatedImportId];
         } elseif ($todas) {
             try {
                 $importacoes = $this->getPendingImports();
@@ -52,7 +60,15 @@ class ProcessarImportacoes extends Command
                 return Command::FAILURE;
             }
         } else {
-            $importacoes = [$this->askId()];
+            $importId = $this->askId();
+
+            if ($importId <= 0) {
+                $this->error('ID da importação inválido. Informe um número inteiro maior que zero.');
+
+                return Command::FAILURE;
+            }
+
+            $importacoes = [$importId];
         }
 
         if (empty($importacoes)) {
