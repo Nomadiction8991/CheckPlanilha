@@ -2,17 +2,27 @@
 
 ## Resumo
 - Críticos: 0
-- Altos: 10
+- Altos: 11
 - Médios: 12
 - Baixos: 0
 
 ## Erros por Categoria
-### Segurança (2)
+### Segurança (3)
 ### Lógica (21)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### AUTH-003 - Sessão nativa mantinha administrações removidas do escopo do usuário
+**Arquivo**: `app/Services/LegacyNativeSessionBridge.php` (`normalizeAuthenticatedPayload`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança (escopo de acesso)
+**Status**: Corrigido nesta rodada.
+**Descrição**: Ao importar uma sessão nativa de usuário ativo não-administrador, o bridge atualizava apenas o estado de administrador e mantinha `administracao_id` e `administracoes_permitidas` do cookie. Se o escopo do cadastro fosse reduzido, telas e operações que filtram por esses campos continuavam acessíveis até a sessão ser renovada.
+**Risco/Impacto**: Uma sessão antiga podia continuar consultando dados de administrações cujo acesso já havia sido removido.
+**Correção**: Recarregar o escopo administrativo do registro ativo a cada importação; se não for possível validar o usuário no banco ou se ele estiver inativo, limpar o escopo da sessão. Coberto por `test_native_session_refreshes_regular_user_administration_scope_from_database`.
+**Prioridade de Correção**: 🚨 Imediata
 
 ### AUTH-002 - Sessão de usuário removido ou não verificável continuava autenticada
 **Arquivo**: `app/Http/Middleware/RequireLegacySession.php` (`legacyUserIsActive`)

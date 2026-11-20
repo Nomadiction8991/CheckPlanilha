@@ -156,6 +156,8 @@ class LegacyNativeSessionBridge
             // Falha ao confirmar que a conta continua ativa: remova qualquer privilégio em cache.
             $payload['is_admin'] = false;
             $payload['legacy_permissions'] = [];
+            $payload['administracao_id'] = null;
+            $payload['administracoes_permitidas'] = [];
 
             return $payload;
         }
@@ -164,6 +166,7 @@ class LegacyNativeSessionBridge
             // A conta foi desativada ou removida; não confie nas permissões da sessão antiga.
             $payload['is_admin'] = false;
             $payload['legacy_permissions'] = [];
+            $payload['administracao_id'] = null;
             $payload['administracoes_permitidas'] = [];
 
             return $payload;
@@ -182,7 +185,23 @@ class LegacyNativeSessionBridge
             } catch (\Throwable $throwable) {
                 // Mantém o escopo já presente na sessão nativa quando o banco não estiver disponível.
             }
+
+            return $payload;
         }
+
+        $administrationId = (int) ($user->administracao_id ?? 0);
+        $payload['administracao_id'] = $administrationId > 0 ? $administrationId : null;
+
+        $administrationIds = array_values(array_filter(array_map(
+            static fn (mixed $value): int => (int) $value,
+            (array) ($user->administracoes_permitidas ?? []),
+        ), static fn (int $value): bool => $value > 0));
+
+        if ($administrationId > 0) {
+            $administrationIds[] = $administrationId;
+        }
+
+        $payload['administracoes_permitidas'] = array_values(array_unique($administrationIds));
 
         return $payload;
     }

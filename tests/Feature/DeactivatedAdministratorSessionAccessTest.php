@@ -278,6 +278,58 @@ final class DeactivatedAdministratorSessionAccessTest extends TestCase
         self::assertFalse($controllerInvoked, 'An inactive account must be stopped before product browsing.');
     }
 
+    public function test_native_session_refreshes_regular_user_administration_scope_from_database(): void
+    {
+        $this->seedAdministrationsAndProducts();
+
+        $user = new Usuario;
+        $user->forceFill([
+            'id' => 8,
+            'administracao_id' => 10,
+            'administracoes_permitidas' => [10],
+            'nome' => 'Usuário de teste',
+            'email' => 'USER@EXAMPLE.TEST',
+            'senha' => password_hash('correct-horse', PASSWORD_BCRYPT),
+            'ativo' => 1,
+            'cpf' => '98765432100',
+            'rg' => '87654321',
+            'tipo' => 'usuario',
+            'permissions' => ['products.view' => true],
+        ])->save();
+
+        $nativePayload = [
+            'usuario_id' => (int) $user->id,
+            'usuario_nome' => 'Usuário de teste',
+            'usuario_email' => 'USER@EXAMPLE.TEST',
+            'comum_id' => 200,
+            'administracao_id' => 20,
+            'administracoes_permitidas' => [10, 20],
+            'is_admin' => false,
+            'legacy_permissions' => ['products.view' => true],
+        ];
+        $nativeSessionId = $this->persistNativeSession($nativePayload);
+        $_COOKIE[session_name()] = $nativeSessionId;
+
+        $request = Request::create(
+            'http://localhost/products',
+            'GET',
+            [],
+            [session_name() => $nativeSessionId],
+        );
+        $requestSession = $this->app->make('session')->driver();
+        $requestSession->flush();
+        $requestSession->setId('next'.bin2hex(random_bytes(12)));
+        $requestSession->put(['_enforce_native_bridge' => true]);
+        $request->setLaravelSession($requestSession);
+        session_id($nativeSessionId);
+
+        $this->app->detectEnvironment(static fn (): string => 'local');
+        (new LegacyNativeSessionBridge)->import($request);
+
+        self::assertSame([10], $request->session()->get('administracoes_permitidas'));
+        self::assertSame(10, (int) $request->session()->get('administracao_id'));
+    }
+
     private function seedAdministrationsAndProducts(): void
     {
         foreach ([10, 20] as $administrationId) {
