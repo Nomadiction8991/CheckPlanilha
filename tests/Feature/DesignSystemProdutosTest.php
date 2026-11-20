@@ -39,6 +39,7 @@ class DesignSystemProdutosTest extends TestCase
         $product->setRelation('tipoBem', (object) ['id' => 99, 'codigo' => '99', 'descricao' => 'Móveis']);
         $this->app['router']->bind('product', fn () => $product);
         $service = $this->mock(LegacyProductBrowserServiceInterface::class);
+        $service->shouldReceive('churchOptions')->once()->andReturn(collect([(object) ['id' => 7]]));
         $service->shouldReceive('assetTypeOptions')->once()->andReturn(collect());
         $service->shouldReceive('dependencyOptions')->once()->andReturn(collect());
 

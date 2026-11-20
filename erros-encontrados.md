@@ -25,6 +25,16 @@
 **Padrão Recorrente**: Sim — qualquer ID de cadastro vindo do formulário (igreja, dependência, tipo de bem) precisa da checagem de escopo antes de gravar.
 **Prioridade de Correção**: 🚨 Imediata
 
+### PROD-002 - Edição direta de bem exibia dados fora do escopo
+**Arquivo**: `app/Http/Controllers/LegacyProductController.php` (método `edit`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança (acesso entre administrações)
+**Status**: Corrigido nesta rodada.
+**Descrição**: A rota de edição aceitava o ID do bem por model binding e renderizava a página antes de validar se a igreja do bem fazia parte das igrejas permitidas ao usuário. A gravação já validava o escopo no serviço, mas o acesso direto à tela revelava os dados do bem.
+**Risco/Impacto**: Um usuário com permissão de edição de produtos podia ler dados de um bem de outra administração ao alterar o ID da URL.
+**Correção**: A página agora confere o ID da igreja nas opções já limitadas ao escopo do usuário e responde 404 fora dele. O caminho autorizado e o acesso direto fora do escopo têm cobertura de regressão.
+**Prioridade de Correção**: 🚨 Imediata
+
 ### REL-001 - Relatório corrompe valores com cifrão ($) no preenchimento
 
 **Arquivo**: `resources/legacy-reports/fillers/bootstrap.php` (linha 37, função `appReportPreencherCampoPorName`)

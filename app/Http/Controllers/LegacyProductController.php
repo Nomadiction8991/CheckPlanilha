@@ -138,6 +138,13 @@ class LegacyProductController extends Controller
 
     public function edit(Produto $product): View
     {
+        abort_unless(
+            $this->products->churchOptions()->contains(
+                static fn (object $church): bool => (int) $church->id === (int) $product->comum_id,
+            ),
+            404,
+        );
+
         $product->loadMissing([
             'comum:id,codigo,descricao',
             'dependencia:id,descricao',

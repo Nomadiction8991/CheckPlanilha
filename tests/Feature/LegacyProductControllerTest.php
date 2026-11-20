@@ -598,6 +598,13 @@ final class LegacyProductControllerTest extends TestCase
     public function testEditShowsProductForm(): void
     {
         $this->products
+            ->shouldReceive('churchOptions')
+            ->once()
+            ->andReturn(collect([
+                (object) ['id' => 7, 'codigo' => '12-3456', 'descricao' => 'Central Cuiabá'],
+            ]));
+
+        $this->products
             ->shouldReceive('assetTypeOptions')
             ->once()
             ->andReturn(collect([
@@ -619,6 +626,18 @@ final class LegacyProductControllerTest extends TestCase
         $response->assertSee('Editar produto.');
         $response->assertSee('PROD-001');
         $response->assertSee('99 - MÓVEIS');
+    }
+
+    public function testEditHidesProductOutsideUserChurchScope(): void
+    {
+        $this->products
+            ->shouldReceive('churchOptions')
+            ->once()
+            ->andReturn(collect());
+
+        $response = $this->get(route('migration.products.edit', ['product' => $this->boundProduct->id_produto]));
+
+        $response->assertNotFound();
     }
 
     public function testEditRedirectsGuestsToLogin(): void
