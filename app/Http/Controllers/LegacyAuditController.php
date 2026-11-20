@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Contracts\LegacyAuditTrailServiceInterface;
 use App\Contracts\LegacyAuthSessionServiceInterface;
+use App\Support\QueryParameter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,11 +29,11 @@ final class LegacyAuditController extends Controller
 
         $currentUser = $this->auth->currentUser();
         $filters = [
-            'search' => trim((string) $request->query('busca', '')),
-            'module' => trim((string) $request->query('modulo', '')),
-            'date_from' => trim((string) $request->query('data_inicio', '')),
-            'date_to' => trim((string) $request->query('data_fim', '')),
-            'administracao_id' => trim((string) $request->query('administracao_id', '')),
+            'search' => trim(QueryParameter::string($request, 'busca')),
+            'module' => trim(QueryParameter::string($request, 'modulo')),
+            'date_from' => trim(QueryParameter::string($request, 'data_inicio')),
+            'date_to' => trim(QueryParameter::string($request, 'data_fim')),
+            'administracao_id' => trim(QueryParameter::string($request, 'administracao_id')),
         ];
 
         $audits = $this->audits->paginate(
@@ -43,7 +44,7 @@ final class LegacyAuditController extends Controller
             (bool) ($currentUser['is_admin'] ?? false),
             $request->url(),
             $request->query(),
-            max(1, (int) $request->query('page', '1')),
+            max(1, QueryParameter::integer($request, 'page', 1)),
             20,
         );
 
@@ -77,11 +78,11 @@ final class LegacyAuditController extends Controller
 
         $currentUser = $this->auth->currentUser();
         $filters = [
-            'search' => trim((string) $request->query('busca', '')),
-            'module' => trim((string) $request->query('modulo', '')),
-            'date_from' => trim((string) $request->query('data_inicio', '')),
-            'date_to' => trim((string) $request->query('data_fim', '')),
-            'administracao_id' => trim((string) $request->query('administracao_id', '')),
+            'search' => trim(QueryParameter::string($request, 'busca')),
+            'module' => trim(QueryParameter::string($request, 'modulo')),
+            'date_from' => trim(QueryParameter::string($request, 'data_inicio')),
+            'date_to' => trim(QueryParameter::string($request, 'data_fim')),
+            'administracao_id' => trim(QueryParameter::string($request, 'administracao_id')),
         ];
 
         $file = $this->audits->exportCsv(
@@ -121,8 +122,8 @@ final class LegacyAuditController extends Controller
 
     private function validatePeriod(Request $request): ?RedirectResponse
     {
-        $dateFrom = trim((string) $request->query('data_inicio', ''));
-        $dateTo = trim((string) $request->query('data_fim', ''));
+        $dateFrom = trim(QueryParameter::string($request, 'data_inicio'));
+        $dateTo = trim(QueryParameter::string($request, 'data_fim'));
         $errors = [];
 
         foreach (['data_inicio' => $dateFrom, 'data_fim' => $dateTo] as $field => $value) {

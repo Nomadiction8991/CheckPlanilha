@@ -231,6 +231,16 @@ final class LegacyReportPagesTest extends TestCase
         $response->assertSee('Relatório 14.1');
     }
 
+    public function testReportsIndexIgnoresArrayStateFilter(): void
+    {
+        $this->bindReportService();
+
+        $response = $this->get(route('migration.reports.index', ['estado' => ['SP']]));
+
+        $response->assertOk();
+        $response->assertViewHas('selectedState', null);
+    }
+
     public function testReportsIndexClearsChurchSelectionWhenChurchIsOutsideFilters(): void
     {
         $this->bindReportService(collect([

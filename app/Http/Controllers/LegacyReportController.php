@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Contracts\LegacyReportServiceInterface;
 use App\Services\LegacyReportTemplateService;
+use App\Support\QueryParameter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,7 +26,7 @@ class LegacyReportController extends Controller
     public function index(Request $request): View
     {
         $administrationId = $request->integer('administracao_id') ?: null;
-        $state = strtoupper(trim((string) $request->query('estado', '')));
+        $state = strtoupper(trim(QueryParameter::string($request, 'estado')));
         $state = $state !== '' ? $state : null;
         $churchId = $request->integer('comum_id') ?: ((int) Session::get('comum_id', 0) ?: null);
 
@@ -177,7 +178,7 @@ class LegacyReportController extends Controller
 
     public function editor(Request $request): View|RedirectResponse
     {
-        $formulario = str_replace('-', '.', trim((string) $request->query('formulario', '14.1')));
+        $formulario = str_replace('-', '.', trim(QueryParameter::string($request, 'formulario', '14.1')));
 
         if ($formulario === '') {
             $formulario = '14.1';

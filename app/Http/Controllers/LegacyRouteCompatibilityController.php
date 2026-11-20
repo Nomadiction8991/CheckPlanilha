@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
 use App\Contracts\LegacyProductUtilityServiceInterface;
+use App\Support\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -86,7 +87,7 @@ class LegacyRouteCompatibilityController extends Controller
             $request->input('administracao_id'),
             $request->query('administracao_id'),
         );
-        $state = strtoupper(trim((string) ($request->input('estado') ?? $request->query('estado', ''))));
+        $state = strtoupper(trim(QueryParameter::inputString($request, 'estado')));
         if ($state === '') {
             $state = null;
         }
@@ -252,7 +253,7 @@ class LegacyRouteCompatibilityController extends Controller
                 'pagina' => max(1, (int) $request->query('pagina', '1')),
                 'busca' => $this->resolveProductSearch($request),
                 'dependencia_id' => $this->firstPositiveInt($request->query('dependencia_id'), $request->query('dependencia')),
-                'status' => trim((string) $request->query('status', '')),
+                'status' => trim(QueryParameter::string($request, 'status')),
                 'somente_novos' => $request->boolean('somente_novos'),
             ],
         ]);
@@ -277,7 +278,7 @@ class LegacyRouteCompatibilityController extends Controller
             $updated = $products->updateObservation(
                 $productId,
                 $churchId,
-                (string) $request->input('observacoes', $request->input('observacao', '')),
+                QueryParameter::inputString($request, 'observacoes', QueryParameter::inputString($request, 'observacao')),
             );
         } catch (RuntimeException $exception) {
             return $this->productJsonOrRedirectError($request, $exception->getMessage(), 403);
@@ -334,13 +335,13 @@ class LegacyRouteCompatibilityController extends Controller
                 (array) $request->input('PRODUTOS', []),
                 $churchId,
                 $userId,
-                (string) $request->input('acao', ''),
+                QueryParameter::inputString($request, 'acao'),
             );
         } catch (RuntimeException $exception) {
             return response()->json(['success' => false, 'message' => $exception->getMessage()], 422);
         }
 
-        $action = (string) $request->input('acao', '');
+        $action = QueryParameter::inputString($request, 'acao');
         $message = $action === 'desassinar'
             ? 'Assinatura removida com sucesso.'
             : 'Assinatura aplicada com sucesso.';
@@ -561,7 +562,7 @@ class LegacyRouteCompatibilityController extends Controller
 
     public function reportsView(Request $request): RedirectResponse
     {
-        $formulario = str_replace('-', '.', trim((string) $request->query('formulario', '')));
+        $formulario = str_replace('-', '.', trim(QueryParameter::string($request, 'formulario')));
 
         if ($formulario === '') {
             return redirect()
@@ -643,26 +644,26 @@ class LegacyRouteCompatibilityController extends Controller
             'busca' => $this->resolveProductSearch($request),
             'dependencia_id' => $this->firstPositiveInt($request->input('dependencia_id'), $request->input('dependencia'), $request->query('dependencia_id'), $request->query('dependencia')),
             'tipo_bem_id' => $this->firstPositiveInt($request->input('tipo_bem_id'), $request->query('tipo_bem_id')),
-            'status' => trim((string) $request->input('status', $request->query('status', ''))),
+            'status' => trim(QueryParameter::inputString($request, 'status')),
             'somente_novos' => $request->boolean('somente_novos') ? 1 : null,
         ], static fn (mixed $value): bool => is_scalar($value) && $value !== '');
     }
 
     private function resolveProductSearch(Request $request): string
     {
-        $search = trim((string) $request->input('busca', $request->query('busca', '')));
+        $search = trim(QueryParameter::inputString($request, 'busca'));
 
         if ($search !== '') {
             return $search;
         }
 
-        $search = trim((string) $request->input('nome', $request->query('nome', '')));
+        $search = trim(QueryParameter::inputString($request, 'nome'));
 
         if ($search !== '') {
             return $search;
         }
 
-        return trim((string) $request->input('codigo', $request->query('codigo', $request->query('filtro_codigo', ''))));
+        return trim(QueryParameter::inputString($request, 'codigo', QueryParameter::string($request, 'filtro_codigo')));
     }
 
     private function resolveChurchCode(int $churchId): ?string

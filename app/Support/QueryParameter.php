@@ -10,8 +10,16 @@ final class QueryParameter
 {
     public static function string(Request $request, string $key, string $default = ''): string
     {
-        $value = $request->query($key, $default);
+        return self::scalarString($request->query($key, $default), $default);
+    }
 
+    public static function inputString(Request $request, string $key, string $default = ''): string
+    {
+        return self::scalarString($request->input($key, $default), $default);
+    }
+
+    private static function scalarString(mixed $value, string $default): string
+    {
         return is_scalar($value) ? (string) $value : $default;
     }
 

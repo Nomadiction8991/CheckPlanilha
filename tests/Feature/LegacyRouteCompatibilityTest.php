@@ -24,6 +24,20 @@ final class LegacyRouteCompatibilityTest extends TestCase
         $response->assertRedirect('/products?comum_id=7&busca=A-10');
     }
 
+    public function testLegacyProductsViewIgnoresArraySearchFilter(): void
+    {
+        $response = $this->withSession([
+            '_enforce_legacy_auth' => true,
+            'usuario_id' => 9,
+            'usuario_nome' => 'Maria Silva',
+            'usuario_email' => 'MARIA@EXEMPLO.COM',
+            'comum_id' => 7,
+            'is_admin' => false,
+        ])->get('/products/view?comum_id=7&busca%5B0%5D=A-10');
+
+        $response->assertRedirect('/products?comum_id=7');
+    }
+
     public function testLegacyProductsNewRouteRedirectsToLaravelFilteredIndex(): void
     {
         $response = $this->withSession([
@@ -83,6 +97,21 @@ final class LegacyRouteCompatibilityTest extends TestCase
         ])->get('/reports/view?formulario=14.1&comum_id=7');
 
         $response->assertRedirect('/reports/14.1?comum_id=7');
+    }
+
+    public function testLegacyReportsViewIgnoresArrayFormParameter(): void
+    {
+        $response = $this->withSession([
+            '_enforce_legacy_auth' => true,
+            'usuario_id' => 9,
+            'usuario_nome' => 'Maria Silva',
+            'usuario_email' => 'MARIA@EXEMPLO.COM',
+            'comum_id' => 7,
+            'is_admin' => false,
+        ])->get('/reports/view?formulario%5B0%5D=14.1&comum_id=7');
+
+        $response->assertRedirect('/reports?comum_id=7');
+        $response->assertSessionHas('status', 'Formulário não informado.');
     }
 
     public function testLegacySpreadsheetPreviewRouteRedirectsToLaravelPreview(): void

@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Contracts\LegacySpreadsheetImportServiceInterface;
 use App\Http\Requests\StoreSpreadsheetImportRequest;
 use App\Support\LegacyAdministratorAccess;
+use App\Support\QueryParameter;
 use App\Support\UniversalSpreadsheetReader;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -141,7 +142,7 @@ class SpreadsheetImportController extends Controller
         try {
             $result = $this->imports->applyBulkPreviewAction(
                 $importacao,
-                (string) $request->input('acao', ''),
+                QueryParameter::inputString($request, 'acao'),
             );
         } catch (RuntimeException $exception) {
             return response()->json(['erro' => $exception->getMessage()], 422);

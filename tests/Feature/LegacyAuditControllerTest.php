@@ -357,6 +357,39 @@ final class LegacyAuditControllerTest extends TestCase
         $response->assertSessionHasErrors('data_inicio');
     }
 
+    public function testIndexIgnoresArrayValuesInStringFilters(): void
+    {
+        $this->mockAuthenticatedUser();
+        $this->bindAuditTrailService(new LengthAwarePaginator([], 0, self::PER_PAGE));
+
+        $response = $this->get(route('migration.audits.index', ['busca' => ['Login']]));
+
+        $response->assertOk();
+        $response->assertViewHas('filters', [
+            'search' => '',
+            'module' => '',
+            'date_from' => '',
+            'date_to' => '',
+            'administracao_id' => '',
+        ]);
+    }
+
+    public function testExportIgnoresArrayValuesInDateFilters(): void
+    {
+        $this->mockAuthenticatedUser();
+        /** @var MockInterface&LegacyAuditTrailServiceInterface $audits */
+        $audits = $this->mock(LegacyAuditTrailServiceInterface::class);
+        $audits->shouldReceive('exportCsv')
+            ->once()
+            ->with(['search' => '', 'module' => '', 'date_from' => '', 'date_to' => '', 'administracao_id' => ''], 7, 2, null, false)
+            ->andReturn(['filename' => '', 'content' => '']);
+
+        $response = $this->get(route('migration.audits.export', ['data_inicio' => ['2026-04-01']]));
+
+        $response->assertRedirect(route('migration.audits.index'));
+        $response->assertSessionHas('status', 'Não há eventos auditados para os filtros atuais.');
+    }
+
     public function testIndexRejectsImpossibleCalendarDateAndPreservesFilters(): void
     {
         $this->mockAuthenticatedUser();
