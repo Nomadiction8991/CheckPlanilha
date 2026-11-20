@@ -94,6 +94,89 @@ final class LegacySpreadsheetImportServiceScopeTest extends TestCase
         self::assertSame(self::ADMIN_A, $imports[0]['administracao_id']);
     }
 
+    public function testNonAdminSeesLegacyImportThroughPermittedChurchWhenAdministrationIdIsNull(): void
+    {
+        DB::table('importacoes')->insert([
+            'id' => 3,
+            'usuario_id' => 10,
+            'comum_id' => self::CHURCH_A,
+            'administracao_id' => null,
+            'arquivo_nome' => 'A-legacy.csv',
+            'total_linhas' => 4,
+            'linhas_processadas' => 4,
+            'linhas_sucesso' => 4,
+            'linhas_erro' => 1,
+            'porcentagem' => 100,
+            'status' => 'concluida',
+            'iniciada_em' => '2026-09-29 08:00:00',
+            'concluida_em' => '2026-09-29 08:10:00',
+        ]);
+        DB::table('importacoes')->insert([
+            'id' => 4,
+            'usuario_id' => 11,
+            'comum_id' => self::CHURCH_B,
+            'administracao_id' => null,
+            'arquivo_nome' => 'B-legacy.csv',
+            'total_linhas' => 2,
+            'linhas_processadas' => 2,
+            'linhas_sucesso' => 1,
+            'linhas_erro' => 1,
+            'porcentagem' => 100,
+            'status' => 'concluida',
+            'iniciada_em' => '2026-09-28 08:00:00',
+            'concluida_em' => '2026-09-28 08:10:00',
+        ]);
+        Session::put([
+            'usuario_id' => 501,
+            'is_admin' => false,
+            'administracoes_permitidas' => [self::ADMIN_A],
+        ]);
+
+        $this->createImportErrorsTable();
+        DB::table('import_erros')->insert([
+            'id' => 3,
+            'importacao_id' => 3,
+            'linha_csv' => 4,
+            'codigo' => 'A-LEGACY',
+            'descricao_csv' => 'Bem histórico',
+            'mensagem_erro' => 'Tipo não encontrado.',
+            'resolvido' => 0,
+        ]);
+        DB::table('import_erros')->insert([
+            'id' => 4,
+            'importacao_id' => 4,
+            'linha_csv' => 2,
+            'codigo' => 'B-LEGACY',
+            'descricao_csv' => 'Bem privado',
+            'mensagem_erro' => 'Tipo não encontrado.',
+            'resolvido' => 0,
+        ]);
+
+        $service = new LegacySpreadsheetImportService();
+        $filenames = array_column($service->recentImports(null, 5), 'arquivo_nome');
+
+        self::assertSame(['A-legacy.csv', 'A-central.csv'], $filenames);
+        self::assertSame(0, $service->loadImportErrors(null, 4)['erros']->total());
+        self::assertCount(1, $this->collectRows($service->downloadImportErrorsCsv(null, 4)['rows']));
+
+        $errors = $service->loadImportErrors(null, 3);
+        self::assertSame(1, $errors['erros']->total());
+        self::assertSame(1, $errors['resumo']['pendentes']);
+        self::assertNotNull($errors['importacao']);
+
+        $csvRows = $this->collectRows($service->downloadImportErrorsCsv(null, 3)['rows']);
+        self::assertSame('A-LEGACY', $csvRows[1][0]);
+
+        self::assertSame(['pendentes' => 0, 'resolvido' => true], $service->markImportErrorResolved(3, true));
+
+        try {
+            $service->markImportErrorResolved(4, true);
+            self::fail('A resolução não deveria permitir uma importação legada de outra administração.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('Erro de importação não encontrado.', $exception->getMessage());
+        }
+    }
+
     public function testNonAdminWithEmptyPermittedListFallsBackToCurrentAdministration(): void
     {
         Session::put([
@@ -201,7 +284,8 @@ final class LegacySpreadsheetImportServiceScopeTest extends TestCase
             complemento TEXT DEFAULT NULL,
             dependencia TEXT DEFAULT NULL,
             mensagem_erro TEXT DEFAULT NULL,
-            resolvido INTEGER DEFAULT 0
+            resolvido INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )');
     }
 

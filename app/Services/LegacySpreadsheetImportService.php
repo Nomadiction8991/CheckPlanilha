@@ -13,6 +13,7 @@ use App\Models\Legacy\Usuario;
 use App\Services\AnalysisPersistenceService;
 use App\Support\LegacyAdministratorAccess;
 use App\Support\LegacyCsvSanitizer;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -183,7 +184,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
             ->limit(max(1, $limit));
 
         if ($administrationIds !== null) {
-            $query->whereIn('i.administracao_id', $administrationIds);
+            $this->whereImportInAdministrationScope($query, 'i', $administrationIds);
         } elseif (($churchId ?? 0) > 0) {
             $query->where('i.comum_id', '=', $churchId);
         }
@@ -882,7 +883,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
                 ->where('ie.importacao_id', '=', $importacaoId);
 
             if ($administrationIds !== null) {
-                $baseQuery->whereIn('imp.administracao_id', $administrationIds);
+                $this->whereImportInAdministrationScope($baseQuery, 'imp', $administrationIds);
             } elseif (($effectiveChurchId ?? 0) > 0) {
                 $baseQuery->where('imp.comum_id', '=', $effectiveChurchId);
             }
@@ -890,8 +891,8 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
             $mode = 'administracao';
             $baseQuery
                 ->join('importacoes as imp', 'imp.id', '=', 'ie.importacao_id')
-                ->whereIn('imp.administracao_id', $administrationIds)
                 ->where('ie.resolvido', '=', 0);
+            $this->whereImportInAdministrationScope($baseQuery, 'imp', $administrationIds);
         } elseif (($effectiveChurchId ?? 0) > 0) {
             $mode = 'comum';
             $baseQuery
@@ -955,7 +956,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
                 ->where('i.id', '=', $importacaoId);
 
             if ($administrationIds !== null) {
-                $import->whereIn('i.administracao_id', $administrationIds);
+                $this->whereImportInAdministrationScope($import, 'i', $administrationIds);
             } elseif (($effectiveChurchId ?? 0) > 0) {
                 $import->where('i.comum_id', '=', $effectiveChurchId);
             }
@@ -1017,7 +1018,7 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
                 ->where('ie.importacao_id', '=', $importacaoId)
                 ->where('ie.resolvido', '=', 0);
             if ($administrationIds !== null) {
-                $query->whereIn('imp.administracao_id', $administrationIds);
+                $this->whereImportInAdministrationScope($query, 'imp', $administrationIds);
             } elseif (($effectiveChurchId ?? 0) > 0) {
                 $query->where('imp.comum_id', '=', $effectiveChurchId);
             }
@@ -1025,8 +1026,8 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
         } elseif ($administrationIds !== null) {
             $query
                 ->join('importacoes as imp', 'imp.id', '=', 'ie.importacao_id')
-                ->whereIn('imp.administracao_id', $administrationIds)
                 ->where('ie.resolvido', '=', 0);
+            $this->whereImportInAdministrationScope($query, 'imp', $administrationIds);
             $suffix = 'adm_' . implode('_', $administrationIds);
         } elseif (($effectiveChurchId ?? 0) > 0) {
             $query
@@ -1248,14 +1249,14 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
                 ->where('ie.importacao_id', '=', $importacaoId);
 
             if ($administrationIds !== null) {
-                $query->whereIn('imp.administracao_id', $administrationIds);
+                $this->whereImportInAdministrationScope($query, 'imp', $administrationIds);
             } elseif (($effectiveChurchId ?? 0) > 0) {
                 $query->where('imp.comum_id', '=', $effectiveChurchId);
             }
         } elseif ($administrationIds !== null) {
             $query
-                ->join('importacoes as imp', 'ie.importacao_id', '=', 'imp.id')
-                ->whereIn('imp.administracao_id', $administrationIds);
+                ->join('importacoes as imp', 'ie.importacao_id', '=', 'imp.id');
+            $this->whereImportInAdministrationScope($query, 'imp', $administrationIds);
         } elseif (($effectiveChurchId ?? 0) > 0) {
             $query
                 ->join('importacoes as imp', 'ie.importacao_id', '=', 'imp.id')
@@ -1356,9 +1357,44 @@ class LegacySpreadsheetImportService implements LegacySpreadsheetImportServiceIn
         }
 
         $errorAdministrationId = (int) ($error->administracao_id ?? 0);
-        if (!in_array($errorAdministrationId, $administrationIds, true)) {
+        if ($errorAdministrationId > 0) {
+            if (in_array($errorAdministrationId, $administrationIds, true)) {
+                return;
+            }
+
             throw new RuntimeException('Erro de importação não encontrado.');
         }
+
+        $churchId = (int) ($error->comum_id ?? 0);
+        $churchAdministrationId = $churchId > 0
+            ? (int) DB::table('comums')->where('id', '=', $churchId)->value('administracao_id')
+            : 0;
+
+        if (!in_array($churchAdministrationId, $administrationIds, true)) {
+            throw new RuntimeException('Erro de importação não encontrado.');
+        }
+    }
+
+    /**
+     * @param array<int, int> $administrationIds
+     */
+    private function whereImportInAdministrationScope(QueryBuilder $query, string $importAlias, array $administrationIds): void
+    {
+        $query->where(function (QueryBuilder $scope) use ($importAlias, $administrationIds): void {
+            $scope
+                ->whereIn($importAlias . '.administracao_id', $administrationIds)
+                ->orWhere(function (QueryBuilder $legacy) use ($importAlias, $administrationIds): void {
+                    $legacy
+                        ->whereNull($importAlias . '.administracao_id')
+                        ->whereExists(function (QueryBuilder $church) use ($importAlias, $administrationIds): void {
+                            $church
+                                ->selectRaw('1')
+                                ->from('comums as scoped_comum')
+                                ->whereColumn('scoped_comum.id', $importAlias . '.comum_id')
+                                ->whereIn('scoped_comum.administracao_id', $administrationIds);
+                        });
+                });
+        });
     }
 
     private function isUserAllowedForAdministration(Usuario $user, int $administrationId): bool

@@ -604,6 +604,17 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Padrão Recorrente**: Sim — ações que recebem o id da importação sem checar escopo. Resolvido: `preview`, `confirm`, `savePreviewActions`, `bulkPreviewAction` e `processing` agora aplicam a mesma validação de responsável já usada no início e acompanhamento do processamento. Coberto por `testPreviewActionsAreDeniedForAnotherUsersImport`, `testOtherUserCannotReadPreviewOrProcessingPage` e `testOtherUserCannotApplyBulkActionOrConfirmImport`.
 **Prioridade de Correção**: ✅ Resolvido
 
+### IMP-023 - Importações antigas sem administração ficavam invisíveis no escopo da igreja
+**Arquivo**: `app/Services/LegacySpreadsheetImportService.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação de planilhas / Acesso a dados
+**Status**: Corrigido nesta rodada.
+**Descrição**: A coluna `importacoes.administracao_id` foi adicionada como anulável e os registros existentes não receberam preenchimento retroativo. Os filtros de histórico, erros, resumo, download e resolução usavam apenas essa coluna; por isso, importações antigas com `comum_id` válido não apareciam para usuários da administração correta.
+**Risco/Impacto**: Usuários autorizados não conseguiam consultar nem resolver erros de importações históricas, embora a igreja responsável ainda estivesse vinculada à administração permitida.
+**Recomendação**: Para registros com `administracao_id` nulo, derivar o escopo da igreja vinculada e aplicar a mesma regra em todos os caminhos de consulta e alteração. Coberto por `testNonAdminSeesLegacyImportThroughPermittedChurchWhenAdministrationIdIsNull`.
+**Padrão Recorrente**: Sim — campos de escopo adicionados após a criação dos registros precisam de fallback seguro quando os dados antigos ainda não foram preenchidos.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### SYNC-001 - Resolver conflito não aplicava campo vazio sobre valor nulo
 **Arquivo**: `app/Sync/ConflictResolver.php` (`camposAlterados`)
 **Severidade**: 🟡 MÉDIO
