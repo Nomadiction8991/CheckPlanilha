@@ -28,7 +28,7 @@ final class LegacyPasswordRecoveryService implements LegacyPasswordRecoveryServi
         $normalizedPhone = $this->digitsOnly($phone);
         $normalizedEmail = mb_strtoupper(trim($email), 'UTF-8');
 
-        if ($normalizedCpf === '' || !LegacyCpfValidator::isValid($normalizedCpf)) {
+        if ($normalizedCpf === '' || !LegacyCpfValidator::isValid($normalizedCpf) || $normalizedPhone === '') {
             throw new RuntimeException('Dados não conferem com o cadastro informado.');
         }
 

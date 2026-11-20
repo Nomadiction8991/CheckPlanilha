@@ -332,6 +332,17 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Padrão Recorrente**: Sim — a importação deve preservar a representação exibida dos identificadores numéricos.
 **Prioridade de Correção**: ✅ Resolvido
 
+### AUTH-001 - Recuperação aceitava telefone sem dígitos em cadastro sem telefone
+**Arquivo**: `app/Services/LegacyPasswordRecoveryService.php` (`recover`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança
+**Status**: Corrigido nesta rodada.
+**Descrição**: A recuperação normalizava o telefone removendo tudo que não fosse dígito e comparava os resultados. Assim, uma entrada como `abc` virava string vazia e correspondia a um telefone `NULL` ou vazio no cadastro.
+**Risco/Impacto**: Uma pessoa que conhecesse o CPF e o e-mail de uma conta sem telefone cadastrado podia trocar a senha usando uma entrada sem número.
+**Recomendação**: Rejeitar telefones sem dígitos antes de buscar a conta. Coberto por `LegacyPasswordRecoveryServiceTest`, que confirma rejeição, senha inalterada e ausência de e-mail enviado.
+**Padrão Recorrente**: Comparações de dados de recuperação devem rejeitar valores vazios após normalização.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### LOC-005 - "Sant'Ana" saía com "a" minúsculo após o apóstrofo
 **Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`normalizeCityName`, usado por estados e cidades)
 **Severidade**: 🟡 MÉDIO

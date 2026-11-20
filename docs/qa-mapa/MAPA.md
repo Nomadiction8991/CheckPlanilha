@@ -19,7 +19,7 @@ Legenda testes: ✅ tem teste dedicado · ⚠️ parcial · ❌ sem teste.
 | `app/Models/Legacy` | 6 | ⚠️ (1/6) | — | — |
 | `app/Providers` | 1 | ❌ | — | — |
 | `app/Repositories` | 6 | ⚠️ (1/6) | 2026-10-10 | `t_d8aeeca2`: prévia por ID expõe dados de importação de outra administração (P2) |
-| `app/Services` | 30 | ⚠️ (16/30) | 2026-10-10 | `t_9f994f52`: recuperação aceita telefone sem dígitos em cadastros com telefone nulo e permite rotação/reenvio repetido sem throttle (P2) |
+| `app/Services` | 30 | ⚠️ (16/30) | 2026-11-19 | `t_9f994f52`: confirmado e corrigido: a recuperação agora rejeita telefone sem dígitos; o endpoint já limita tentativas a cinco por minuto |
 | `app/Support` | 7 | ⚠️ (3/7) | — | — |
 | `app/ValueObjects` | 1 | ❌ | — | — |
 
