@@ -31,7 +31,7 @@ final readonly class UserFilters
             search: trim(QueryParameter::string($request, 'busca')),
             status: in_array($status, ['0', '1'], true) ? $status : '',
             state: $state,
-            page: max(1, QueryParameter::integer($request, 'pagina', 1)),
+            page: QueryParameter::page($request, 'pagina', 20),
             perPage: 20,
         );
     }

@@ -30,6 +30,15 @@ final class QueryParameter
         return is_scalar($value) ? (int) $value : $default;
     }
 
+    public static function page(Request $request, string $key, int $perPage, int $default = 1): int
+    {
+        $perPage = max(1, $perPage);
+        $page = max(1, self::integer($request, $key, $default));
+        $maxPage = intdiv(PHP_INT_MAX, $perPage) + 1;
+
+        return min($page, $maxPage);
+    }
+
     public static function boolean(Request $request, string $key): bool
     {
         return is_scalar($request->query($key)) && $request->boolean($key);

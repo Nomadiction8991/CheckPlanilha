@@ -8,6 +8,7 @@ use App\DTO\AdministrationFilters;
 use App\Models\Legacy\Administracao;
 use App\Services\LegacyAdministrationBrowserService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -85,6 +86,23 @@ final class LegacyAdministrationBrowserServiceTest extends TestCase
 
         self::assertSame(1, $paginator->total());
         self::assertSame('Administração Central Curitiba', $paginator->items()[0]->descricao);
+    }
+
+    public function testPaginateHandlesExtremelyLargePageNumbers(): void
+    {
+        Administracao::query()->create([
+            'descricao' => 'Administração Central',
+            'cnpj' => '11111111000111',
+            'estado' => 'MT',
+            'cidade' => 'CUIABA',
+        ]);
+
+        $filters = AdministrationFilters::fromRequest(Request::create('/administrations?pagina=999999999999999999999999999999'));
+
+        $paginator = $this->service->paginate($filters);
+
+        self::assertSame(1, $paginator->total());
+        self::assertSame([], $paginator->items());
     }
 
     public function testSearchTreatsWildcardCharactersAsLiteralText(): void

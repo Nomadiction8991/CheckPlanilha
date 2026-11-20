@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 13
+- Médios: 14
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (3)
-### Lógica (22)
+### Lógica (23)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -78,6 +78,16 @@
 **Descrição**: A lista de relatórios consultava `legacy_permissions` diretamente na sessão para decidir se mostrava a posição de estoque. Após a permissão ser revogada, essa cópia podia continuar habilitando o atalho, embora o middleware já negasse a rota com base nas permissões atuais.
 **Risco/Impacto**: O usuário via um relatório indisponível e recebia uma negativa ao abri-lo.
 **Correção**: Consultar `LegacyPermissionServiceInterface::can('reports.changes.view')`, que resolve a permissão atual também usada pela autorização das rotas. Coberto por `testListAvailableReportsHidesPositionWhenPermissionWasRevokedDespiteStaleSession`.
+**Prioridade de Correção**: ✅ Resolvido
+
+### PAG-001 - Número de página extremo fazia a listagem retornar a primeira página
+**Arquivo**: `app/Support/QueryParameter.php` e DTOs de filtros de listagem
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica
+**Status**: Corrigido nesta rodada.
+**Descrição**: Os seis filtros de listagem convertiam `pagina` para inteiro e limitavam apenas o mínimo. Um valor decimal muito maior que o limite inteiro era convertido para `PHP_INT_MAX`; o cálculo do offset transbordava e o SQLite podia retornar a primeira página em vez de uma página sem resultados.
+**Risco/Impacto**: Uma URL com número de página extremo mostrava registros errados e podia quebrar a consulta em outros bancos.
+**Correção**: Limitar a página ao maior valor cujo offset ainda cabe em um inteiro, nos filtros de administrações, tipos de bem, igrejas, dependências, produtos e usuários. Coberto por `testPaginateHandlesExtremelyLargePageNumbers` e `test_list_filters_cap_page_numbers_before_offset_overflow`.
 **Prioridade de Correção**: ✅ Resolvido
 
 ### IMP-002 - Acentos corrompidos quando a amostra de encoding corta um caractere UTF-8

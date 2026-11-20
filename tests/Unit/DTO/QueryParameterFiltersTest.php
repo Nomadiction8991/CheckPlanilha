@@ -62,4 +62,19 @@ final class QueryParameterFiltersTest extends TestCase
         self::assertFalse($products->onlyNew);
         self::assertSame(1, $products->page);
     }
+
+    public function test_list_filters_cap_page_numbers_before_offset_overflow(): void
+    {
+        $request = Request::create('/listagem', 'GET', [
+            'pagina' => '999999999999999999999999999999',
+        ]);
+        $safeMaximum = intdiv(PHP_INT_MAX, 20) + 1;
+
+        self::assertSame($safeMaximum, AdministrationFilters::fromRequest($request)->page);
+        self::assertSame($safeMaximum, UserFilters::fromRequest($request)->page);
+        self::assertSame($safeMaximum, ChurchFilters::fromRequest($request)->page);
+        self::assertSame($safeMaximum, AssetTypeFilters::fromRequest($request)->page);
+        self::assertSame($safeMaximum, DepartmentFilters::fromRequest($request)->page);
+        self::assertSame($safeMaximum, ProductFilters::fromRequest($request)->page);
+    }
 }

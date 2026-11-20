@@ -28,7 +28,7 @@ final readonly class ChurchFilters
             administrationId: $administrationId > 0 ? $administrationId : null,
             search: trim(QueryParameter::string($request, 'busca')),
             state: $state,
-            page: max(1, QueryParameter::integer($request, 'pagina', 1)),
+            page: QueryParameter::page($request, 'pagina', 20),
             perPage: 20,
         );
     }

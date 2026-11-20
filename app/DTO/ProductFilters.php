@@ -50,7 +50,7 @@ final readonly class ProductFilters
             state: $state,
             status: trim(QueryParameter::string($request, 'status')),
             onlyNew: QueryParameter::boolean($request, 'somente_novos') || QueryParameter::string($request, 'status') === 'novos',
-            page: max(1, QueryParameter::integer($request, 'pagina', 1)),
+            page: QueryParameter::page($request, 'pagina', 20),
             perPage: 20,
         );
     }
