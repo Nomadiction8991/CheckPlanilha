@@ -100,6 +100,32 @@ class SyncPullTest extends SincronizacaoTestCase
         $this->assertFalse(DB::table('produtos')->where('id_produto', 6)->exists());
     }
 
+    public function test_aplicacao_no_notebook_recusa_operacao_desconhecida_sem_alterar_o_registro(): void
+    {
+        Schema::create('produtos', function (Blueprint $table): void {
+            $table->increments('id_produto');
+            $table->string('codigo')->unique();
+            $table->string('bem')->nullable();
+        });
+        DB::table('produtos')->insert(['id_produto' => 5, 'codigo' => 'P-5', 'bem' => 'Cadeira']);
+
+        try {
+            app(NotebookChangeApplier::class)->aplicarLote([[
+                'uuid' => 'abababab-4444-4444-8444-444444444444',
+                'tabela' => 'produtos',
+                'chave' => '5',
+                'operacao' => 'truncate',
+                'antes' => ['id_produto' => 5, 'codigo' => 'P-5', 'bem' => 'Cadeira'],
+                'depois' => ['id_produto' => 5, 'codigo' => 'P-5', 'bem' => 'Mesa'],
+            ]]);
+            $this->fail('Era esperado RuntimeException para uma operação desconhecida.');
+        } catch (RuntimeException $erro) {
+            $this->assertSame('Operação desconhecida: truncate.', $erro->getMessage());
+        }
+
+        $this->assertSame('Cadeira', DB::table('produtos')->where('id_produto', 5)->value('bem'));
+    }
+
     public function test_aplicacao_no_notebook_preserva_mudanca_de_nulo_para_texto_vazio(): void
     {
         Schema::create('produtos', function (Blueprint $table): void {

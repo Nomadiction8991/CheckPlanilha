@@ -57,6 +57,11 @@ final class NotebookChangeApplier
         $operacao = (string) $alteracao['operacao'];
         $antes = (array) ($alteracao['antes'] ?? []);
         $depois = (array) ($alteracao['depois'] ?? []);
+
+        if (! in_array($operacao, ['insert', 'update', 'delete'], true)) {
+            throw new \RuntimeException("Operação desconhecida: {$operacao}.");
+        }
+
         $chavePrimaria = TableKeys::primaryKey($tabela);
         $chave = (string) $alteracao['chave'];
 
