@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\DTO;
 
+use App\Support\QueryParameter;
 use Illuminate\Http\Request;
 
 final readonly class UserFilters
@@ -20,17 +21,17 @@ final readonly class UserFilters
 
     public static function fromRequest(Request $request): self
     {
-        $administrationId = (int) $request->query('administracao_id', 0);
-        $status = trim((string) $request->query('status', ''));
-        $rawState = trim((string) $request->query('estado', ''));
+        $administrationId = QueryParameter::integer($request, 'administracao_id');
+        $status = trim(QueryParameter::string($request, 'status'));
+        $rawState = trim(QueryParameter::string($request, 'estado'));
         $state = $rawState !== '' ? mb_strtoupper(mb_substr($rawState, 0, 2, 'UTF-8'), 'UTF-8') : null;
 
         return new self(
             administrationId: $administrationId > 0 ? $administrationId : null,
-            search: trim((string) $request->query('busca', '')),
+            search: trim(QueryParameter::string($request, 'busca')),
             status: in_array($status, ['0', '1'], true) ? $status : '',
             state: $state,
-            page: max(1, (int) $request->query('pagina', 1)),
+            page: max(1, QueryParameter::integer($request, 'pagina', 1)),
             perPage: 20,
         );
     }

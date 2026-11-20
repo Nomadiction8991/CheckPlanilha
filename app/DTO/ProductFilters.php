@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\DTO;
 
+use App\Support\QueryParameter;
 use Illuminate\Http\Request;
 
 final readonly class ProductFilters
@@ -24,20 +25,20 @@ final readonly class ProductFilters
 
     public static function fromRequest(Request $request): self
     {
-        $administrationId = (int) $request->query('administracao_id', 0);
-        $comumId = (int) $request->query('comum_id', 0);
-        $dependencyId = (int) $request->query('dependencia_id', 0);
-        $assetTypeId = (int) $request->query('tipo_bem_id', 0);
-        $search = trim((string) $request->query('busca', ''));
-        $rawState = trim((string) $request->query('estado', ''));
+        $administrationId = QueryParameter::integer($request, 'administracao_id');
+        $comumId = QueryParameter::integer($request, 'comum_id');
+        $dependencyId = QueryParameter::integer($request, 'dependencia_id');
+        $assetTypeId = QueryParameter::integer($request, 'tipo_bem_id');
+        $search = trim(QueryParameter::string($request, 'busca'));
+        $rawState = trim(QueryParameter::string($request, 'estado'));
         $state = $rawState !== '' ? mb_strtoupper(mb_substr($rawState, 0, 2, 'UTF-8'), 'UTF-8') : null;
 
         if ($search === '') {
-            $search = trim((string) $request->query('nome', ''));
+            $search = trim(QueryParameter::string($request, 'nome'));
         }
 
         if ($search === '') {
-            $search = trim((string) $request->query('codigo', ''));
+            $search = trim(QueryParameter::string($request, 'codigo'));
         }
 
         return new self(
@@ -47,9 +48,9 @@ final readonly class ProductFilters
             dependencyId: $dependencyId > 0 ? $dependencyId : null,
             assetTypeId: $assetTypeId > 0 ? $assetTypeId : null,
             state: $state,
-            status: trim((string) $request->query('status', '')),
-            onlyNew: $request->boolean('somente_novos') || $request->query('status') === 'novos',
-            page: max(1, (int) $request->query('pagina', 1)),
+            status: trim(QueryParameter::string($request, 'status')),
+            onlyNew: QueryParameter::boolean($request, 'somente_novos') || QueryParameter::string($request, 'status') === 'novos',
+            page: max(1, QueryParameter::integer($request, 'pagina', 1)),
             perPage: 20,
         );
     }
