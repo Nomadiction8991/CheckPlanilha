@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
+use App\Contracts\LegacyPermissionServiceInterface;
 use App\Services\LegacyReportService;
 use App\Services\LegacyReportTemplateService;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +29,9 @@ final class LegacyReportServiceScopeTest extends TestCase
             'id' => 9,
             'nome' => 'Maria Silva',
         ]);
-        $this->service = new LegacyReportService(new LegacyReportTemplateService(), $this->auth);
+        $permissions = $this->mock(LegacyPermissionServiceInterface::class);
+        $permissions->shouldIgnoreMissing();
+        $this->service = new LegacyReportService(new LegacyReportTemplateService(), $this->auth, $permissions);
     }
 
     public function testRestrictScopeToPermittedAdministrationsAndChurches(): void

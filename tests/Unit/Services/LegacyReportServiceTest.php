@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
+use App\Contracts\LegacyPermissionServiceInterface;
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Comum;
 use App\Services\LegacyReportService;
@@ -21,6 +22,7 @@ final class LegacyReportServiceTest extends TestCase
 {
     private LegacyReportTemplateService $templates;
     private LegacyAuthSessionServiceInterface&MockInterface $auth;
+    private LegacyPermissionServiceInterface&MockInterface $permissions;
     private LegacyReportService $service;
 
     protected function setUp(): void
@@ -29,8 +31,9 @@ final class LegacyReportServiceTest extends TestCase
 
         $this->templates = new LegacyReportTemplateService();
         $this->auth = $this->mock(LegacyAuthSessionServiceInterface::class);
+        $this->permissions = $this->mock(LegacyPermissionServiceInterface::class);
 
-        $this->service = new LegacyReportService($this->templates, $this->auth);
+        $this->service = new LegacyReportService($this->templates, $this->auth, $this->permissions);
     }
 
     /**
@@ -98,10 +101,7 @@ final class LegacyReportServiceTest extends TestCase
         Session::shouldReceive('all')
             ->once()
             ->andReturn([]);
-        Session::shouldReceive('get')
-            ->with('legacy_permissions', [])
-            ->once()
-            ->andReturn([]);
+        $this->permissions->shouldReceive('can')->once()->with('reports.changes.view')->andReturn(false);
 
         $result = $this->service->listAvailableReports(1);
 
@@ -135,10 +135,7 @@ final class LegacyReportServiceTest extends TestCase
         Session::shouldReceive('all')
             ->once()
             ->andReturn([]);
-        Session::shouldReceive('get')
-            ->with('legacy_permissions', [])
-            ->once()
-            ->andReturn(['reports.changes.view' => true]);
+        $this->permissions->shouldReceive('can')->once()->with('reports.changes.view')->andReturn(true);
 
         $result = $this->service->listAvailableReports(1);
 
@@ -159,16 +156,30 @@ final class LegacyReportServiceTest extends TestCase
         $this->assertSame(0, $posReport[0]['quantidade']); // empty products table
     }
 
+    public function testListAvailableReportsHidesPositionWhenPermissionWasRevokedDespiteStaleSession(): void
+    {
+        $this->mockProductsTableReturnsEmpty();
+        Session::shouldReceive('all')->once()->andReturn([
+            'legacy_permissions' => ['reports.changes.view' => true],
+        ]);
+
+        $this->permissions->shouldReceive('can')
+            ->once()
+            ->with('reports.changes.view')
+            ->andReturn(false);
+
+        $result = $this->service->listAvailableReports(1);
+
+        $this->assertNotContains('POS', array_column($result, 'codigo'));
+    }
+
     public function testListAvailableReportsUsesOfficialFormTitles(): void
     {
         $this->mockProductsTableReturnsEmpty();
         Session::shouldReceive('all')
             ->once()
             ->andReturn([]);
-        Session::shouldReceive('get')
-            ->with('legacy_permissions', [])
-            ->once()
-            ->andReturn([]);
+        $this->permissions->shouldReceive('can')->once()->with('reports.changes.view')->andReturn(false);
 
         $result = $this->service->listAvailableReports(1);
         $descricoes = array_column($result, 'descricao', 'codigo');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
+use App\Contracts\LegacyPermissionServiceInterface;
 use App\Contracts\LegacyReportServiceInterface;
 use App\Contracts\LegacyTransferServiceInterface;
 use App\Models\Legacy\Administracao;
@@ -57,6 +58,7 @@ class LegacyReportService implements LegacyReportServiceInterface
     public function __construct(
         private readonly LegacyReportTemplateService $templates,
         private readonly LegacyAuthSessionServiceInterface $auth,
+        private readonly LegacyPermissionServiceInterface $permissions,
     ) {
     }
 
@@ -100,8 +102,6 @@ class LegacyReportService implements LegacyReportServiceInterface
     {
         $this->assertChurchWithinReportScope($churchId);
         $reports = [];
-        $permissions = (array) Session::get('legacy_permissions', []);
-
         foreach (self::REPORTS as $codigo => $definition) {
             if (!in_array($codigo, ['14.1', '14.6'], true)) {
                 $reports[] = [
@@ -133,7 +133,7 @@ class LegacyReportService implements LegacyReportServiceInterface
             ];
         }
 
-        if (!empty($permissions['reports.changes.view'] ?? false)) {
+        if ($this->permissions->can('reports.changes.view')) {
             $positionRows = $this->loadVerificationPositionProducts($churchId);
 
             $reports[] = [

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Transfers;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
+use App\Contracts\LegacyPermissionServiceInterface;
 use App\Services\LegacyReportService;
 use App\Services\LegacyReportTemplateService;
 use App\Services\LegacyTransferService;
@@ -56,7 +57,8 @@ final class RelatorioAlteracoesTransferenciasTest extends TransferenciasTestCase
     private function relatorioDaIgreja(int $comumId): array
     {
         $auth = Mockery::mock(LegacyAuthSessionServiceInterface::class)->shouldIgnoreMissing();
-        $servico = new LegacyReportService(new LegacyReportTemplateService(), $auth);
+        $permissions = Mockery::mock(LegacyPermissionServiceInterface::class)->shouldIgnoreMissing();
+        $servico = new LegacyReportService(new LegacyReportTemplateService(), $auth, $permissions);
 
         return $servico->buildVerificationPositionReport($comumId);
     }

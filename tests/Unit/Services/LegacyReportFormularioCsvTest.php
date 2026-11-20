@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
+use App\Contracts\LegacyPermissionServiceInterface;
 use App\Contracts\LegacyTransferServiceInterface;
 use App\Services\LegacyReportService;
 use App\Services\LegacyReportTemplateService;
@@ -34,7 +35,9 @@ final class LegacyReportFormularioCsvTest extends TestCase
             'nome' => 'Maria Silva',
         ]);
 
-        $this->service = new LegacyReportService($this->templates, $this->auth);
+        $permissions = $this->mock(LegacyPermissionServiceInterface::class);
+        $permissions->shouldIgnoreMissing();
+        $this->service = new LegacyReportService($this->templates, $this->auth, $permissions);
     }
 
     public function testExportaCsvDoFormulario141ComItens(): void

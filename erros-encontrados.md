@@ -60,6 +60,16 @@
 **Padrão Recorrente**: Sim — qualquer interpolação de valor de usuário em replacement de `preg_replace` precisa do escape.
 **Prioridade de Correção**: 🚨 Imediata
 
+### REL-002 - Atalho da posição de estoque permanecia visível após revogação da permissão
+**Arquivo**: `app/Services/LegacyReportService.php` (`listAvailableReports`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: UI/UX e permissões
+**Status**: Corrigido nesta rodada.
+**Descrição**: A lista de relatórios consultava `legacy_permissions` diretamente na sessão para decidir se mostrava a posição de estoque. Após a permissão ser revogada, essa cópia podia continuar habilitando o atalho, embora o middleware já negasse a rota com base nas permissões atuais.
+**Risco/Impacto**: O usuário via um relatório indisponível e recebia uma negativa ao abri-lo.
+**Correção**: Consultar `LegacyPermissionServiceInterface::can('reports.changes.view')`, que resolve a permissão atual também usada pela autorização das rotas. Coberto por `testListAvailableReportsHidesPositionWhenPermissionWasRevokedDespiteStaleSession`.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### IMP-002 - Acentos corrompidos quando a amostra de encoding corta um caractere UTF-8
 **Arquivo**: `app/Services/CsvParserService.php` (método `lerCsv`, detecção de encoding)
 **Severidade**: 🟠 ALTO

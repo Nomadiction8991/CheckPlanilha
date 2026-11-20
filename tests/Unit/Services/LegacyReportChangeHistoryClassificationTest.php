@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Services;
 
 use App\Contracts\LegacyAuthSessionServiceInterface;
+use App\Contracts\LegacyPermissionServiceInterface;
 use App\Services\LegacyReportService;
 use App\Services\LegacyReportTemplateService;
 use Tests\TestCase;
@@ -13,8 +14,7 @@ final class LegacyReportChangeHistoryClassificationTest extends TestCase
 {
     public function testEditedProductWithLabelFlagAppearsOnlyOnceInLabelSection(): void
     {
-        $auth = $this->mock(LegacyAuthSessionServiceInterface::class);
-        $service = new LegacyReportService(new LegacyReportTemplateService(), $auth);
+        $service = $this->reportService();
 
         $product = [
             'origem' => 'produto',
@@ -39,8 +39,7 @@ final class LegacyReportChangeHistoryClassificationTest extends TestCase
 
     public function testUneditedProductWithLabelFlagStillAppearsInLabelSection(): void
     {
-        $auth = $this->mock(LegacyAuthSessionServiceInterface::class);
-        $service = new LegacyReportService(new LegacyReportTemplateService(), $auth);
+        $service = $this->reportService();
 
         $product = [
             'origem' => 'produto',
@@ -60,8 +59,7 @@ final class LegacyReportChangeHistoryClassificationTest extends TestCase
 
     public function testEditedCheckedProductWithLabelFlagAppearsOnceAcrossLabelSections(): void
     {
-        $auth = $this->mock(LegacyAuthSessionServiceInterface::class);
-        $service = new LegacyReportService(new LegacyReportTemplateService(), $auth);
+        $service = $this->reportService();
 
         $product = [
             'origem' => 'produto',
@@ -81,8 +79,7 @@ final class LegacyReportChangeHistoryClassificationTest extends TestCase
 
     public function testEditedProductWithLabelFlagAndObservationAppearsOnceAcrossLabelSections(): void
     {
-        $auth = $this->mock(LegacyAuthSessionServiceInterface::class);
-        $service = new LegacyReportService(new LegacyReportTemplateService(), $auth);
+        $service = $this->reportService();
 
         $product = [
             'origem' => 'produto',
@@ -98,6 +95,15 @@ final class LegacyReportChangeHistoryClassificationTest extends TestCase
 
         self::assertSame(1, $this->countAcrossLabelSections($sections, '4004'), 'Produto editado com observação e etiqueta não pode entrar em duas seções de etiquetas.');
         self::assertCount(1, $sections['alteracoes']['itens']);
+    }
+
+    private function reportService(): LegacyReportService
+    {
+        $auth = $this->mock(LegacyAuthSessionServiceInterface::class);
+        $permissions = $this->mock(LegacyPermissionServiceInterface::class);
+        $permissions->shouldIgnoreMissing();
+
+        return new LegacyReportService(new LegacyReportTemplateService(), $auth, $permissions);
     }
 
     /**
