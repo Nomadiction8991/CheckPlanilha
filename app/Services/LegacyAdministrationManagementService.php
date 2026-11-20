@@ -55,6 +55,10 @@ class LegacyAdministrationManagementService implements LegacyAdministrationManag
 
     public function delete(Administracao $administration): void
     {
+        if (DB::table('comums')->where('administracao_id', (int) $administration->getKey())->exists()) {
+            throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a igrejas.');
+        }
+
         if (DB::table('usuarios')->where('administracao_id', (int) $administration->getKey())->exists()) {
             throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a usuários.');
         }
