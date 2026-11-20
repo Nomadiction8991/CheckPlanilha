@@ -468,6 +468,24 @@ final class LegacyProductManagementTest extends TestCase
         $response->assertSessionHas('status', 'Checklist salvo com sucesso.');
     }
 
+    public function testVerificationStoreRejectsDuplicateProductIds(): void
+    {
+        $this->mock(
+            LegacyProductUtilityServiceInterface::class,
+            function (MockInterface $mock): void {
+                $mock->shouldNotReceive('saveVerificationChecklist');
+            }
+        );
+
+        $this->post(route('migration.products.verification.store'), [
+            'comum_id' => 7,
+            'itens' => [
+                ['produto_id' => 19, 'imprimir_etiqueta' => 1],
+                ['produto_id' => 19, 'imprimir_etiqueta' => 0],
+            ],
+        ])->assertSessionHasErrors('itens.1.produto_id');
+    }
+
     public function testFalhaAoSalvarChecklistNaoAlteraIgrejaAtualDaSessao(): void
     {
         $this->mock(
