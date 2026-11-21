@@ -2,25 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Support\ReportDateFormatter;
+
 if (!function_exists('appReportFormatarDataRelatorio')) {
     function appReportFormatarDataRelatorio($valor): string
     {
-        $valor = trim((string)$valor);
-        if ($valor === '') {
-            return '';
-        }
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor) === 1) {
-            $dt = \DateTime::createFromFormat('Y-m-d', $valor);
-            return $dt ? $dt->format('d/m/Y') : $valor;
-        }
-
-        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $valor) === 1) {
-            return $valor;
-        }
-
-        $timestamp = strtotime($valor);
-        return $timestamp ? date('d/m/Y', $timestamp) : $valor;
+        return ReportDateFormatter::format((string)$valor);
     }
 }
 

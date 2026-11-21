@@ -106,6 +106,22 @@ final class LegacyReportFormularioCsvTest extends TestCase
         $this->assertSame('Comercio, Importadora e Cia', $linhas[1][8]);
     }
 
+    public function testPreservaDataInvalidaSemNormalizarParaOutroDiaNoCsv(): void
+    {
+        $this->seedChurch();
+        $this->seedProduto141([
+            'codigo' => '12-3456 / 0004',
+            'bem' => 'MESA',
+            'condicao_14_1' => '1',
+            'nota_data' => '2024-02-31',
+        ]);
+
+        $file = $this->service->downloadFormularioCsv(7, '14.1');
+        $linhas = $this->parseCsv($file['content']);
+
+        $this->assertSame('2024-02-31', $linhas[1][6]);
+    }
+
     public function testExportaCsvDoFormulario146SomenteEdicoesRelevantes(): void
     {
         $this->seedChurch();

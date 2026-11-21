@@ -15,6 +15,17 @@ final class LegacyReportFillersTest extends TestCase
         require_once resource_path('legacy-reports/fillers/bootstrap.php');
     }
 
+    public function testReport141PreservesInvalidInvoiceDate(): void
+    {
+        $html = '<textarea name="data_de_emissao"></textarea>';
+        $filled = appReportAplicarPreenchimentoRelatorio('14.1', $html, [
+            'condicao_14_1' => 1,
+            'nota_data' => '2024-02-31',
+        ], []);
+
+        self::assertSame('2024-02-31', $this->extractTextareaValue($filled, 'data_de_emissao'));
+    }
+
     public function testReport141FillsAdministrationDescriptionCityAndCnpj(): void
     {
         $html = <<<HTML

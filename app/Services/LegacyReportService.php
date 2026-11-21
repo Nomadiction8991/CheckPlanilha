@@ -13,6 +13,7 @@ use App\Models\Legacy\Comum;
 use App\Support\LegacyAdministratorAccess;
 use App\Support\LegacyCsvSanitizer;
 use App\Support\LegacyProductNameSupport;
+use App\Support\ReportDateFormatter;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -472,25 +473,7 @@ class LegacyReportService implements LegacyReportServiceInterface
      */
     private function formatReportDate(string $value): string
     {
-        $value = trim($value);
-
-        if ($value === '') {
-            return '';
-        }
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
-            $date = \DateTime::createFromFormat('Y-m-d', $value);
-
-            return $date ? $date->format('d/m/Y') : $value;
-        }
-
-        if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $value) === 1) {
-            return $value;
-        }
-
-        $timestamp = strtotime($value);
-
-        return $timestamp ? date('d/m/Y', $timestamp) : $value;
+        return ReportDateFormatter::format($value);
     }
 
     /**
