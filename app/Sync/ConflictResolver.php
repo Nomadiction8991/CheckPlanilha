@@ -27,8 +27,7 @@ final class ConflictResolver
 
     public function __construct(
         private readonly SensitiveFields $camposCifrados,
-    ) {
-    }
+    ) {}
 
     /**
      * Conflitos ainda sem decisão, com os valores lado a lado.
@@ -78,6 +77,12 @@ final class ConflictResolver
                 $campos = array_values(array_diff($this->camposAlterados($antes, $depois), $chavePrimaria));
 
                 if ($campos !== []) {
+                    if ((clone $consulta)->lockForUpdate()->first() === null) {
+                        throw new ConflitoNaoAplicavelException(
+                            'O registro não existe mais no servidor. Mantenha o valor do servidor ou cadastre o item novamente.',
+                        );
+                    }
+
                     $consulta->update($this->camposCifrados->cifrar($tabela, array_intersect_key($depois, array_flip($campos))));
                 }
             }

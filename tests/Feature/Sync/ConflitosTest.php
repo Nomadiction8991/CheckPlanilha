@@ -59,6 +59,22 @@ class ConflitosTest extends SincronizacaoTestCase
         );
     }
 
+    public function test_conflito_de_atualizacao_nao_e_resolvido_se_o_registro_foi_apagado(): void
+    {
+        DB::table('produtos')->where('id_produto', 8)->delete();
+
+        $this->comoAdministrador()
+            ->post("/conflitos/{$this->conflitoId}/notebook")
+            ->assertRedirect(route('migration.conflitos.index'))
+            ->assertSessionHasErrors('conflito');
+
+        $this->assertFalse(DB::table('produtos')->where('id_produto', 8)->exists());
+        $this->assertSame(
+            'pendente',
+            DB::table('sincronizacao_conflitos')->where('id', $this->conflitoId)->value('status'),
+        );
+    }
+
     public function test_manter_valor_vazio_do_notebook_substitui_valor_nulo(): void
     {
         DB::table('produtos')->where('id_produto', 8)->update(['bem' => null]);
