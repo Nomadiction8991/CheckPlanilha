@@ -106,6 +106,22 @@ final class LegacyReportFormularioCsvTest extends TestCase
         $this->assertSame('Comercio, Importadora e Cia', $linhas[1][8]);
     }
 
+    public function testExportaAspaAposBarraInvertidaComoCsvPadrao(): void
+    {
+        $this->seedChurch();
+        $this->seedProduto141([
+            'codigo' => '12-3456 / 0005',
+            'bem' => 'MESA',
+            'condicao_14_1' => '1',
+            'nota_fornecedor' => 'Fornecedor \\"Central"',
+        ]);
+
+        $file = $this->service->downloadFormularioCsv(7, '14.1');
+        $linhas = $this->parseCsv($file['content']);
+
+        $this->assertSame('Fornecedor \\"Central"', $linhas[1][8]);
+    }
+
     public function testPreservaDataInvalidaSemNormalizarParaOutroDiaNoCsv(): void
     {
         $this->seedChurch();
@@ -352,7 +368,7 @@ final class LegacyReportFormularioCsvTest extends TestCase
         $bom = "\xEF\xBB\xBF";
         $rows = [];
         $primeira = true;
-        while (($row = fgetcsv($stream, 0, ';')) !== false) {
+        while (($row = fgetcsv($stream, 0, ';', '"', '')) !== false) {
             if ($row === [null] || $row === []) {
                 continue;
             }

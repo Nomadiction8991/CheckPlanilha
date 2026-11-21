@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 16
+- Médios: 17
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (4)
-### Lógica (25)
+### Lógica (26)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -775,4 +775,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Descrição**: A seleção pública guardava a igreja na sessão e redirecionava para a listagem, mas a consulta não usava esse contexto. A página podia exibir dados de todas as igrejas e opções de administrações alheias à selecionada.
 **Risco/Impacto**: Pessoas atendidas publicamente podiam consultar metadados de outras igrejas sem terem selecionado esse escopo.
 **Correção**: Restringir a listagem, contagem e opções de administração à igreja da sessão pública, inclusive quando o ID vier da chave legada `public_planilha_id`. Teste cobre isolamento entre duas igrejas.
+**Prioridade de Correção**: ✅ Resolvido
+
+### IMP-026 - Aspas CSV após barra invertida eram exportadas com escape incompatível
+**Arquivos**: `app/Http/Controllers/SpreadsheetImportController.php`, `app/Services/LegacyAuditTrailService.php` e `app/Services/LegacyReportService.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação e exportação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: Os exportadores usavam o escape padrão de `fputcsv` (`\\`). Quando um campo continha barra invertida imediatamente antes de aspas, o CSV deixava de seguir o escape padrão e era lido com aspas e colunas incorretas pelo próprio leitor do sistema.
+**Risco/Impacto**: Arquivos de correção, auditoria e relatórios podiam perder ou corromper valores ao serem abertos ou reimportados.
+**Correção**: Configurar todos os exportadores para duplicar aspas e não usar escape proprietário, mantendo os separadores existentes. Testes de round-trip cobrem exportação de erros, auditoria e relatório.
 **Prioridade de Correção**: ✅ Resolvido

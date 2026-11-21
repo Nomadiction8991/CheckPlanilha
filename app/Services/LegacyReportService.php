@@ -489,10 +489,10 @@ class LegacyReportService implements LegacyReportServiceInterface
         }
 
         fwrite($stream, "\xEF\xBB\xBF");
-        fputcsv($stream, $headers, ';');
+        fputcsv($stream, $headers, ';', '"', '');
 
         foreach ($rows as $row) {
-            fputcsv($stream, $row, ';');
+            fputcsv($stream, $row, ';', '"', '');
         }
 
         rewind($stream);
@@ -641,7 +641,7 @@ class LegacyReportService implements LegacyReportServiceInterface
             'Observação',
             'Editado',
             'Novo',
-        ], ';');
+        ], ';', '"', '');
 
         foreach ($items as $item) {
             fputcsv($stream, [
@@ -655,7 +655,7 @@ class LegacyReportService implements LegacyReportServiceInterface
                 LegacyCsvSanitizer::sanitizeText((string) ($item['observacoes'] ?? '')),
                 ($item['editado'] ?? false) === true ? '1' : '0',
                 ($item['novo'] ?? false) === true ? '1' : '0',
-            ], ';');
+            ], ';', '"', '');
         }
 
         rewind($stream);

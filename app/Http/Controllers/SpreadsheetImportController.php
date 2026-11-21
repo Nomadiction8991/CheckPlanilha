@@ -415,7 +415,7 @@ class SpreadsheetImportController extends Controller
                 
                 if (isset($file['rows']) && is_iterable($file['rows'])) {
                     foreach ($file['rows'] as $row) {
-                        fputcsv($output, $row);
+                        fputcsv($output, $row, ',', '"', '');
                     }
                 } else {
                     echo $file['content'] ?? '';

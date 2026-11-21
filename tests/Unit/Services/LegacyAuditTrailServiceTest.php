@@ -385,6 +385,20 @@ final class LegacyAuditTrailServiceTest extends TestCase
         self::assertSame('9', $row[3]);
     }
 
+    public function testExportCsvPreservesQuoteAfterBackslash(): void
+    {
+        $service = new LegacyAuditTrailService($this->storageFile);
+        $this->recordEntry($service, '2026-04-17 09:00:00', 'Ana', 9, 'Sessão', [
+            'description' => 'Caminho \\"Centro"',
+        ]);
+
+        $file = $service->exportCsv(['search' => '', 'module' => ''], 1, 9, null, false);
+        $lines = preg_split('/\r\n|\r|\n/', trim($file['content'])) ?: [];
+        $row = str_getcsv($lines[1], ';', '"', '');
+
+        self::assertSame('Caminho \\"Centro"', $row[7]);
+    }
+
     public function testExportCsvWithoutEntriesSignalsEmptyResult(): void
     {
         $service = new LegacyAuditTrailService($this->storageFile);

@@ -1005,6 +1005,31 @@ final class LegacySpreadsheetImportTest extends TestCase
         $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
     }
 
+    public function testErrorsDownloadUsesCsvQuoteEscapingCompatibleWithSpreadsheetReader(): void
+    {
+        $imports = \Mockery::mock(LegacySpreadsheetImportServiceInterface::class);
+        $imports->shouldReceive('downloadImportErrorsCsv')
+            ->once()
+            ->andReturn([
+                'filename' => 'erros.csv',
+                'rows' => [
+                    ['Codigo', '', '', 'Nome'],
+                    ['001', '', '', 'Objeto com \\"aspas"'],
+                ],
+            ]);
+        $this->app->instance(LegacySpreadsheetImportServiceInterface::class, $imports);
+
+        $response = $this->get(route('migration.spreadsheets.errors.download', ['importacao_id' => 15]));
+        $response->assertOk();
+
+        $stream = fopen('php://temp', 'r+');
+        fwrite($stream, substr($response->streamedContent(), 3));
+        rewind($stream);
+        fgetcsv($stream, 0, ',', '"', '');
+        $this->assertSame(['001', '', '', 'Objeto com \\"aspas"'], fgetcsv($stream, 0, ',', '"', ''));
+        fclose($stream);
+    }
+
     public function testLegacyErrorsDownloadReturnsCsv(): void
     {
         $response = $this->get('/spreadsheets/import-errors/download?importacao_id=15');

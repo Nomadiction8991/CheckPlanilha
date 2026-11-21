@@ -332,7 +332,7 @@ final class LegacyAuditTrailService implements LegacyAuditTrailServiceInterface
         }
 
         fwrite($stream, "\xEF\xBB\xBF");
-        fputcsv($stream, $headers, ';');
+        fputcsv($stream, $headers, ';', '"', '');
 
         foreach ($entries as $entry) {
             fputcsv($stream, [
@@ -349,7 +349,7 @@ final class LegacyAuditTrailService implements LegacyAuditTrailServiceInterface
                 LegacyCsvSanitizer::sanitizeText($entry->method),
                 (string) $entry->statusCode,
                 LegacyCsvSanitizer::sanitizeText($entry->ipAddress),
-            ], ';');
+            ], ';', '"', '');
         }
 
         rewind($stream);
