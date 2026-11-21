@@ -70,6 +70,8 @@ final class LegacyProductBrowserServiceTest extends TestCase
             $table->string('codigo')->nullable();
             $table->string('bem')->nullable();
             $table->string('complemento')->nullable();
+            $table->string('editado_bem')->nullable();
+            $table->string('editado_complemento')->nullable();
             $table->integer('novo')->default(0);
             $table->integer('editado')->default(0);
             $table->integer('ativo')->default(1);
@@ -528,6 +530,19 @@ final class LegacyProductBrowserServiceTest extends TestCase
         self::assertSame(1, $byName->total());
         self::assertSame(1, $byComplement->total());
         self::assertSame(1, $product->id_produto);
+    }
+
+    public function testSearchFindsTheCurrentEditedProductNameAndComplement(): void
+    {
+        $product = $this->seedEditedProduct();
+        $product->forceFill([
+            'editado_bem' => 'MESA DE REUNIAO',
+            'editado_complemento' => 'MADEIRA MACICA',
+        ])->save();
+
+        self::assertSame(1, $this->service->paginate($this->filters(search: 'MESA DE REUNIAO'))->total());
+        self::assertSame(1, $this->service->paginate($this->filters(search: 'MADEIRA MACICA'))->total());
+        self::assertSame(0, $this->service->paginate($this->filters(search: 'ARMARIO'))->total());
     }
 
     public function testRestrictedUserSearchByEditedClassificationRespectsCurrentAdministrationFilter(): void

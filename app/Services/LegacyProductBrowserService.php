@@ -62,8 +62,12 @@ class LegacyProductBrowserService implements LegacyProductBrowserServiceInterfac
 
                     $query->where(function (Builder $nested) use ($search): void {
                         LegacySearchPattern::whereContains($nested, 'codigo', $search);
-                        LegacySearchPattern::whereContains($nested, 'bem', $search, true);
-                        LegacySearchPattern::whereContains($nested, 'complemento', $search, true);
+                        $nested->orWhere(function (Builder $currentName) use ($search): void {
+                            $this->whereCurrentTextFieldMatches($currentName, 'bem', 'editado_bem', $search);
+                        });
+                        $nested->orWhere(function (Builder $currentComplement) use ($search): void {
+                            $this->whereCurrentTextFieldMatches($currentComplement, 'complemento', 'editado_complemento', $search);
+                        });
                         $nested
                             ->orWhere(function (Builder $current) use ($search): void {
                                 $this->whereCurrentClassification(
@@ -149,6 +153,33 @@ class LegacyProductBrowserService implements LegacyProductBrowserServiceInterfac
                 pageName: 'pagina',
                 page: $filters->page,
             );
+    }
+
+    private function whereCurrentTextFieldMatches(
+        Builder $query,
+        string $originalColumn,
+        string $editedColumn,
+        string $search,
+    ): void {
+        $query->where(function (Builder $current) use ($originalColumn, $editedColumn, $search): void {
+            $current
+                ->where(function (Builder $edited) use ($editedColumn, $search): void {
+                    $edited
+                        ->where('editado', 1)
+                        ->whereNotNull($editedColumn);
+                    LegacySearchPattern::whereContains($edited, $editedColumn, $search);
+                })
+                ->orWhere(function (Builder $original) use ($originalColumn, $editedColumn, $search): void {
+                    $original
+                        ->where(function (Builder $fallback) use ($editedColumn): void {
+                            $fallback
+                                ->where('editado', '!=', 1)
+                                ->orWhereNull('editado')
+                                ->orWhereNull($editedColumn);
+                        });
+                    LegacySearchPattern::whereContains($original, $originalColumn, $search);
+                });
+        });
     }
 
     private function whereCurrentClassification(
