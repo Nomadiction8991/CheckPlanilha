@@ -766,3 +766,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Usuários autorizados a várias administrações não conseguiam selecionar a igreja necessária para operar.
 **Correção**: Permitir a troca quando a administração da igreja estiver no escopo do usuário; manter a restrição à igreja atribuída para contas legadas sem escopo de administração. Testes cobrem troca permitida e rejeição fora do escopo.
 **Prioridade de Correção**: ✅ Resolvido
+
+### PUB-001 - Acesso público listava igrejas fora da seleção
+**Arquivos**: `app/Services/LegacyChurchBrowserService.php` e `tests/Unit/Services/LegacyChurchBrowserServiceTest.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Privacidade / escopo de consulta
+**Status**: Corrigido nesta rodada.
+**Descrição**: A seleção pública guardava a igreja na sessão e redirecionava para a listagem, mas a consulta não usava esse contexto. A página podia exibir dados de todas as igrejas e opções de administrações alheias à selecionada.
+**Risco/Impacto**: Pessoas atendidas publicamente podiam consultar metadados de outras igrejas sem terem selecionado esse escopo.
+**Correção**: Restringir a listagem, contagem e opções de administração à igreja da sessão pública, inclusive quando o ID vier da chave legada `public_planilha_id`. Teste cobre isolamento entre duas igrejas.
+**Prioridade de Correção**: ✅ Resolvido

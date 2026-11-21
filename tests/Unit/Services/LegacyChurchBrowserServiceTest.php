@@ -115,6 +115,34 @@ final class LegacyChurchBrowserServiceTest extends TestCase
         self::assertSame('Igreja Alpha', $results->items()[0]->descricao);
     }
 
+    public function testPublicSessionIsRestrictedToSelectedChurchAndItsAdministration(): void
+    {
+        $admin1 = new Administracao();
+        $admin1->forceFill(['id' => 10, 'descricao' => 'Administração pública']);
+        $admin1->save();
+        $admin2 = new Administracao();
+        $admin2->forceFill(['id' => 20, 'descricao' => 'Administração privada']);
+        $admin2->save();
+
+        foreach ([
+            ['id' => 1, 'codigo' => 'PUB-01', 'descricao' => 'Igreja selecionada', 'administracao_id' => 10],
+            ['id' => 2, 'codigo' => 'PRIV-02', 'descricao' => 'Outra igreja', 'administracao_id' => 20],
+        ] as $values) {
+            $church = new Comum();
+            $church->forceFill($values);
+            $church->save();
+        }
+
+        Session::put(['public_acesso' => true, 'public_comum_id' => 0, 'public_planilha_id' => 1]);
+
+        $results = $this->service->paginate(new ChurchFilters(null, '', null, 1, 10));
+
+        self::assertCount(1, $results->items());
+        self::assertSame('Igreja selecionada', $results->items()[0]->descricao);
+        self::assertSame(1, $this->service->countAll());
+        self::assertSame(['Administração pública'], $this->service->administrationOptions()->pluck('descricao')->all());
+    }
+
     public function testPaginateFiltersByState(): void
     {
         $churchSp = new Comum();

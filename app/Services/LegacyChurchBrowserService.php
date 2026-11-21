@@ -19,10 +19,12 @@ class LegacyChurchBrowserService implements LegacyChurchBrowserServiceInterface
     public function paginate(ChurchFilters $filters): LengthAwarePaginator
     {
         $administrationScopeIds = $this->currentAdministrationScopeIds();
+        $publicChurchId = $this->publicChurchId();
 
         return Comum::query()
             ->with(['administracao:id,descricao'])
             ->withCount('activeProducts')
+            ->when($publicChurchId !== null, static fn ($query) => $query->whereKey($publicChurchId))
             ->when(
                 $administrationScopeIds !== null,
                 static fn ($query) => $query->whereIn('administracao_id', $administrationScopeIds),
@@ -59,8 +61,10 @@ class LegacyChurchBrowserService implements LegacyChurchBrowserServiceInterface
     public function countAll(): int
     {
         $administrationScopeIds = $this->currentAdministrationScopeIds();
+        $publicChurchId = $this->publicChurchId();
 
         return Comum::query()
+            ->when($publicChurchId !== null, static fn ($query) => $query->whereKey($publicChurchId))
             ->when(
                 $administrationScopeIds !== null,
                 static fn ($query) => $query->whereIn('administracao_id', $administrationScopeIds),
@@ -71,6 +75,17 @@ class LegacyChurchBrowserService implements LegacyChurchBrowserServiceInterface
     public function administrationOptions(): Collection
     {
         $administrationScopeIds = $this->currentAdministrationScopeIds();
+        $publicChurchId = $this->publicChurchId();
+
+        if ($publicChurchId !== null) {
+            $administrationId = Comum::query()->whereKey($publicChurchId)->value('administracao_id');
+
+            if ($administrationId === null) {
+                return collect();
+            }
+
+            $administrationScopeIds = [(int) $administrationId];
+        }
 
         return Administracao::query()
             ->when(
@@ -110,5 +125,19 @@ class LegacyChurchBrowserService implements LegacyChurchBrowserServiceInterface
         $permittedAdministrationIds = array_values(array_unique($permittedAdministrationIds));
 
         return $permittedAdministrationIds !== [] ? $permittedAdministrationIds : [];
+    }
+
+    private function publicChurchId(): ?int
+    {
+        if (! Session::get('public_acesso', false)) {
+            return null;
+        }
+
+        $churchId = (int) Session::get('public_comum_id', 0);
+        if ($churchId <= 0) {
+            $churchId = (int) Session::get('public_planilha_id', 0);
+        }
+
+        return $churchId > 0 ? $churchId : 0;
     }
 }
