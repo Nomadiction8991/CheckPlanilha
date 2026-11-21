@@ -39,6 +39,28 @@ class WindowsAccessPointTest extends TestCase
         $this->assertStringNotContainsString(self::SENHA, implode(' ', $chamada['comando']));
     }
 
+    public function test_estado_desligado_nao_e_confundido_com_ligado(): void
+    {
+        $executor = new FakeCommandRunner([
+            'powershell.exe' => ['codigo' => 0, 'saida' => 'DESLIGADO'],
+        ]);
+
+        $ponto = new WindowsAccessPoint($executor, sys_get_temp_dir(), liberado: true);
+
+        $this->assertFalse($ponto->estaLigado());
+    }
+
+    public function test_estado_ligado_e_reconhecido(): void
+    {
+        $executor = new FakeCommandRunner([
+            'powershell.exe' => ['codigo' => 0, 'saida' => 'LIGADO'],
+        ]);
+
+        $ponto = new WindowsAccessPoint($executor, sys_get_temp_dir(), liberado: true);
+
+        $this->assertTrue($ponto->estaLigado());
+    }
+
     public function test_falha_do_script_nao_mostra_a_senha(): void
     {
         $executor = new FakeCommandRunner([

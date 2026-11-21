@@ -14,6 +14,16 @@
 
 ## Detalhes dos Erros
 
+### REDE-001 - O ponto de acesso desligado era exibido como ligado no Windows
+**Arquivo**: `app/Support/Connection/WindowsAccessPoint.php` (`estaLigado`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / modo offline
+**Status**: Corrigido nesta rodada.
+**Descrição**: A verificação procurava a palavra `LIGADO` em qualquer trecho da saída do PowerShell. Como a resposta desligada é `DESLIGADO`, ela também continha essa sequência e era interpretada como rede ativa.
+**Risco/Impacto**: A tela podia indicar que o ponto de acesso estava ligado e mostrar instruções de conexão mesmo quando os celulares não conseguiam encontrar a rede.
+**Correção**: Comparar a resposta aparada exatamente com `LIGADO`. Testes cobrem os estados ligado e desligado.
+**Prioridade de Correção**: Média
+
 ### SYNC-001 - Cópia inicial podia misturar estados de momentos diferentes
 **Arquivo**: `app/Sync/CopyExporter.php` (`linhas`)
 **Severidade**: 🟠 ALTO

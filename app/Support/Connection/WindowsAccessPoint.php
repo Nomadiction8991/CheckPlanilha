@@ -65,7 +65,7 @@ final class WindowsAccessPoint implements AccessPointInterface
 
         $resultado = $this->rodar($this->scriptEstado());
 
-        return $resultado['codigo'] === 0 && str_contains($resultado['saida'], 'LIGADO');
+        return $resultado['codigo'] === 0 && trim($resultado['saida']) === 'LIGADO';
     }
 
     public function enderecoDaRede(): ?string
