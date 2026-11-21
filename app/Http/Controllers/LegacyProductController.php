@@ -15,6 +15,7 @@ use App\Http\Requests\UpdateLegacyProductRequest;
 use App\Models\Legacy\Produto;
 use App\Support\LegacyProductTypeOptionSupport;
 use App\Support\InternalRedirect;
+use App\Support\QueryParameter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -33,7 +34,7 @@ class LegacyProductController extends Controller
 
     public function index(Request $request): View
     {
-        if ($request->integer('comum_id') <= 0 && (int) Session::get('comum_id', 0) > 0) {
+        if (QueryParameter::inputInteger($request, 'comum_id') <= 0 && (int) Session::get('comum_id', 0) > 0) {
             $request->merge(['comum_id' => (int) Session::get('comum_id')]);
         }
 
@@ -56,7 +57,7 @@ class LegacyProductController extends Controller
 
     public function verification(Request $request): View
     {
-        if ($request->integer('comum_id') <= 0 && (int) Session::get('comum_id', 0) > 0) {
+        if (QueryParameter::inputInteger($request, 'comum_id') <= 0 && (int) Session::get('comum_id', 0) > 0) {
             $request->merge(['comum_id' => (int) Session::get('comum_id')]);
         }
 
@@ -93,7 +94,11 @@ class LegacyProductController extends Controller
 
     public function create(Request $request): View
     {
-        $selectedChurchId = max(0, (int) $request->query('comum_id', (int) Session::get('comum_id', 0)));
+        $selectedChurchId = max(0, QueryParameter::integer(
+            $request,
+            'comum_id',
+            (int) Session::get('comum_id', 0),
+        ));
         $churches = $this->products->churchOptions();
         $dependencies = $this->products->dependencyOptions(null);
         $assetTypes = $this->products->assetTypeOptions();
@@ -120,16 +125,16 @@ class LegacyProductController extends Controller
             $createdCount = $this->productManager->createMany($request->toDto());
         } catch (RuntimeException $exception) {
             return redirect()
-                ->route('migration.products.create', ['comum_id' => $request->integer('comum_id') ?: null])
+                ->route('migration.products.create', ['comum_id' => QueryParameter::inputInteger($request, 'comum_id') ?: null])
                 ->withInput()
                 ->with('status', $exception->getMessage())
                 ->with('status_type', 'error');
         }
 
-        Session::put('comum_id', $request->integer('comum_id'));
+        Session::put('comum_id', QueryParameter::inputInteger($request, 'comum_id'));
 
         return redirect()
-            ->route('migration.products.index', ['comum_id' => $request->integer('comum_id')])
+            ->route('migration.products.index', ['comum_id' => QueryParameter::inputInteger($request, 'comum_id')])
             ->with('status', $createdCount > 1 ? $createdCount . ' produtos cadastrados com sucesso.' : 'Produto cadastrado com sucesso.')
             ->with('status_type', 'success');
     }
@@ -195,7 +200,7 @@ class LegacyProductController extends Controller
     {
         try {
             $this->productUtility->saveVerificationChecklist(
-                $request->integer('comum_id'),
+                QueryParameter::inputInteger($request, 'comum_id'),
                 $request->toItems(),
             );
         } catch (RuntimeException $exception) {
@@ -205,7 +210,7 @@ class LegacyProductController extends Controller
                 ->with('status_type', 'error');
         }
 
-        Session::put('comum_id', $request->integer('comum_id'));
+        Session::put('comum_id', QueryParameter::inputInteger($request, 'comum_id'));
 
         return redirect()
             ->route('migration.products.verification', $request->toReturnQuery())

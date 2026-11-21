@@ -12,6 +12,7 @@ use App\Models\Legacy\Produto;
 use App\Models\Legacy\Transferencia;
 use App\Services\LegacyTransferFormService;
 use App\Support\Modo\EstadoModo;
+use App\Support\QueryParameter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -62,7 +63,7 @@ class LegacyTransferController extends Controller
             ->values();
 
         // Só aceita como destino uma igreja da lista, para não mostrar os locais de igreja fora do escopo.
-        $destino = $igrejasDeDestino->firstWhere('id', $request->integer('comum_destino_id'));
+        $destino = $igrejasDeDestino->firstWhere('id', QueryParameter::inputInteger($request, 'comum_destino_id'));
 
         return view('transfers.produto', [
             'bem' => $product,

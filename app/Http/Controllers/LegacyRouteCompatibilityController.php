@@ -250,7 +250,7 @@ class LegacyRouteCompatibilityController extends Controller
             'product' => $product,
             'churchId' => $churchId,
             'filters' => [
-                'pagina' => max(1, (int) $request->query('pagina', '1')),
+                'pagina' => max(1, QueryParameter::integer($request, 'pagina', 1)),
                 'busca' => $this->resolveProductSearch($request),
                 'dependencia_id' => $this->firstPositiveInt($request->query('dependencia_id'), $request->query('dependencia')),
                 'status' => trim(QueryParameter::string($request, 'status')),
@@ -613,7 +613,7 @@ class LegacyRouteCompatibilityController extends Controller
     private function firstPositiveInt(mixed ...$values): ?int
     {
         foreach ($values as $value) {
-            $candidate = (int) $value;
+            $candidate = QueryParameter::integerValue($value);
             if ($candidate > 0) {
                 return $candidate;
             }
@@ -636,7 +636,11 @@ class LegacyRouteCompatibilityController extends Controller
      */
     private function buildProductReturnQuery(Request $request, ?int $churchId): array
     {
-        $page = max(1, (int) $request->input('pagina', $request->query('pagina', '1')));
+        $page = max(1, QueryParameter::inputInteger(
+            $request,
+            'pagina',
+            QueryParameter::integer($request, 'pagina', 1),
+        ));
 
         return array_filter([
             'comum_id' => $churchId,

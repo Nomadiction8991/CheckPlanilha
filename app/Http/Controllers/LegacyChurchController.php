@@ -9,6 +9,7 @@ use App\Contracts\LegacyChurchManagementServiceInterface;
 use App\DTO\ChurchFilters;
 use App\Http\Requests\UpdateLegacyChurchRequest;
 use App\Models\Legacy\Comum;
+use App\Support\QueryParameter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -74,7 +75,7 @@ class LegacyChurchController extends Controller
 
     public function productsCount(Request $request): JsonResponse
     {
-        $churchId = max(0, (int) $request->query('comum_id', 0));
+        $churchId = max(0, QueryParameter::integer($request, 'comum_id'));
 
         if ($churchId <= 0) {
             return response()->json([
@@ -111,7 +112,7 @@ class LegacyChurchController extends Controller
 
     public function deleteProducts(Request $request): RedirectResponse
     {
-        $churchId = max(0, (int) $request->input('comum_id', 0));
+        $churchId = max(0, QueryParameter::inputInteger($request, 'comum_id'));
 
         if ($churchId <= 0) {
             return redirect()

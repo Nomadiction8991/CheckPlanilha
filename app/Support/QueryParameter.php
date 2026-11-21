@@ -27,6 +27,16 @@ final class QueryParameter
     {
         $value = $request->query($key, $default);
 
+        return self::integerValue($value, $default);
+    }
+
+    public static function inputInteger(Request $request, string $key, int $default = 0): int
+    {
+        return self::integerValue($request->input($key, $default), $default);
+    }
+
+    public static function integerValue(mixed $value, int $default = 0): int
+    {
         return is_scalar($value) ? (int) $value : $default;
     }
 

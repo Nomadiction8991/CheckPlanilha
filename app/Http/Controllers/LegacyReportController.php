@@ -25,10 +25,10 @@ class LegacyReportController extends Controller
 
     public function index(Request $request): View
     {
-        $administrationId = $request->integer('administracao_id') ?: null;
+        $administrationId = QueryParameter::inputInteger($request, 'administracao_id') ?: null;
         $state = strtoupper(trim(QueryParameter::string($request, 'estado')));
         $state = $state !== '' ? $state : null;
-        $churchId = $request->integer('comum_id') ?: ((int) Session::get('comum_id', 0) ?: null);
+        $churchId = QueryParameter::inputInteger($request, 'comum_id') ?: ((int) Session::get('comum_id', 0) ?: null);
 
         $churches = $this->reports->churchOptions($administrationId, $state);
         $selectedChurchId = $this->normalizeSelectedChurchId($churchId, $churches);
@@ -60,7 +60,7 @@ class LegacyReportController extends Controller
 
     public function show(Request $request, string $formulario): View|RedirectResponse
     {
-        $churchId = $request->integer('comum_id', (int) Session::get('comum_id', 0));
+        $churchId = QueryParameter::inputInteger($request, 'comum_id', (int) Session::get('comum_id', 0));
 
         if ($churchId <= 0) {
             return redirect()
@@ -87,7 +87,7 @@ class LegacyReportController extends Controller
 
     public function changes(Request $request): View|RedirectResponse
     {
-        $churchId = $request->integer('comum_id', (int) Session::get('comum_id', 0));
+        $churchId = QueryParameter::inputInteger($request, 'comum_id', (int) Session::get('comum_id', 0));
 
         if ($churchId <= 0) {
             return redirect()
@@ -114,7 +114,7 @@ class LegacyReportController extends Controller
 
     public function changesExport(Request $request): StreamedResponse|RedirectResponse
     {
-        $churchId = $request->integer('comum_id', (int) Session::get('comum_id', 0));
+        $churchId = QueryParameter::inputInteger($request, 'comum_id', (int) Session::get('comum_id', 0));
 
         if ($churchId <= 0) {
             return redirect()
@@ -146,7 +146,7 @@ class LegacyReportController extends Controller
 
     public function formularioExport(Request $request, string $formulario): StreamedResponse|RedirectResponse
     {
-        $churchId = $request->integer('comum_id', (int) Session::get('comum_id', 0));
+        $churchId = QueryParameter::inputInteger($request, 'comum_id', (int) Session::get('comum_id', 0));
 
         if ($churchId <= 0) {
             return redirect()
@@ -189,13 +189,13 @@ class LegacyReportController extends Controller
         if (!is_file($templatePath)) {
             return redirect()
                 ->route('migration.reports.index', array_filter([
-                    'comum_id' => $request->integer('comum_id') ?: null,
+                    'comum_id' => QueryParameter::inputInteger($request, 'comum_id') ?: null,
                 ]))
                 ->with('status', 'Formulário inválido para o editor de células.')
                 ->with('status_type', 'error');
         }
 
-        $comumId = $request->integer('comum_id', (int) Session::get('comum_id', 0));
+        $comumId = QueryParameter::inputInteger($request, 'comum_id', (int) Session::get('comum_id', 0));
         $cellEditorBaseUrl = route('migration.reports.editor', absolute: false);
         $cellEditorQuerySuffix = $comumId > 0 ? '&comum_id=' . $comumId : '';
         $editorBackUrl = $comumId > 0

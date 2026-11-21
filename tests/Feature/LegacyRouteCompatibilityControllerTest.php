@@ -78,6 +78,18 @@ final class LegacyRouteCompatibilityControllerTest extends TestCase
         $response->assertSessionHas('status_type', 'error');
     }
 
+    public function testChurchesEditRejectsArrayIdInsteadOfCoercingItToAnInteger(): void
+    {
+        $this->mockPermissionCan();
+
+        $response = $this->withSession($this->authSession())
+            ->get('/churches/edit?id%5B%5D=5');
+
+        $response->assertRedirect('/churches');
+        $response->assertSessionHas('status', 'Igreja não informada para edição.');
+        $response->assertSessionHas('status_type', 'error');
+    }
+
     public function testChurchesUpdatePostRedirectsToCanonicalUpdateRoute(): void
     {
         $this->mockPermissionCan();

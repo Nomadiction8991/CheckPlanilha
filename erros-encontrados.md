@@ -736,3 +736,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Produtos podiam ser registrados com classificação de outra administração, afetando a consistência dos cadastros e relatórios.
 **Correção**: Validar também a administração da igreja ao resolver o tipo de bem, mantendo tipos compartilhados e igrejas sem administração identificada. Testes cobrem criação e edição com usuário global.
 **Prioridade de Correção**: ✅ Resolvido
+
+### HTTP-001 - Identificadores em array eram convertidos para o registro 1
+**Arquivos**: `app/Support/QueryParameter.php` e controladores de igrejas, produtos, relatórios, transferências, importações e rotas legadas
+**Severidade**: 🟠 ALTO
+**Categoria**: Integridade de dados / Entrada HTTP
+**Status**: Corrigido nesta rodada.
+**Descrição**: Alguns endpoints convertiam diretamente valores enviados pelo usuário para inteiro. Em PHP, um array não vazio convertido dessa forma vira `1`; por exemplo, `comum_id[]=7` podia selecionar a igreja de ID 1. Isso também fazia rotas legadas encaminharem um ID diferente do informado.
+**Risco/Impacto**: Uma requisição malformada podia consultar ou alterar dados de outro registro; no endpoint de exclusão, podia apagar os produtos da igreja de ID 1.
+**Correção**: Centralizar a conversão de parâmetros numéricos em `QueryParameter`, que usa o valor padrão para entradas não escalares sem alterar a conversão dos valores escalares, e substituir os casts diretos encontrados nos controladores afetados. Testes de regressão cobrem rotas legadas, exclusão de produtos e progresso de importação.
+**Prioridade de Correção**: ✅ Resolvido

@@ -729,6 +729,25 @@ final class LegacyChurchControllerTest extends TestCase
         $response->assertSessionHas('status_type', 'error');
     }
 
+    public function testDeleteProductsRejectsArrayChurchIdWithoutCallingDeletionService(): void
+    {
+        $this->mock(
+            LegacyChurchManagementServiceInterface::class,
+            function (MockInterface $mock): void {
+                $mock->shouldNotReceive('findChurch');
+                $mock->shouldNotReceive('deleteProducts');
+            },
+        );
+
+        $response = $this->post(route('migration.churches.delete-products'), [
+            'comum_id' => [7],
+        ]);
+
+        $response->assertRedirect(route('migration.churches.index'));
+        $response->assertSessionHas('status', 'ID de igreja inválido.');
+        $response->assertSessionHas('status_type', 'error');
+    }
+
     public function testDeleteProductsFailsForMissingChurch(): void
     {
         $this->mock(

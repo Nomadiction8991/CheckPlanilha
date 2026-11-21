@@ -315,7 +315,7 @@ class SpreadsheetImportController extends Controller
 
     public function processFile(Request $request): JsonResponse
     {
-        $importacao = max(0, (int) $request->input('id', 0));
+        $importacao = max(0, QueryParameter::inputInteger($request, 'id'));
 
         if ($importacao <= 0) {
             return response()->json([
@@ -359,7 +359,7 @@ class SpreadsheetImportController extends Controller
 
     public function legacyProgress(Request $request): JsonResponse
     {
-        $importacao = max(0, (int) ($request->query('id') ?? 0));
+        $importacao = max(0, QueryParameter::integer($request, 'id'));
 
         if ($importacao <= 0) {
             return response()->json([
@@ -373,9 +373,9 @@ class SpreadsheetImportController extends Controller
 
     public function errors(Request $request): View
     {
-        $churchId = $request->integer('comum_id') ?: null;
-        $importacaoId = $request->integer('importacao_id') ?: null;
-        $page = max(1, $request->integer('pagina', 1));
+        $churchId = QueryParameter::inputInteger($request, 'comum_id') ?: null;
+        $importacaoId = QueryParameter::inputInteger($request, 'importacao_id') ?: null;
+        $page = max(1, QueryParameter::inputInteger($request, 'pagina', 1));
         $data = $this->imports->loadImportErrors($churchId, $importacaoId, $page);
 
         return view('spreadsheets.errors', [
@@ -392,8 +392,8 @@ class SpreadsheetImportController extends Controller
 
     public function downloadErrorsCsv(Request $request): StreamedResponse|RedirectResponse
     {
-        $churchId = $request->integer('comum_id') ?: null;
-        $importacaoId = $request->integer('importacao_id') ?: null;
+        $churchId = QueryParameter::inputInteger($request, 'comum_id') ?: null;
+        $importacaoId = QueryParameter::inputInteger($request, 'importacao_id') ?: null;
 
         try {
             $file = $this->imports->downloadImportErrorsCsv($churchId, $importacaoId);
@@ -454,7 +454,11 @@ class SpreadsheetImportController extends Controller
 
     public function legacyResolveError(Request $request): JsonResponse
     {
-        $erro = max(0, (int) $request->input('erro_id', $request->input('erro', 0)));
+        $erro = max(0, QueryParameter::inputInteger(
+            $request,
+            'erro_id',
+            QueryParameter::inputInteger($request, 'erro'),
+        ));
 
         if ($erro <= 0) {
             return response()->json([
@@ -527,7 +531,15 @@ class SpreadsheetImportController extends Controller
 
     private function legacyImportId(Request $request): int
     {
-        return max(0, (int) $request->input('importacao_id', $request->input('id', $request->input('importacao', 0))));
+        return max(0, QueryParameter::inputInteger(
+            $request,
+            'importacao_id',
+            QueryParameter::inputInteger(
+                $request,
+                'id',
+                QueryParameter::inputInteger($request, 'importacao'),
+            ),
+        ));
     }
 
     private function assertOwnership(int $importacao): ?JsonResponse
