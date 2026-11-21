@@ -68,6 +68,66 @@ class AuditLogTest extends TestCase
         $log->acrescentar([$this->entrada('isto nao e json')]);
     }
 
+    public function test_duas_gravacoes_concorrentes_nao_duplicam_eventos(): void
+    {
+        $diretorio = dirname($this->arquivo);
+        mkdir($diretorio, 0777, true);
+
+        $sinalizacao = $diretorio . '/.inicio';
+        $conteudo = [];
+        for ($indice = 0; $indice < 10_000; $indice++) {
+            $linha = json_encode(['acao' => 'concorrente', 'evento' => $indice], JSON_THROW_ON_ERROR);
+            $conteudo[] = $this->entrada($linha);
+        }
+
+        $codigo = <<<'PHP'
+            require $argv[1] . '/vendor/autoload.php';
+            $entradas = json_decode(file_get_contents($argv[4]), true, 512, JSON_THROW_ON_ERROR);
+            while (! is_file($argv[2])) { usleep(1000); }
+            $recebidas = (new \App\Sync\AuditLog($argv[3]))->acrescentar($entradas);
+            file_put_contents($argv[5], (string) $recebidas);
+            PHP;
+
+        $arquivoEntradas = $diretorio . '/entradas.json';
+        file_put_contents($arquivoEntradas, json_encode($conteudo, JSON_THROW_ON_ERROR));
+        $processos = [];
+        $resultados = [];
+
+        for ($indice = 0; $indice < 2; $indice++) {
+            $resultado = $diretorio . '/resultado-' . $indice;
+            $processo = proc_open([
+                PHP_BINARY,
+                '-r',
+                $codigo,
+                dirname(__DIR__, 3),
+                $sinalizacao,
+                $this->arquivo,
+                $arquivoEntradas,
+                $resultado,
+            ], [
+                0 => ['file', '/dev/null', 'r'],
+                1 => ['file', '/dev/null', 'w'],
+                2 => ['file', '/dev/null', 'w'],
+            ], $pipes);
+
+            $this->assertIsResource($processo);
+            $processos[] = $processo;
+            $resultados[] = $resultado;
+        }
+
+        touch($sinalizacao);
+
+        foreach ($processos as $processo) {
+            $this->assertSame(0, proc_close($processo));
+        }
+
+        $this->assertSame(10_000, count((new AuditLog($this->arquivo))->linhas()));
+        $this->assertSame(10_000, array_sum(array_map(
+            static fn (string $resultado): int => (int) file_get_contents($resultado),
+            $resultados,
+        )));
+    }
+
     public function test_nao_confirma_linhas_quando_o_arquivo_de_auditoria_nao_pode_ser_escrito(): void
     {
         mkdir($this->arquivo, 0777, true);

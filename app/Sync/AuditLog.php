@@ -45,9 +45,6 @@ final class AuditLog
      */
     public function acrescentar(array $entradas): int
     {
-        $existentes = array_flip(array_column($this->linhas(), 'sha256'));
-        $novas = [];
-
         foreach ($entradas as $entrada) {
             $linha = (string) $entrada['linha'];
             $sha256 = (string) $entrada['sha256'];
@@ -59,16 +56,9 @@ final class AuditLog
             if (str_contains($linha, "\n") || str_contains($linha, "\r") || ! is_array(json_decode($linha, true))) {
                 throw new InvalidArgumentException('Uma linha da auditoria não é um evento válido. O lote inteiro foi recusado.');
             }
-
-            if (isset($existentes[$sha256])) {
-                continue;
-            }
-
-            $existentes[$sha256] = true;
-            $novas[] = $linha;
         }
 
-        if ($novas === []) {
+        if ($entradas === []) {
             return 0;
         }
 
@@ -78,8 +68,7 @@ final class AuditLog
             throw new InvalidArgumentException('Não foi possível criar a pasta da auditoria.');
         }
 
-        $conteudo = implode(PHP_EOL, $novas) . PHP_EOL;
-        $arquivo = @fopen($this->arquivo, 'ab');
+        $arquivo = @fopen($this->arquivo, 'c+');
 
         if ($arquivo === false) {
             throw new RuntimeException('Não foi possível abrir o histórico de auditoria para gravação.');
@@ -88,6 +77,38 @@ final class AuditLog
         try {
             if (! flock($arquivo, LOCK_EX)) {
                 throw new RuntimeException('Não foi possível bloquear o histórico de auditoria para gravação.');
+            }
+
+            rewind($arquivo);
+            $conteudoExistente = stream_get_contents($arquivo);
+            if ($conteudoExistente === false) {
+                throw new RuntimeException('Não foi possível ler o histórico de auditoria.');
+            }
+
+            $existentes = array_fill_keys(array_map(
+                static fn (string $linha): string => hash('sha256', $linha),
+                preg_split('/\r\n|\n|\r/', $conteudoExistente, -1, PREG_SPLIT_NO_EMPTY) ?: [],
+            ), true);
+            $novas = [];
+
+            foreach ($entradas as $entrada) {
+                $sha256 = (string) $entrada['sha256'];
+                if (isset($existentes[$sha256])) {
+                    continue;
+                }
+
+                $existentes[$sha256] = true;
+                $novas[] = (string) $entrada['linha'];
+            }
+
+            if ($novas === []) {
+                return 0;
+            }
+
+            $conteudo = implode(PHP_EOL, $novas) . PHP_EOL;
+
+            if (fseek($arquivo, 0, SEEK_END) !== 0) {
+                throw new RuntimeException('Não foi possível posicionar o histórico de auditoria para gravação.');
             }
 
             $estadoInicial = fstat($arquivo);
