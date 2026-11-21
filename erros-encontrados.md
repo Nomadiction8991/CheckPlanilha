@@ -756,3 +756,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Uma conta sem escopo passava a carregar o contexto de uma igreja alheia, e o login alterava o cadastro do usuário sem uma atribuição explícita.
 **Correção**: Retornar escopo de igreja nulo quando a igreja atribuída estiver ausente ou inválida, sem selecionar outra igreja nem gravar no usuário. Testes de regressão cobrem conta sem igreja e referência a igreja inexistente.
 **Prioridade de Correção**: ✅ Resolvido
+
+### AUTH-006 - Usuário de administração não conseguia trocar de igreja
+**Arquivo**: `app/Services/LegacyAuthSessionService.php` (`switchChurch`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Regra de acesso / funcionalidade
+**Status**: Corrigido nesta rodada.
+**Descrição**: Contas comuns vinculadas a uma administração usam `comum_id` nulo e recebem igrejas pelo escopo de `administracoes_permitidas`. A troca de contexto ignorava esse escopo e comparava apenas `comum_id`, recusando todas as igrejas dessas contas.
+**Risco/Impacto**: Usuários autorizados a várias administrações não conseguiam selecionar a igreja necessária para operar.
+**Correção**: Permitir a troca quando a administração da igreja estiver no escopo do usuário; manter a restrição à igreja atribuída para contas legadas sem escopo de administração. Testes cobrem troca permitida e rejeição fora do escopo.
+**Prioridade de Correção**: ✅ Resolvido

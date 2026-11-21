@@ -141,8 +141,16 @@ class LegacyAuthSessionService implements LegacyAuthSessionServiceInterface
             throw new RuntimeException('Sessão inválida.');
         }
 
-        if (!$user->isAdministrator() && (int) $user->comum_id !== $churchId) {
-            throw new RuntimeException('Igreja fora do escopo permitido.');
+        if (!$user->isAdministrator()) {
+            $administrationIds = $this->resolveAdministrationIds($user);
+
+            if ($administrationIds !== []) {
+                if (!in_array((int) ($church->administracao_id ?? 0), $administrationIds, true)) {
+                    throw new RuntimeException('Igreja fora do escopo permitido.');
+                }
+            } elseif ((int) $user->comum_id !== $churchId) {
+                throw new RuntimeException('Igreja fora do escopo permitido.');
+            }
         }
 
         Session::put('comum_id', $churchId);
