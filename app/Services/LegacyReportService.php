@@ -843,6 +843,7 @@ class LegacyReportService implements LegacyReportServiceInterface
         if (!array_key_exists('is_admin', $session)
             && !array_key_exists('administracao_id', $session)
             && !array_key_exists('administracoes_permitidas', $session)
+            && !array_key_exists('usuario_id', $session)
         ) {
             return null;
         }

@@ -12,6 +12,7 @@ use App\Services\LegacyChurchBrowserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Tests\TestCase;
 
@@ -29,6 +30,13 @@ final class LegacyChurchBrowserServiceTest extends TestCase
             $table->string('estado', 2)->nullable();
             $table->string('cidade')->nullable();
             $table->string('cnpj')->nullable();
+        });
+
+        Schema::create('usuarios', function (Blueprint $table): void {
+            $table->id();
+            $table->string('email')->nullable();
+            $table->string('tipo')->nullable();
+            $table->integer('ativo')->default(1);
         });
 
         Schema::create('comums', function (Blueprint $table): void {
@@ -59,6 +67,7 @@ final class LegacyChurchBrowserServiceTest extends TestCase
     {
         Schema::dropIfExists('produtos');
         Schema::dropIfExists('comums');
+        Schema::dropIfExists('usuarios');
         Schema::dropIfExists('administracoes');
         parent::tearDown();
     }
@@ -334,6 +343,26 @@ final class LegacyChurchBrowserServiceTest extends TestCase
         ));
 
         self::assertSame(2, $results->total());
+    }
+
+    public function testAuthenticatedUserWithoutAdministrationScopeCannotSeeAllChurches(): void
+    {
+        DB::table('usuarios')->insert(['id' => 90, 'email' => 'user@example.test', 'tipo' => 'usuario', 'ativo' => 1]);
+        DB::table('administracoes')->insert([
+            ['id' => 10, 'descricao' => 'Administração A'],
+            ['id' => 20, 'descricao' => 'Administração B'],
+        ]);
+        DB::table('comums')->insert([
+            ['id' => 100, 'codigo' => 'A-01', 'descricao' => 'Igreja A', 'administracao_id' => 10],
+            ['id' => 200, 'codigo' => 'B-01', 'descricao' => 'Igreja B', 'administracao_id' => 20],
+        ]);
+        Session::put('usuario_id', 90);
+
+        $result = $this->service->paginate(new ChurchFilters(null, '', null, 1, 10));
+
+        self::assertSame(0, $result->total());
+        self::assertSame(0, $this->service->countAll());
+        self::assertCount(0, $this->service->administrationOptions());
     }
 
     public function testSearchTreatsWildcardCharactersAsLiteralText(): void

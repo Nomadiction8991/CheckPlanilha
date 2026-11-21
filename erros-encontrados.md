@@ -786,3 +786,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Arquivos de correção, auditoria e relatórios podiam perder ou corromper valores ao serem abertos ou reimportados.
 **Correção**: Configurar todos os exportadores para duplicar aspas e não usar escape proprietário, mantendo os separadores existentes. Testes de round-trip cobrem exportação de erros, auditoria e relatório.
 **Prioridade de Correção**: ✅ Resolvido
+
+### SCOPE-001 - Sessão autenticada sem administração listava dados globais
+**Arquivos**: `app/Services/LegacyChurchBrowserService.php`, `app/Services/LegacyDepartmentBrowserService.php`, `app/Services/LegacyProductBrowserService.php` e `app/Services/LegacyReportService.php`
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança / isolamento entre administrações
+**Status**: Corrigido nesta rodada.
+**Descrição**: Os quatro serviços interpretavam a ausência simultânea dos campos de escopo como acesso global, mesmo quando `usuario_id` identificava uma sessão autenticada. Isso podia ocorrer com sessões antigas ou incompletas.
+**Risco/Impacto**: Um usuário comum podia consultar igrejas, dependências, bens e opções de relatórios de administrações alheias.
+**Correção**: Preservar o acesso global de administradores e de chamadas sem usuário autenticado; uma sessão de usuário comum sem administração passa a receber escopo vazio. Testes cobrem as listagens, contagens e opções nos quatro serviços.
+**Prioridade de Correção**: ✅ Resolvido

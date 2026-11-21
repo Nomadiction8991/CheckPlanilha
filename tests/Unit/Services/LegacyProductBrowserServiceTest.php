@@ -217,6 +217,29 @@ final class LegacyProductBrowserServiceTest extends TestCase
         );
     }
 
+    public function testAuthenticatedUserWithoutAdministrationScopeCannotSeeAllProducts(): void
+    {
+        DB::table('usuarios')->insert(['id' => 90, 'ativo' => 1]);
+        DB::table('administracoes')->insert([
+            ['id' => 10, 'descricao' => 'Administração A'],
+            ['id' => 20, 'descricao' => 'Administração B'],
+        ]);
+        DB::table('comums')->insert([
+            ['id' => 100, 'codigo' => 'A-01', 'descricao' => 'Igreja A', 'administracao_id' => 10],
+            ['id' => 200, 'codigo' => 'B-01', 'descricao' => 'Igreja B', 'administracao_id' => 20],
+        ]);
+        DB::table('produtos')->insert([
+            ['id_produto' => 1, 'comum_id' => 100, 'codigo' => 'P-A', 'bem' => 'Mesa', 'ativo' => 1],
+            ['id_produto' => 2, 'comum_id' => 200, 'codigo' => 'P-B', 'bem' => 'Cadeira', 'ativo' => 1],
+        ]);
+        Session::flush();
+        Session::put('usuario_id', 90);
+
+        self::assertSame(0, $this->service->paginate($this->filters())->total());
+        self::assertCount(0, $this->service->churchOptions());
+        self::assertCount(0, $this->service->administrationOptions());
+    }
+
     public function testRestrictedUserCannotUseAnAdministrationOutsideTheirScope(): void
     {
         Session::put([

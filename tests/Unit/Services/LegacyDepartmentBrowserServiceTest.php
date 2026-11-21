@@ -10,7 +10,9 @@ use App\Models\Legacy\Comum;
 use App\Models\Legacy\Dependencia;
 use App\Services\LegacyDepartmentBrowserService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Session;
 use Tests\TestCase;
 
 final class LegacyDepartmentBrowserServiceTest extends TestCase
@@ -27,6 +29,13 @@ final class LegacyDepartmentBrowserServiceTest extends TestCase
             $table->string('estado', 2)->nullable();
             $table->string('cidade')->nullable();
             $table->string('cnpj')->nullable();
+        });
+
+        Schema::create('usuarios', function (Blueprint $table): void {
+            $table->id();
+            $table->string('email')->nullable();
+            $table->string('tipo')->nullable();
+            $table->integer('ativo')->default(1);
         });
 
         Schema::create('comums', function (Blueprint $table): void {
@@ -59,6 +68,7 @@ final class LegacyDepartmentBrowserServiceTest extends TestCase
         Schema::dropIfExists('produtos');
         Schema::dropIfExists('dependencias');
         Schema::dropIfExists('comums');
+        Schema::dropIfExists('usuarios');
         Schema::dropIfExists('administracoes');
         parent::tearDown();
     }
@@ -208,6 +218,31 @@ final class LegacyDepartmentBrowserServiceTest extends TestCase
         $administrations = $this->service->administrationOptions();
         self::assertCount(1, $administrations);
         self::assertSame(10, $administrations->first()->id);
+    }
+
+    public function testAuthenticatedUserWithoutAdministrationScopeCannotSeeAllDepartments(): void
+    {
+        DB::table('usuarios')->insert(['id' => 90, 'email' => 'user@example.test', 'tipo' => 'usuario', 'ativo' => 1]);
+        DB::table('administracoes')->insert([
+            ['id' => 10, 'descricao' => 'Administração A'],
+            ['id' => 20, 'descricao' => 'Administração B'],
+        ]);
+        DB::table('comums')->insert([
+            ['id' => 100, 'codigo' => 'A-01', 'descricao' => 'Igreja A', 'administracao_id' => 10],
+            ['id' => 200, 'codigo' => 'B-01', 'descricao' => 'Igreja B', 'administracao_id' => 20],
+        ]);
+        DB::table('dependencias')->insert([
+            ['id' => 1, 'comum_id' => 100, 'descricao' => 'Salão A'],
+            ['id' => 2, 'comum_id' => 200, 'descricao' => 'Salão B'],
+        ]);
+        Session::put('usuario_id', 90);
+
+        $result = $this->service->paginate(new DepartmentFilters(null, null, '', null, 1, 10));
+
+        self::assertSame(0, $result->total());
+        self::assertSame(0, $this->service->countAll());
+        self::assertCount(0, $this->service->churchOptions());
+        self::assertCount(0, $this->service->administrationOptions());
     }
 
     public function testSearchTreatsUnderscoreAsLiteralCharacter(): void

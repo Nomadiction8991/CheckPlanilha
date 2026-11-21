@@ -77,6 +77,18 @@ final class LegacyReportServiceScopeTest extends TestCase
         self::assertSame([], $this->service->churchOptions()->pluck('id')->all());
     }
 
+    public function testAuthenticatedUserWithMissingScopeFieldsCannotSeeGlobalReportOptions(): void
+    {
+        $this->createScopeTables();
+        DB::statement('CREATE TABLE usuarios (id INTEGER PRIMARY KEY, ativo INTEGER, tipo VARCHAR(50))');
+        DB::table('usuarios')->insert(['id' => 90, 'ativo' => 1, 'tipo' => 'usuario']);
+        $this->insertAdministrationsAndChurches();
+        Session::put('usuario_id', 90);
+
+        self::assertSame([], $this->service->administrationOptions()->pluck('id')->all());
+        self::assertSame([], $this->service->churchOptions()->pluck('id')->all());
+    }
+
     public function testRejectsReportPreviewForChurchOutsideScopeBeforeLoadingReportData(): void
     {
         $this->createScopeTables();

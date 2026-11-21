@@ -102,6 +102,7 @@ class LegacyDepartmentBrowserService implements LegacyDepartmentBrowserServiceIn
         if (!Session::has('is_admin')
             && !Session::has('administracao_id')
             && !Session::has('administracoes_permitidas')
+            && !Session::has('usuario_id')
         ) {
             return null;
         }
