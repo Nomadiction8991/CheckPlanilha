@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 18
+- Médios: 19
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (4)
-### Lógica (27)
+### Lógica (28)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -22,6 +22,16 @@
 **Descrição**: A tabela exibe o nome e o complemento atuais quando o bem foi editado, mas a busca consultava somente os campos originais. Assim, o texto visível não encontrava o registro, e o nome antigo ainda podia retornar mesmo depois de substituído.
 **Risco/Impacto**: Usuários não conseguiam localizar bens pelo nome exibido na listagem ou na verificação.
 **Correção**: A busca agora consulta os campos editados quando existem e usa os valores originais somente quando não há valor editado. Testes de regressão cobrem o nome atual, o complemento e o nome substituído.
+**Prioridade de Correção**: Média
+
+### SYNC-003 - Cópia inicial aceitava contagens fracionárias
+**Arquivo**: `app/Sync/CopyImporter.php` (`importar`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / sincronização
+**Status**: Corrigido nesta rodada.
+**Descrição**: O cursor do cabeçalho e a quantidade de registros do marcador final aceitavam números decimais e os convertiam para inteiro. Uma cópia malformada podia truncar o cursor ou passar pela conferência de quantidade, embora a importação já tivesse apagado os dados locais.
+**Risco/Impacto**: O notebook podia perder alterações da sincronização ou substituir seus dados por uma cópia incompleta.
+**Correção**: Exigir números inteiros JSON não negativos no cursor e uma quantidade inteira exatamente igual aos registros recebidos. Testes de regressão confirmam rejeição e rollback dos dados locais.
 **Prioridade de Correção**: Média
 
 ### REDE-001 - O ponto de acesso desligado era exibido como ligado no Windows

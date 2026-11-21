@@ -60,11 +60,13 @@ final class CopyImporter
                                 throw new RuntimeException('A versão do protocolo da cópia não é suportada.');
                             }
 
-                            if ($cabecalhoRecebido || $linhasRecebidas > 0 || ! is_numeric($registro['cursor'] ?? null) || (int) $registro['cursor'] < 0) {
+                            $cursorRecebido = $registro['cursor'] ?? null;
+
+                            if ($cabecalhoRecebido || $linhasRecebidas > 0 || ! is_int($cursorRecebido) || $cursorRecebido < 0) {
                                 throw new RuntimeException('O cabeçalho da cópia é inválido.');
                             }
 
-                            $cursor = (int) $registro['cursor'];
+                            $cursor = $cursorRecebido;
                             $cabecalhoRecebido = true;
 
                             break;
@@ -80,7 +82,9 @@ final class CopyImporter
                             break;
 
                         case 'fim':
-                            if (! $cabecalhoRecebido || ! is_numeric($registro['linhas'] ?? null) || (int) $registro['linhas'] !== $linhasRecebidas) {
+                            $quantidadeRecebida = $registro['linhas'] ?? null;
+
+                            if (! $cabecalhoRecebido || ! is_int($quantidadeRecebida) || $quantidadeRecebida !== $linhasRecebidas) {
                                 throw new RuntimeException('A cópia está incompleta: a quantidade de registros não confere.');
                             }
 
