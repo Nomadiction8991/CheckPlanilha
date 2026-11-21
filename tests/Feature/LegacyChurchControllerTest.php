@@ -361,6 +361,7 @@ final class LegacyChurchControllerTest extends TestCase
         $response->assertSee('Salvar alterações');
         $response->assertSee('12-3456');
         $response->assertSee('data-mask="cnpj"', false);
+        $response->assertSee('inputmode="text"', false);
     }
 
     public function testEditHidesChurchOutsideUserAdministrationScope(): void

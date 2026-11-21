@@ -22,28 +22,28 @@
             },
         },
         cnpj: {
-            inputMode: 'numeric',
-            maxDigits: 14,
+            inputMode: 'text',
+            character: /[0-9A-Z]/i,
             format(value) {
-                const digits = onlyDigits(value).slice(0, 14);
+                const identifier = String(value ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 14);
 
-                if (digits.length <= 2) {
-                    return digits;
+                if (identifier.length <= 2) {
+                    return identifier;
                 }
 
-                if (digits.length <= 5) {
-                    return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+                if (identifier.length <= 5) {
+                    return `${identifier.slice(0, 2)}.${identifier.slice(2)}`;
                 }
 
-                if (digits.length <= 8) {
-                    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+                if (identifier.length <= 8) {
+                    return `${identifier.slice(0, 2)}.${identifier.slice(2, 5)}.${identifier.slice(5)}`;
                 }
 
-                if (digits.length <= 12) {
-                    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+                if (identifier.length <= 12) {
+                    return `${identifier.slice(0, 2)}.${identifier.slice(2, 5)}.${identifier.slice(5, 8)}/${identifier.slice(8)}`;
                 }
 
-                return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12)}`;
+                return `${identifier.slice(0, 2)}.${identifier.slice(2, 5)}.${identifier.slice(5, 8)}/${identifier.slice(8, 12)}-${identifier.slice(12)}`;
             },
         },
         cep: {
@@ -91,18 +91,24 @@
         return String(value ?? '').replace(/\D+/g, '');
     }
 
-    function caretPositionFromDigits(value, digitsBeforeCaret) {
-        if (digitsBeforeCaret <= 0) {
+    function characterCount(value, pattern) {
+        const character = pattern.character || /\d/;
+        return [...value].filter((valueCharacter) => character.test(valueCharacter)).length;
+    }
+
+    function caretPositionFromCharacters(value, charactersBeforeCaret, pattern) {
+        if (charactersBeforeCaret <= 0) {
             return 0;
         }
 
-        let digitsSeen = 0;
+        let charactersSeen = 0;
+        const character = pattern.character || /\d/;
 
         for (let index = 0; index < value.length; index += 1) {
-            if (/\d/.test(value[index])) {
-                digitsSeen += 1;
+            if (character.test(value[index])) {
+                charactersSeen += 1;
 
-                if (digitsSeen >= digitsBeforeCaret) {
+                if (charactersSeen >= charactersBeforeCaret) {
                     return index + 1;
                 }
             }
@@ -121,7 +127,7 @@
 
         const currentValue = input.value;
         const caretStart = typeof input.selectionStart === 'number' ? input.selectionStart : currentValue.length;
-        const digitsBeforeCaret = onlyDigits(currentValue.slice(0, caretStart)).length;
+        const charactersBeforeCaret = characterCount(currentValue.slice(0, caretStart), pattern);
         const formattedValue = pattern.format(currentValue);
 
         if (formattedValue !== currentValue) {
@@ -129,7 +135,7 @@
         }
 
         if (typeof input.setSelectionRange === 'function' && document.activeElement === input) {
-            const nextCaret = caretPositionFromDigits(formattedValue, digitsBeforeCaret);
+            const nextCaret = caretPositionFromCharacters(formattedValue, charactersBeforeCaret, pattern);
             input.setSelectionRange(nextCaret, nextCaret);
         }
     }

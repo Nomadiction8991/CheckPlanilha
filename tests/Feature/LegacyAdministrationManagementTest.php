@@ -130,6 +130,7 @@ final class LegacyAdministrationManagementTest extends TestCase
         $response->assertSee('assets/forms/input-mask.js', false);
         $response->assertSee($this->localidadesAsset, false);
         $response->assertSee('data-mask="cnpj"', false);
+        $response->assertSee('inputmode="text"', false);
     }
 
     public function testCreatePagePreservesCityAfterValidationFailure(): void
@@ -219,6 +220,7 @@ final class LegacyAdministrationManagementTest extends TestCase
         $response->assertSee('Editar administração.');
         $response->assertSee('Salvar alterações');
         $response->assertSee('data-mask="cnpj"', false);
+        $response->assertSee('inputmode="text"', false);
         $response->assertSee($this->localidadesAsset, false);
     }
 

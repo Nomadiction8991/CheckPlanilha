@@ -22,7 +22,7 @@ class LookupCnpjRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'cnpj' => ['required', 'string', 'regex:/^\d{14}$/'],
+            'cnpj' => ['required', 'string', 'regex:/^[0-9A-Z]{12}[0-9]{2}$/i'],
         ];
     }
 
@@ -33,7 +33,7 @@ class LookupCnpjRequest extends FormRequest
     {
         return [
             'cnpj.required' => 'O CNPJ é obrigatório.',
-            'cnpj.regex' => 'O CNPJ deve conter exatamente 14 dígitos.',
+            'cnpj.regex' => 'O CNPJ deve conter 14 caracteres e terminar com dois dígitos.',
         ];
     }
 
@@ -48,7 +48,7 @@ class LookupCnpjRequest extends FormRequest
     public function toDto(): CnpjLookupData
     {
         return new CnpjLookupData(
-            cnpj: (string) $this->validated('cnpj'),
+            cnpj: mb_strtoupper((string) $this->validated('cnpj'), 'UTF-8'),
         );
     }
 }

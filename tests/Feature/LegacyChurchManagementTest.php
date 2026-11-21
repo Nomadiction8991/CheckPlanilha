@@ -78,6 +78,7 @@ final class LegacyChurchManagementTest extends TestCase
         $response->assertSee('assets/forms/input-mask.js', false);
         $response->assertSee('assets/forms/localidades.js', false);
         $response->assertSee('data-mask="cnpj"', false);
+        $response->assertSee('inputmode="text"', false);
     }
 
     public function testUpdateChangesChurchData(): void

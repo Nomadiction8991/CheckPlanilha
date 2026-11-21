@@ -73,7 +73,7 @@
                             value="{{ old('cnpj', $church->cnpj) }}"
                             maxlength="18"
                             data-mask="cnpj"
-                            inputmode="numeric"
+                            inputmode="text"
                             placeholder="00.000.000/0000-00"
                             required
                             @error('cnpj') aria-invalid="true" aria-describedby="church-cnpj-error" @enderror

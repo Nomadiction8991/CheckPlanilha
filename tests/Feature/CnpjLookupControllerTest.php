@@ -45,6 +45,28 @@ final class CnpjLookupControllerTest extends TestCase
         ]);
     }
 
+    public function testAlphanumericCnpjLookupIsNormalizedBeforeCallingProvider(): void
+    {
+        Http::fake([
+            'https://www.cnpj.dev/api/v1/cnpj/*' => Http::response([
+                'razao_social' => 'Empresa alfanumérica',
+                'municipio' => 'Cuiabá',
+            ], 200),
+        ]);
+
+        $response = $this->withSession(self::AUTH_SESSION)
+            ->postJson(route('migration.api.cnpj.lookup'), [
+                'cnpj' => '12abc34501de35',
+            ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.nome', 'Empresa alfanumérica');
+        Http::assertSent(static fn ($request): bool => str_ends_with(
+            $request->url(),
+            '/12ABC34501DE35',
+        ));
+    }
+
     public function testInvalidCnpjLookup(): void
     {
         $response = $this->withSession(self::AUTH_SESSION)

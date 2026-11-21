@@ -3,16 +3,26 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 14
+- Médios: 15
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (3)
-### Lógica (23)
+### Lógica (24)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### CNPJ-001 - Máscara e consulta rejeitavam CNPJ alfanumérico
+**Arquivo**: `public/assets/forms/input-mask.js`, `app/Http/Requests/LookupCnpjRequest.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica e usabilidade
+**Status**: Corrigido nesta rodada.
+**Descrição**: O cadastro já aceitava CNPJs alfanuméricos, mas a máscara removia letras e o endpoint de consulta aceitava somente números, impedindo informar e consultar inscrições emitidas no novo formato.
+**Risco/Impacto**: Usuários não conseguiam preencher ou consultar CNPJs alfanuméricos válidos nos formulários de administração e igreja.
+**Correção**: A máscara passou a manter e formatar letras em maiúsculas, os campos permitem teclado de texto e a consulta valida as 12 primeiras posições alfanuméricas com dois dígitos finais. Coberto por regressões da máscara, tela e endpoint.
+**Prioridade de Correção**: Alta
 
 ### AUTH-003 - Sessão nativa mantinha administrações removidas do escopo do usuário
 **Arquivo**: `app/Services/LegacyNativeSessionBridge.php` (`normalizeAuthenticatedPayload`)

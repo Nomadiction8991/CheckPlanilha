@@ -60,7 +60,7 @@
                             value="{{ old('cnpj', $administration->cnpj) }}"
                             maxlength="18"
                             data-mask="cnpj"
-                            inputmode="numeric"
+                            inputmode="text"
                             placeholder="00.000.000/0000-00"
                             required
                         >
