@@ -200,6 +200,16 @@ final class LegacyProductManagementServiceTest extends TestCase
         $this->assertSame(1, $quantidade);
     }
 
+    public function testRejeitaTipoDeOutraAdministracaoMesmoParaAdministradorGlobal(): void
+    {
+        DB::table('tipos_bens')->insert(['id' => 5, 'administracao_id' => 2, 'codigo' => '2', 'descricao' => 'CADEIRA']);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('O tipo de bem selecionado não pertence à administração da igreja.');
+
+        $this->service()->createMany($this->dados(code: 'ABC-9', multiplier: 1, assetTypeId: 5));
+    }
+
     public function testEdicaoNaoTrocaParaTipoDeBemDeOutraAdministracao(): void
     {
         DB::table('tipos_bens')->insert(['id' => 5, 'administracao_id' => 2, 'codigo' => '2', 'descricao' => 'CADEIRA']);
@@ -246,6 +256,46 @@ final class LegacyProductManagementServiceTest extends TestCase
                 'A edição não deve gravar tipo de outra administração.',
             );
         }
+    }
+
+    public function testEdicaoRejeitaTipoDeOutraAdministracaoMesmoParaAdministradorGlobal(): void
+    {
+        DB::table('tipos_bens')->insert(['id' => 5, 'administracao_id' => 2, 'codigo' => '2', 'descricao' => 'CADEIRA']);
+        DB::table('produtos')->insert([
+            'id_produto' => 31,
+            'comum_id' => 7,
+            'codigo' => 'ABC-10',
+            'tipo_bem_id' => 4,
+            'bem' => 'CADEIRA',
+            'dependencia_id' => 2,
+            'ativo' => 1,
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('O tipo de bem selecionado não pertence à administração da igreja.');
+
+        $this->service()->update(
+            Produto::query()->findOrFail(31),
+            new UpdateLegacyProductData(
+                editedAssetTypeId: 5,
+                editedItemName: 'CADEIRA',
+                editedComplement: 'Metalica',
+                editedBrand: null,
+                editedHeightMeters: null,
+                editedWidthMeters: null,
+                editedLengthMeters: null,
+                editedDependencyId: 2,
+                verified: true,
+                printLabel: true,
+                observation: '',
+                printReport141: false,
+                condition141: '',
+                invoiceNumber: null,
+                invoiceDate: null,
+                invoiceValue: null,
+                invoiceSupplier: null,
+            ),
+        );
     }
 
     public function testAceitaTipoDeBemCompartilhadoSemAdministracaoParaUsuarioSemAcessoGlobal(): void

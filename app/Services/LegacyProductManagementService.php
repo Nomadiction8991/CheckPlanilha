@@ -23,7 +23,7 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
     public function createMany(CreateLegacyProductData $data): int
     {
         $church = $this->assertChurchWithinProductScope($data->churchId);
-        $assetType = $this->resolveAssetType($data->assetTypeId);
+        $assetType = $this->resolveAssetType($data->assetTypeId, (int) ($church->administracao_id ?? 0));
         $dependency = $this->resolveDependency($data->dependencyId, $church->id);
         $itemName = $this->normalizeItemName($assetType, $data->itemName);
         $code = $data->code !== null && trim($data->code) !== '' ? trim($data->code) : null;
@@ -71,8 +71,8 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
 
     public function update(Produto $product, UpdateLegacyProductData $data): Produto
     {
-        $this->assertProductWithinProductScope($product);
-        $assetType = $this->resolveAssetType($data->editedAssetTypeId);
+        $church = $this->assertProductWithinProductScope($product);
+        $assetType = $this->resolveAssetType($data->editedAssetTypeId, (int) ($church->administracao_id ?? 0));
         $dependency = $this->resolveDependency($data->editedDependencyId, (int) $product->comum_id);
         $itemName = $this->normalizeItemName($assetType, $data->editedItemName);
         $invoiceSupplier = $data->invoiceSupplier !== null
@@ -111,7 +111,7 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
         return $this->assertChurchWithinProductScope($churchId);
     }
 
-    private function resolveAssetType(int $assetTypeId): TipoBem
+    private function resolveAssetType(int $assetTypeId, int $churchAdministrationId): TipoBem
     {
         $assetType = TipoBem::query()->find($assetTypeId);
 
@@ -119,7 +119,7 @@ class LegacyProductManagementService implements LegacyProductManagementServiceIn
             throw new RuntimeException('O tipo de bem selecionado não está mais disponível.');
         }
 
-        $this->assertAssetTypeWithinProductScope($assetType);
+        $this->assertAssetTypeWithinProductScope($assetType, $churchAdministrationId);
 
         return $assetType;
     }

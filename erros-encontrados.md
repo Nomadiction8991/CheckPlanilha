@@ -726,3 +726,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Envios inválidos repetidos acumulavam cópias completas de planilhas no disco do servidor.
 **Correção**: Remover o CSV convertido em um bloco `finally` após a tentativa de importação. Quando o caminho feliz move o arquivo para o armazenamento da importação, a limpeza não afeta a cópia persistida.
 **Prioridade de Correção**: ✅ Resolvido
+
+### PROD-001 - Produto aceitava tipo de bem de outra administração
+**Arquivos**: `app/Services/LegacyProductManagementService.php` e `app/Services/ResolvesLegacyProductScope.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Regra de negócio / Integridade de dados
+**Status**: Corrigido nesta rodada.
+**Descrição**: A criação e a edição verificavam se o usuário podia acessar a igreja e o tipo de bem, mas não se o tipo pertencia à administração da igreja. Um administrador com acesso global podia associar cadastros de administrações diferentes.
+**Risco/Impacto**: Produtos podiam ser registrados com classificação de outra administração, afetando a consistência dos cadastros e relatórios.
+**Correção**: Validar também a administração da igreja ao resolver o tipo de bem, mantendo tipos compartilhados e igrejas sem administração identificada. Testes cobrem criação e edição com usuário global.
+**Prioridade de Correção**: ✅ Resolvido

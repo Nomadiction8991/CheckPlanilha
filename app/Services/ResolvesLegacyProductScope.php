@@ -43,28 +43,30 @@ trait ResolvesLegacyProductScope
         }
     }
 
-    protected function assertProductWithinProductScope(\App\Models\Legacy\Produto $product): void
+    protected function assertProductWithinProductScope(\App\Models\Legacy\Produto $product): Comum
     {
-        $this->assertChurchWithinProductScope((int) $product->comum_id);
+        return $this->assertChurchWithinProductScope((int) $product->comum_id);
     }
 
     /**
-     * Tipo de bem compartilhado (sem administração) vale para qualquer escopo; um tipo
-     * vinculado a uma administração só pode ser usado por quem tem essa administração.
+     * Tipos compartilhados valem para qualquer escopo; tipos vinculados precisam estar
+     * no escopo do usuário e pertencer à administração da igreja, quando identificada.
      */
-    protected function assertAssetTypeWithinProductScope(\App\Models\Legacy\TipoBem $assetType): void
+    protected function assertAssetTypeWithinProductScope(
+        \App\Models\Legacy\TipoBem $assetType,
+        int $churchAdministrationId,
+    ): void
     {
-        if ($this->productScopeIsGlobal()) {
-            return;
-        }
-
         $administrationId = (int) ($assetType->administracao_id ?? 0);
-        if ($administrationId <= 0) {
-            return;
+
+        if (!$this->productScopeIsGlobal() && $administrationId > 0
+            && !in_array($administrationId, $this->productScopeAdministrationIds(), true)) {
+            throw new RuntimeException('O tipo de bem selecionado está fora do seu escopo permitido.');
         }
 
-        if (!in_array($administrationId, $this->productScopeAdministrationIds(), true)) {
-            throw new RuntimeException('O tipo de bem selecionado está fora do seu escopo permitido.');
+        if ($administrationId > 0 && $churchAdministrationId !== null && $churchAdministrationId > 0
+            && $administrationId !== $churchAdministrationId) {
+            throw new RuntimeException('O tipo de bem selecionado não pertence à administração da igreja.');
         }
     }
 
