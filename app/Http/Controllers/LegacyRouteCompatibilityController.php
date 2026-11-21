@@ -330,9 +330,25 @@ class LegacyRouteCompatibilityController extends Controller
             return response()->json(['success' => false, 'message' => 'Sessão inválida.'], 400);
         }
 
+        $rawProductIds = $request->input('PRODUTOS', []);
+        if (!is_array($rawProductIds)) {
+            return response()->json(['success' => false, 'message' => 'Lista de produtos inválida.'], 422);
+        }
+
+        $productIds = [];
+        foreach ($rawProductIds as $rawProductId) {
+            $productId = QueryParameter::integerValue($rawProductId);
+
+            if ($productId <= 0) {
+                return response()->json(['success' => false, 'message' => 'Lista de produtos inválida.'], 422);
+            }
+
+            $productIds[] = $productId;
+        }
+
         try {
             $updated = $products->signProducts(
-                (array) $request->input('PRODUTOS', []),
+                $productIds,
                 $churchId,
                 $userId,
                 QueryParameter::inputString($request, 'acao'),

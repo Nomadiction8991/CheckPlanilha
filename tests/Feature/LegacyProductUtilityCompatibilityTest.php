@@ -466,6 +466,56 @@ final class LegacyProductUtilityCompatibilityTest extends TestCase
         ]);
     }
 
+    public function testSignEndpointRejectsPartiallyNumericProductIdentifiers(): void
+    {
+        $this->mock(LegacyProductUtilityServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldNotReceive('signProducts');
+        });
+
+        $response = $this->withSession([
+            '_enforce_legacy_auth' => true,
+            'usuario_id' => 9,
+            'usuario_nome' => 'Maria Silva',
+            'usuario_email' => 'MARIA@EXEMPLO.COM',
+            'comum_id' => 7,
+            'is_admin' => false,
+        ])->postJson('/products/sign', [
+            'acao' => 'assinar',
+            'PRODUTOS' => [19, '20abc'],
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Lista de produtos inválida.',
+        ]);
+    }
+
+    public function testSignEndpointRejectsProductIdentifiersOutsideAnArray(): void
+    {
+        $this->mock(LegacyProductUtilityServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldNotReceive('signProducts');
+        });
+
+        $response = $this->withSession([
+            '_enforce_legacy_auth' => true,
+            'usuario_id' => 9,
+            'usuario_nome' => 'Maria Silva',
+            'usuario_email' => 'MARIA@EXEMPLO.COM',
+            'comum_id' => 7,
+            'is_admin' => false,
+        ])->postJson('/products/sign', [
+            'acao' => 'assinar',
+            'PRODUTOS' => '19',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Lista de produtos inválida.',
+        ]);
+    }
+
     public function testClearEditsRedirectsBackToProductsIndex(): void
     {
         $this->mock(LegacyProductUtilityServiceInterface::class, function (MockInterface $mock): void {
