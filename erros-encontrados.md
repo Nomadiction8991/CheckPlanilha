@@ -3,16 +3,26 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 17
+- Médios: 18
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (4)
-### Lógica (26)
+### Lógica (27)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### PROD-003 - Busca não encontrava o nome editado do bem
+**Arquivo**: `app/Services/LegacyProductBrowserService.php` (`paginate`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / busca de produtos
+**Status**: Corrigido nesta rodada.
+**Descrição**: A tabela exibe o nome e o complemento atuais quando o bem foi editado, mas a busca consultava somente os campos originais. Assim, o texto visível não encontrava o registro, e o nome antigo ainda podia retornar mesmo depois de substituído.
+**Risco/Impacto**: Usuários não conseguiam localizar bens pelo nome exibido na listagem ou na verificação.
+**Correção**: A busca agora consulta os campos editados quando existem e usa os valores originais somente quando não há valor editado. Testes de regressão cobrem o nome atual, o complemento e o nome substituído.
+**Prioridade de Correção**: Média
 
 ### REDE-001 - O ponto de acesso desligado era exibido como ligado no Windows
 **Arquivo**: `app/Support/Connection/WindowsAccessPoint.php` (`estaLigado`)
