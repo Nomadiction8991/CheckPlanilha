@@ -24,4 +24,19 @@ final class SpreadsheetImportInvalidIdentifierTest extends TestCase
             'message' => 'Importação inválida',
         ]);
     }
+
+    public function testLegacyProgressRejectsPartiallyNumericImportId(): void
+    {
+        $this->mock(LegacySpreadsheetImportServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldNotReceive('loadProgress');
+        });
+
+        $response = $this->get('/spreadsheets/api/progress?id=5abc');
+
+        $response->assertStatus(400);
+        $response->assertJson([
+            'success' => false,
+            'message' => 'Importação inválida',
+        ]);
+    }
 }

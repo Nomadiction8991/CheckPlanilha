@@ -37,14 +37,44 @@ final class QueryParameter
 
     public static function integerValue(mixed $value, int $default = 0): int
     {
-        return is_scalar($value) ? (int) $value : $default;
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (! is_string($value) || preg_match('/^[+-]?\d+$/D', $value) !== 1) {
+            return $default;
+        }
+
+        $negative = str_starts_with($value, '-');
+        $digits = ltrim(ltrim($value, '+-'), '0') ?: '0';
+
+        if ($digits === '0') {
+            return 0;
+        }
+
+        $normalized = ($negative ? '-' : '') . $digits;
+        $integer = filter_var($normalized, FILTER_VALIDATE_INT);
+
+        return is_int($integer) ? $integer : $default;
     }
 
     public static function page(Request $request, string $key, int $perPage, int $default = 1): int
     {
         $perPage = max(1, $perPage);
-        $page = max(1, self::integer($request, $key, $default));
         $maxPage = intdiv(PHP_INT_MAX, $perPage) + 1;
+        $value = $request->query($key, $default);
+
+        if (is_string($value) && preg_match('/^\+?\d+$/D', $value) === 1) {
+            $digits = ltrim(ltrim($value, '+'), '0') ?: '0';
+            $maximum = (string) $maxPage;
+
+            if (strlen($digits) > strlen($maximum)
+                || (strlen($digits) === strlen($maximum) && strcmp($digits, $maximum) > 0)) {
+                return $maxPage;
+            }
+        }
+
+        $page = max(1, self::integerValue($value, $default));
 
         return min($page, $maxPage);
     }
