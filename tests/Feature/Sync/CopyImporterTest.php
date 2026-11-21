@@ -46,4 +46,38 @@ final class CopyImporterTest extends TestCase
             'Uma cópia inválida não pode apagar os dados deste computador.',
         );
     }
+
+    public function test_copia_com_versao_de_protocolo_desconhecida_nao_apaga_dados_existentes(): void
+    {
+        config([
+            'sincronizacao.ordem_da_copia' => ['comums'],
+            'sincronizacao.tabelas' => ['comums'],
+        ]);
+        Schema::create('comums', static function ($table): void {
+            $table->increments('id');
+            $table->string('codigo')->nullable();
+        });
+        Schema::create('sincronizacao_estado', static function ($table): void {
+            $table->string('chave')->primary();
+            $table->text('valor')->nullable();
+        });
+        DB::table('comums')->insert(['codigo' => 'C-LOCAL']);
+        $linhas = [
+            json_encode(['tipo' => 'cabecalho', 'versao' => 999, 'cursor' => 0], JSON_THROW_ON_ERROR),
+            json_encode(['tipo' => 'fim', 'linhas' => 0], JSON_THROW_ON_ERROR),
+        ];
+
+        try {
+            app(CopyImporter::class)->importar($linhas);
+            $this->fail('Uma cópia de versão não suportada precisava ser recusada.');
+        } catch (RuntimeException $erro) {
+            $this->assertStringContainsString('versão', mb_strtolower($erro->getMessage(), 'UTF-8'));
+        }
+
+        $this->assertSame(
+            1,
+            DB::table('comums')->where('codigo', 'C-LOCAL')->count(),
+            'Uma cópia incompatível não pode apagar os dados deste computador.',
+        );
+    }
 }

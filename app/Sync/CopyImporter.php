@@ -56,6 +56,10 @@ final class CopyImporter
 
                     switch ($registro['tipo'] ?? null) {
                         case 'cabecalho':
+                            if (($registro['versao'] ?? null) !== 1) {
+                                throw new RuntimeException('A versão do protocolo da cópia não é suportada.');
+                            }
+
                             if ($cabecalhoRecebido || $linhasRecebidas > 0 || ! is_numeric($registro['cursor'] ?? null) || (int) $registro['cursor'] < 0) {
                                 throw new RuntimeException('O cabeçalho da cópia é inválido.');
                             }
