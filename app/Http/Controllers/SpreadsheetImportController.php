@@ -40,6 +40,8 @@ class SpreadsheetImportController extends Controller
 
     public function store(StoreSpreadsheetImportRequest $request): RedirectResponse
     {
+        $convertedCsvPath = null;
+
         try {
             /** @var UploadedFile $file */
             $file = $request->file('arquivo_csv');
@@ -47,6 +49,7 @@ class SpreadsheetImportController extends Controller
                 $realPath = $file->getRealPath();
                 $csvPath = UniversalSpreadsheetReader::ensureCsv($realPath);
                 if ($csvPath !== $realPath) {
+                    $convertedCsvPath = $csvPath;
                     $file = new UploadedFile(
                         $csvPath,
                         pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME) . '.csv',
@@ -67,6 +70,10 @@ class SpreadsheetImportController extends Controller
                 ->withInput()
                 ->with('status', $exception->getMessage())
                 ->with('status_type', 'error');
+        } finally {
+            if ($convertedCsvPath !== null && is_file($convertedCsvPath)) {
+                @unlink($convertedCsvPath);
+            }
         }
 
         return redirect()

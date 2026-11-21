@@ -706,3 +706,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: A tela indicava falha mesmo que a administração tivesse sido criada ou alterada, deixando o estado parcialmente aplicado.
 **Correção**: Executar a gravação e a sincronização na mesma transação. Os testes provocam falha na segunda gravação e confirmam rollback tanto na criação quanto na edição.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-025 - CSV temporário de conversão permanecia após rejeição do upload
+**Arquivo**: `app/Http/Controllers/SpreadsheetImportController.php` (`store`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação de planilhas / Limpeza de arquivos
+**Status**: Corrigido nesta rodada.
+**Descrição**: Arquivos XLS/XLSX eram convertidos para um CSV temporário antes de validar a administração e o responsável. Se o serviço rejeitasse esses dados antes de mover o arquivo, o CSV convertido ficava no diretório temporário do PHP.
+**Risco/Impacto**: Envios inválidos repetidos acumulavam cópias completas de planilhas no disco do servidor.
+**Correção**: Remover o CSV convertido em um bloco `finally` após a tentativa de importação. Quando o caminho feliz move o arquivo para o armazenamento da importação, a limpeza não afeta a cópia persistida.
+**Prioridade de Correção**: ✅ Resolvido

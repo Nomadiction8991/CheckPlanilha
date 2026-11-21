@@ -117,6 +117,9 @@ final class RealSpreadsheetHttpTest extends TestCase
         $origem = tempnam(sys_get_temp_dir(), 'planilha_http_');
         self::assertNotFalse($origem);
         self::assertTrue(copy(base_path('tests/Fixtures/importacao/relatorio-ficticio.xls'), $origem));
+        $origemFalha = tempnam(sys_get_temp_dir(), 'planilha_http_falha_');
+        self::assertNotFalse($origemFalha);
+        self::assertTrue(copy(base_path('tests/Fixtures/importacao/relatorio-ficticio.xls'), $origemFalha));
         $caminho = null;
         $id = null;
         $caminhoFalha = null;
@@ -137,6 +140,7 @@ final class RealSpreadsheetHttpTest extends TestCase
                     'administracao_id' => 1,
                     'arquivo_csv' => new UploadedFile($origem, 'planilha.xls', 'application/vnd.ms-excel', null, true),
                 ]);
+            self::assertFileDoesNotExist($origem . '_converted.csv');
             $importacao = DB::table('importacoes')->first();
             self::assertNotNull($importacao, (string) session('status'));
             $id = (int) $importacao->id;
@@ -163,6 +167,13 @@ final class RealSpreadsheetHttpTest extends TestCase
             self::assertSame(2, DB::table('produtos')->count());
             self::assertSame(['99-9999 / 0001', '99-9999 / 0002'], DB::table('produtos')->orderBy('codigo')->pluck('codigo')->all());
             self::assertSame('concluida', DB::table('importacoes')->where('id', $id)->value('status'));
+
+            $this->withSession(['usuario_id' => 1, 'administracao_id' => 1])
+                ->post(route('migration.spreadsheets.store'), [
+                    'administracao_id' => 999,
+                    'arquivo_csv' => new UploadedFile($origemFalha, 'planilha-invalida.xls', 'application/vnd.ms-excel', null, true),
+                ])->assertRedirect(route('migration.spreadsheets.create'));
+            self::assertFileDoesNotExist($origemFalha . '_converted.csv');
 
             $respostaFalha = $this->withSession(['usuario_id' => 1, 'administracao_id' => 1])
                 ->post(route('migration.spreadsheets.store'), [
@@ -193,6 +204,9 @@ final class RealSpreadsheetHttpTest extends TestCase
             if (is_file($origem)) {
                 unlink($origem);
             }
+            if (is_file($origemFalha)) {
+                unlink($origemFalha);
+            }
             foreach ($arquivosSentinela as $sentinela) {
                 if (is_file($sentinela)) {
                     unlink($sentinela);
@@ -201,6 +215,10 @@ final class RealSpreadsheetHttpTest extends TestCase
             $convertido = $origem . '_converted.csv';
             if (is_file($convertido)) {
                 unlink($convertido);
+            }
+            $convertidoFalha = $origemFalha . '_converted.csv';
+            if (is_file($convertidoFalha)) {
+                unlink($convertidoFalha);
             }
             ConnectionManager::reset();
         }
