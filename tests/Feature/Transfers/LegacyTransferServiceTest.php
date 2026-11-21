@@ -59,6 +59,23 @@ final class LegacyTransferServiceTest extends TransferenciasTestCase
         $this->assertSame(0, (int) $bem->imprimir_etiqueta);
     }
 
+    public function test_historico_aceita_descricao_com_bem_e_complemento_longos(): void
+    {
+        $bem = str_repeat('B', 200);
+        $complemento = str_repeat('C', 200);
+        DB::table('produtos')->where('id_produto', 1001)->update([
+            'bem' => $bem,
+            'complemento' => $complemento,
+        ]);
+
+        $transferencia = $this->servico->transferir(7, 8, 80, [1001], 9);
+
+        $this->assertSame(
+            $bem.' '.$complemento,
+            TransferenciaItem::query()->where('transferencia_id', $transferencia->id)->value('descricao'),
+        );
+    }
+
     public function testNumeracaoDaSaidaEDaEntradaEPorIgreja(): void
     {
         $this->criarBem(1002, 7, 'A-101', 'Mesa');

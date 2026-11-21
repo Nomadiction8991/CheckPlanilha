@@ -108,6 +108,7 @@ abstract class TransferenciasTestCase extends TestCase
         });
 
         (require base_path('database/migrations/20261108120000_create_transferencias_tables.php'))->up();
+        (require base_path('database/migrations/20261121110000_expand_transferencia_item_description.php'))->up();
 
         Session::put('is_admin', true);
         Session::put('administracoes_permitidas', [1]);

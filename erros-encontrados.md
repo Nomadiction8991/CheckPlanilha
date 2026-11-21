@@ -806,3 +806,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: CSVs com cabeçalho de código perdiam silenciosamente o primeiro bem e linhas de metadados podiam virar registros importáveis.
 **Correção**: Normalizar textos de comparação em minúsculas UTF-8 e remover pontuação residual da transliteração nos dois caminhos. Testes cobrem cabeçalho acentuado, metadados acentuados em caixa alta e a importação com arquivo CSV de fixture.
 **Prioridade de Correção**: ✅ Resolvido
+
+### TRANS-001 - Descrições longas impediam transferências de bens
+**Arquivo**: `database/migrations/20261121110000_expand_transferencia_item_description.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Transferências / Integridade de dados
+**Status**: Corrigido nesta rodada.
+**Descrição**: A transferência juntava o nome do bem e seu complemento no histórico, mas a coluna aceitava no máximo 255 caracteres. Os dois campos podem ter até 255 caracteres cada, portanto uma descrição válida podia exceder a coluna e abortar a transferência em MySQL com modo estrito.
+**Risco/Impacto**: Bens com descrição longa não podiam ser transferidos, apesar de seus dados serem aceitos pelo cadastro.
+**Correção**: Ampliar a coluna do histórico para `TEXT` por migração incremental. O rollback verifica se há registros longos e interrompe a redução para evitar perda de dados. Testes cobrem o tipo da coluna e a preservação da descrição combinada acima de 255 caracteres.
+**Prioridade de Correção**: ✅ Resolvido

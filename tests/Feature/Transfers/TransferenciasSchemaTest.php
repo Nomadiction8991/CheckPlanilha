@@ -16,6 +16,8 @@ final class TransferenciasSchemaTest extends TestCase
             '--realpath' => true,
         ])->assertSuccessful();
 
+        (require base_path('database/migrations/20261121110000_expand_transferencia_item_description.php'))->up();
+
         $this->assertTrue(Schema::hasTable('transferencias'));
         $this->assertTrue(Schema::hasColumns('transferencias', [
             'comum_origem_id',
@@ -38,5 +40,6 @@ final class TransferenciasSchemaTest extends TestCase
             'valor',
             'dependencia_origem',
         ]));
+        $this->assertSame('text', Schema::getColumnType('transferencia_itens', 'descricao'));
     }
 }
