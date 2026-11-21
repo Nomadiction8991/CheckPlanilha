@@ -746,3 +746,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Uma requisição malformada podia consultar ou alterar dados de outro registro; no endpoint de exclusão, podia apagar os produtos da igreja de ID 1.
 **Correção**: Centralizar a conversão de parâmetros numéricos em `QueryParameter`, que usa o valor padrão para entradas não escalares sem alterar a conversão dos valores escalares, e substituir os casts diretos encontrados nos controladores afetados. Testes de regressão cobrem rotas legadas, exclusão de produtos e progresso de importação.
 **Prioridade de Correção**: ✅ Resolvido
+
+### AUTH-005 - Login atribuía uma igreja global a usuário sem escopo
+**Arquivo**: `app/Services/LegacyAuthSessionService.php` (`resolveInitialChurchId`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança (escopo de acesso) / integridade de dados
+**Status**: Corrigido nesta rodada.
+**Descrição**: Se um usuário ativo não administrador não tivesse igreja válida nem administração definida, o login selecionava a primeira igreja globalmente e gravava o ID no cadastro. Uma referência a igreja removida causava o mesmo fallback.
+**Risco/Impacto**: Uma conta sem escopo passava a carregar o contexto de uma igreja alheia, e o login alterava o cadastro do usuário sem uma atribuição explícita.
+**Correção**: Retornar escopo de igreja nulo quando a igreja atribuída estiver ausente ou inválida, sem selecionar outra igreja nem gravar no usuário. Testes de regressão cobrem conta sem igreja e referência a igreja inexistente.
+**Prioridade de Correção**: ✅ Resolvido

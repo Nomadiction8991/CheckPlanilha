@@ -359,15 +359,7 @@ class LegacyAuthSessionService implements LegacyAuthSessionServiceInterface
             return $churchId;
         }
 
-        /** @var Comum|null $firstChurch */
-        $firstChurch = Comum::query()->orderBy('codigo')->first(['id']);
-        if ($firstChurch === null) {
-            return null;
-        }
-
-        Usuario::query()->whereKey($user->id)->update(['comum_id' => (int) $firstChurch->id]);
-
-        return (int) $firstChurch->id;
+        return null;
     }
 
     private function resolveAdministrationId(Usuario $user): ?int
