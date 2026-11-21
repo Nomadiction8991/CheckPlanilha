@@ -91,16 +91,45 @@ final class SpreadsheetStore
             throw new RuntimeException('Não foi possível criar a pasta das planilhas.');
         }
 
-        // O arquivo temporário começa com ponto, para a listagem nunca mostrar um arquivo pela metade.
-        $temporario = $this->pasta . DIRECTORY_SEPARATOR . '.' . $nome . '.parcial';
+        // Serializa as decisões para este nome: rename() sozinho pode substituir o destino
+        // quando duas instâncias passam juntas pela verificação de existência.
+        $bloqueio = @fopen($this->pasta . DIRECTORY_SEPARATOR . '.' . $nome . '.lock', 'c');
 
-        if (file_put_contents($temporario, $conteudo, LOCK_EX) === false || ! rename($temporario, $caminho)) {
-            @unlink($temporario);
+        if ($bloqueio === false || ! flock($bloqueio, LOCK_EX)) {
+            if (is_resource($bloqueio)) {
+                fclose($bloqueio);
+            }
 
-            throw new RuntimeException("Não foi possível gravar a planilha {$nome}.");
+            throw new RuntimeException('Não foi possível bloquear a gravação da planilha.');
         }
 
-        return 'gravado';
+        $temporario = null;
+
+        try {
+            if (is_file($caminho)) {
+                if (hash_file('sha256', $caminho) === $sha256) {
+                    return 'ja_existe';
+                }
+
+                throw new ConflitoDeArquivoException("Já existe uma planilha {$nome} com conteúdo diferente.");
+            }
+
+            // Nome único para que gravações simultâneas de arquivos diferentes não compartilhem o temporário.
+            $temporario = tempnam($this->pasta, '.' . $nome . '.');
+
+            if ($temporario === false || file_put_contents($temporario, $conteudo, LOCK_EX) === false || ! rename($temporario, $caminho)) {
+                throw new RuntimeException("Não foi possível gravar a planilha {$nome}.");
+            }
+
+            return 'gravado';
+        } finally {
+            if ($temporario !== null && is_file($temporario)) {
+                @unlink($temporario);
+            }
+
+            flock($bloqueio, LOCK_UN);
+            fclose($bloqueio);
+        }
     }
 
     private function caminho(string $nome): string

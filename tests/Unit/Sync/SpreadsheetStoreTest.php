@@ -78,6 +78,60 @@ class SpreadsheetStoreTest extends TestCase
         }
     }
 
+    public function test_gravacoes_concorrentes_com_mesmo_nome_nao_substituem_o_arquivo(): void
+    {
+        $loja = new SpreadsheetStore($this->pasta);
+        $processos = [];
+        $sinalizacao = $this->pasta . '/.inicio';
+        $resultados = [];
+        $conteudos = [str_repeat('a', 2_000_000), str_repeat('b', 2_000_000)];
+
+        if (! mkdir($this->pasta, 0775, true) && ! is_dir($this->pasta)) {
+            $this->fail('Não foi possível criar a pasta temporária do teste.');
+        }
+
+        foreach ($conteudos as $indice => $conteudo) {
+            $resultado = $this->pasta . '/.resultado-' . $indice;
+            $payload = $this->pasta . '/.payload-' . $indice;
+            file_put_contents($payload, $conteudo);
+            $codigo = <<<'PHP'
+                require $argv[1] . '/vendor/autoload.php';
+                while (! is_file($argv[2])) { usleep(1000); }
+                $conteudo = file_get_contents($argv[4]);
+                try {
+                    $status = (new \App\Sync\SpreadsheetStore($argv[3]))->gravar('concorrente.csv', $conteudo, hash('sha256', $conteudo));
+                } catch (\App\Sync\ConflitoDeArquivoException) {
+                    $status = 'conflito';
+                } catch (\Throwable $erro) {
+                    file_put_contents($argv[5], 'erro:' . $erro->getMessage());
+                    exit(1);
+                }
+                file_put_contents($argv[5], $status);
+                PHP;
+            $comando = [PHP_BINARY, '-r', $codigo, dirname(__DIR__, 3), $sinalizacao, $this->pasta, $payload, $resultado];
+            $processos[$indice] = proc_open($comando, [
+                0 => ['file', '/dev/null', 'r'],
+                1 => ['file', '/dev/null', 'w'],
+                2 => ['file', '/dev/null', 'w'],
+            ], $pipes);
+            $resultados[$indice] = $resultado;
+            $this->assertIsResource($processos[$indice]);
+        }
+
+        touch($sinalizacao);
+
+        foreach ($processos as $indice => $processo) {
+            proc_close($processo);
+            $this->assertFileExists($resultados[$indice]);
+        }
+
+        $status = array_map(static fn (string $path): string => (string) file_get_contents($path), $resultados);
+        sort($status);
+
+        $this->assertSame(['conflito', 'gravado'], $status);
+        $this->assertContains(file_get_contents($this->pasta . '/concorrente.csv'), $conteudos);
+    }
+
     public function test_nome_com_caminho_ou_caractere_estranho_e_recusado(): void
     {
         $loja = new SpreadsheetStore($this->pasta);
