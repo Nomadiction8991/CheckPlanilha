@@ -14,6 +14,16 @@
 
 ## Detalhes dos Erros
 
+### SYNC-001 - Cópia inicial podia misturar estados de momentos diferentes
+**Arquivo**: `app/Sync/CopyExporter.php` (`linhas`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Lógica / sincronização
+**Status**: Corrigido nesta rodada.
+**Descrição**: O exportador enviava o cabeçalho com o cursor antes de consultar as tabelas. Uma gravação concorrente podia entrar na cópia depois desse cursor e voltar a chegar na sincronização incremental.
+**Risco/Impacto**: O notebook podia receber um estado novo na cópia inicial e, em seguida, tratar o mesmo evento como alteração concorrente, criando conflito artificial.
+**Correção**: Capturar o cursor e todos os registros em uma transação `REPEATABLE READ`, preparar o NDJSON em armazenamento temporário e só iniciar o envio após a leitura consistente terminar. Coberto por teste que insere um registro após o cursor ser calculado.
+**Prioridade de Correção**: Alta
+
 ### AUTH-004 - Escopo de usuário podia guardar administrações inexistentes
 **Arquivo**: `app/Services/LegacyUserManagementService.php` (`normalizeAdministrationScopeIds`)
 **Severidade**: 🟡 MÉDIO

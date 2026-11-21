@@ -6,6 +6,7 @@ namespace App\Sync;
 
 use Generator;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 /**
  * Gera a cópia completa do servidor: uma linha JSON por registro (formato NDJSON).
@@ -18,43 +19,69 @@ final class CopyExporter
 {
     public function __construct(
         private readonly SensitiveFields $camposCifrados,
-    ) {
-    }
+    ) {}
 
     /**
      * @return Generator<int, string>
      */
     public function linhas(): Generator
     {
-        $cursor = (int) DB::table((string) config('sincronizacao.tabela_registro'))->max('id');
+        $arquivo = fopen('php://temp/maxmemory:2097152', 'w+b');
 
-        yield $this->linha(['tipo' => 'cabecalho', 'versao' => 1, 'cursor' => $cursor]);
-
-        $total = 0;
-
-        foreach ((array) config('sincronizacao.ordem_da_copia') as $tabela) {
-            $consulta = DB::table((string) $tabela);
-
-            foreach (TableKeys::primaryKey((string) $tabela) as $coluna) {
-                $consulta->orderBy($coluna);
-            }
-
-            foreach ($consulta->cursor() as $registro) {
-                $dados = $this->camposCifrados->decifrar((string) $tabela, (array) $registro);
-
-                yield $this->linha(['tipo' => 'linha', 'tabela' => $tabela, 'dados' => $dados]);
-                $total++;
-            }
+        if ($arquivo === false) {
+            throw new RuntimeException('Não foi possível preparar a cópia do servidor.');
         }
 
-        yield $this->linha(['tipo' => 'fim', 'linhas' => $total]);
+        try {
+            // A leitura consistente impede que o cursor e os registros representem instantes diferentes.
+            if (DB::getDriverName() === 'mysql') {
+                DB::statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+            }
+
+            DB::transaction(function () use ($arquivo): void {
+                $cursor = (int) DB::table((string) config('sincronizacao.tabela_registro'))->max('id');
+                $this->escreverLinha($arquivo, ['tipo' => 'cabecalho', 'versao' => 1, 'cursor' => $cursor]);
+
+                $total = 0;
+
+                foreach ((array) config('sincronizacao.ordem_da_copia') as $tabela) {
+                    $consulta = DB::table((string) $tabela);
+
+                    foreach (TableKeys::primaryKey((string) $tabela) as $coluna) {
+                        $consulta->orderBy($coluna);
+                    }
+
+                    foreach ($consulta->cursor() as $registro) {
+                        $dados = $this->camposCifrados->decifrar((string) $tabela, (array) $registro);
+
+                        $this->escreverLinha($arquivo, ['tipo' => 'linha', 'tabela' => $tabela, 'dados' => $dados]);
+                        $total++;
+                    }
+                }
+
+                $this->escreverLinha($arquivo, ['tipo' => 'fim', 'linhas' => $total]);
+            });
+
+            rewind($arquivo);
+
+            while (($linha = fgets($arquivo)) !== false) {
+                yield $linha;
+            }
+        } finally {
+            fclose($arquivo);
+        }
     }
 
     /**
+     * @param  resource  $arquivo
      * @param  array<string, mixed>  $registro
      */
-    private function linha(array $registro): string
+    private function escreverLinha($arquivo, array $registro): void
     {
-        return json_encode($registro, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n";
+        $linha = json_encode($registro, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)."\n";
+
+        if (fwrite($arquivo, $linha) !== strlen($linha)) {
+            throw new RuntimeException('Não foi possível preparar a cópia do servidor.');
+        }
     }
 }
