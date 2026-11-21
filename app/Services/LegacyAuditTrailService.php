@@ -31,7 +31,7 @@ final class LegacyAuditTrailService implements LegacyAuditTrailServiceInterface
         try {
             $directory = dirname($this->storageFile);
 
-            if (!is_dir($directory) && !@mkdir($directory, 0777, true) && !is_dir($directory)) {
+            if (!is_dir($directory) && !@mkdir($directory, 0700, true) && !is_dir($directory)) {
                 return;
             }
 
@@ -40,7 +40,36 @@ final class LegacyAuditTrailService implements LegacyAuditTrailServiceInterface
                 return;
             }
 
-            file_put_contents($this->storageFile, $payload . PHP_EOL, FILE_APPEND | LOCK_EX);
+            $previousUmask = umask(0077);
+            try {
+                $stream = @fopen($this->storageFile, 'ab');
+            } finally {
+                umask($previousUmask);
+            }
+
+            if ($stream === false) {
+                return;
+            }
+
+            if (!@chmod($this->storageFile, 0600)) {
+                fclose($stream);
+
+                return;
+            }
+
+            if (!flock($stream, LOCK_EX)) {
+                fclose($stream);
+
+                return;
+            }
+
+            try {
+                fwrite($stream, $payload . PHP_EOL);
+                fflush($stream);
+            } finally {
+                flock($stream, LOCK_UN);
+                fclose($stream);
+            }
         } catch (Throwable) {
             return;
         }

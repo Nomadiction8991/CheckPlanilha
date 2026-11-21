@@ -93,6 +93,49 @@ final class LegacyAuditTrailServiceTest extends TestCase
         self::assertSame('Produto atualizado com sucesso.', $items[0]->description);
     }
 
+    public function testRecordCreatesAuditFileWithOwnerOnlyPermissions(): void
+    {
+        $directory = sys_get_temp_dir() . '/audit_private_' . bin2hex(random_bytes(8));
+        mkdir($directory, 0700);
+        $storageFile = $directory . '/audit-log.jsonl';
+
+        try {
+            $service = new LegacyAuditTrailService($storageFile);
+            $this->recordEntry($service, '2026-04-17 09:15:00', 'Ana', 9);
+
+            self::assertFileExists($storageFile);
+            self::assertSame(0600, fileperms($storageFile) & 0777);
+        } finally {
+            if (is_file($storageFile)) {
+                unlink($storageFile);
+            }
+
+            rmdir($directory);
+        }
+    }
+
+    public function testRecordRestrictsPermissionsOfAnExistingAuditFile(): void
+    {
+        $directory = sys_get_temp_dir() . '/audit_permissions_' . bin2hex(random_bytes(8));
+        mkdir($directory, 0700);
+        $storageFile = $directory . '/audit-log.jsonl';
+        file_put_contents($storageFile, "existing entry\n");
+        chmod($storageFile, 0644);
+
+        try {
+            $service = new LegacyAuditTrailService($storageFile);
+            $this->recordEntry($service, '2026-04-17 09:15:00', 'Ana', 9);
+
+            self::assertSame(0600, fileperms($storageFile) & 0777);
+        } finally {
+            if (is_file($storageFile)) {
+                unlink($storageFile);
+            }
+
+            rmdir($directory);
+        }
+    }
+
     public function testNonAdminWithoutScopeReceivesNoAuditEntries(): void
     {
         $service = new LegacyAuditTrailService($this->storageFile);
