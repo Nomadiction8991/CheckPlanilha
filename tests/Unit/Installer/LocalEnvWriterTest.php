@@ -103,6 +103,30 @@ class LocalEnvWriterTest extends TestCase
         }
     }
 
+    public function test_nao_segue_link_simbolico_no_arquivo_temporario(): void
+    {
+        $dir = sys_get_temp_dir() . '/cp-env-link-' . uniqid();
+        mkdir($dir);
+        $caminho = $dir . '/.env';
+        $temporario = $caminho . '.tmp';
+        $alvo = $dir . '/arquivo-alheio';
+        file_put_contents($alvo, 'conteudo original');
+        symlink($alvo, $temporario);
+
+        try {
+            (new LocalEnvWriter())->write($caminho, $this->valores());
+
+            $this->assertSame('conteudo original', file_get_contents($alvo));
+            $this->assertFileExists($caminho);
+            $this->assertFalse(is_link($caminho));
+        } finally {
+            @unlink($caminho);
+            @unlink($temporario);
+            @unlink($alvo);
+            @rmdir($dir);
+        }
+    }
+
     public function test_falha_com_mensagem_clara_quando_a_pasta_nao_permite_escrita(): void
     {
         $dir = sys_get_temp_dir() . '/cp-env-ro-' . uniqid();

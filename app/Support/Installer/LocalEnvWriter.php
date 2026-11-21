@@ -77,18 +77,26 @@ final class LocalEnvWriter
         }
 
         $conteudo = $this->render($valores);
-        $temporario = $caminho . '.tmp';
+        $temporario = tempnam($pasta, '.' . basename($caminho) . '.tmp-');
 
-        if (file_put_contents($temporario, $conteudo, LOCK_EX) === false) {
-            throw new RuntimeException("Não foi possível escrever o arquivo temporário {$temporario}.");
+        if ($temporario === false) {
+            throw new RuntimeException("Não foi possível criar um arquivo temporário em {$pasta}.");
         }
 
-        chmod($temporario, 0600);
+        try {
+            if (file_put_contents($temporario, $conteudo, LOCK_EX) === false) {
+                throw new RuntimeException("Não foi possível escrever o arquivo temporário {$temporario}.");
+            }
 
-        if (! rename($temporario, $caminho)) {
+            if (! chmod($temporario, 0600)) {
+                throw new RuntimeException("Não foi possível restringir as permissões do arquivo temporário {$temporario}.");
+            }
+
+            if (! rename($temporario, $caminho)) {
+                throw new RuntimeException("Não foi possível trocar o arquivo {$caminho} pelo novo conteúdo.");
+            }
+        } finally {
             @unlink($temporario);
-
-            throw new RuntimeException("Não foi possível trocar o arquivo {$caminho} pelo novo conteúdo.");
         }
     }
 
