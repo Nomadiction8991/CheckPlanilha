@@ -100,6 +100,12 @@ final class SystemStorageCleanupCommandTest extends TestCase
 
     private function rmdirRecursive(string $dir): void
     {
+        if (is_link($dir)) {
+            unlink($dir);
+
+            return;
+        }
+
         if (! is_dir($dir)) {
             return;
         }
@@ -202,5 +208,38 @@ final class SystemStorageCleanupCommandTest extends TestCase
 
         $this->assertFileDoesNotExist($oldFile, 'Arquivo temporário antigo deve continuar sendo removido.');
         $this->assertFileExists($recentFile, 'Arquivo dentro da janela de retenção deve ser preservado.');
+    }
+
+    /** @test */
+    public function test_cleanup_does_not_follow_storage_directory_symlinks(): void
+    {
+        $outsideTmpDir = $this->tempDir . '/outside-tmp';
+        $outsideAppTmpDir = $this->tempDir . '/outside-app-tmp';
+        mkdir($outsideTmpDir);
+        mkdir($outsideAppTmpDir);
+
+        $oldTmpFile = $outsideTmpDir . '/arquivo_antigo.tmp';
+        $oldAppTmpFile = $outsideAppTmpDir . '/outro_arquivo_antigo.tmp';
+        file_put_contents($oldTmpFile, 'conteudo fora do storage');
+        file_put_contents($oldAppTmpFile, 'conteudo fora do storage');
+        touch($oldTmpFile, time() - (10 * 86400));
+        touch($oldAppTmpFile, time() - (10 * 86400));
+
+        rmdir($this->tempDir . '/tmp');
+        rmdir($this->tempDir . '/app/tmp');
+        symlink($outsideTmpDir, $this->tempDir . '/tmp');
+        symlink($outsideAppTmpDir, $this->tempDir . '/app/tmp');
+
+        $this->artisan('system:storage-cleanup', ['--days' => 7])
+            ->assertSuccessful();
+
+        $this->assertFileExists(
+            $oldTmpFile,
+            'O cleanup não deve atravessar um link simbólico em storage/tmp.'
+        );
+        $this->assertFileExists(
+            $oldAppTmpFile,
+            'O cleanup não deve atravessar um link simbólico em storage/app/tmp.'
+        );
     }
 }

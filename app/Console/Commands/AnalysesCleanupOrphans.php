@@ -50,7 +50,7 @@ class AnalysesCleanupOrphans extends Command
         $dryRun = (bool) $this->option('dry-run');
         $forceDelete = (bool) $this->option('force-delete');
 
-        if (! is_dir($this->storageDir)) {
+        if (is_link($this->storageDir) || ! is_dir($this->storageDir)) {
             $this->warn('Storage directory not found: ' . $this->storageDir);
 
             return 0;

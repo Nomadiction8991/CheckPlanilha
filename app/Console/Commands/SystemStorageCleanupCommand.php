@@ -52,7 +52,7 @@ class SystemStorageCleanupCommand extends Command
         $skippedActive = 0;
 
         foreach ($directories as $dir) {
-            if (!is_dir($dir)) {
+            if (is_link($dir) || ! is_dir($dir)) {
                 continue;
             }
 

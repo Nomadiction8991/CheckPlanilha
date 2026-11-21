@@ -141,6 +141,32 @@ final class AnalysesCleanupOrphansTest extends TestCase
     }
 
     /** @test */
+    public function test_does_not_follow_a_storage_directory_symlink(): void
+    {
+        $outsideDir = $this->tempDir . '_outside';
+        mkdir($outsideDir);
+        $outsideFile = $outsideDir . '/analise_909.json';
+        file_put_contents($outsideFile, '{}');
+
+        $linkedDir = $this->tempDir . '/linked-storage';
+        symlink($outsideDir, $linkedDir);
+
+        $command = $this->app->make(AnalysesCleanupOrphans::class);
+        $command->setStorageDir($linkedDir);
+        $this->app->instance(AnalysesCleanupOrphans::class, $command);
+
+        $this->artisan('analyses:cleanup-orphans')
+            ->expectsOutputToContain('Storage directory not found')
+            ->assertSuccessful();
+
+        $this->assertFileExists($outsideFile);
+
+        unlink($linkedDir);
+        unlink($outsideFile);
+        rmdir($outsideDir);
+    }
+
+    /** @test */
     public function test_no_files_found_when_dir_empty(): void
     {
         $this->bindCommandWithTempDir();

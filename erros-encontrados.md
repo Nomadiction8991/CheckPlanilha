@@ -655,6 +655,16 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Correção**: Consultas, transações e exclusões do comando de órfãos agora usam a conexão padrão da aplicação. Os testes cobrem registros nessa conexão com a conexão legada vazia ou indisponível.
 **Prioridade de Correção**: ✅ Resolvido
 
+### OPS-001 - Limpeza de temporários seguia diretórios fora do storage por link simbólico
+**Arquivo**: `app/Console/Commands/SystemStorageCleanupCommand.php` e `app/Console/Commands/AnalysesCleanupOrphans.php`
+**Severidade**: 🟠 ALTO
+**Categoria**: Estabilidade / Integridade de arquivos
+**Status**: Corrigido nesta rodada.
+**Descrição**: Os comandos aceitavam seus diretórios de trabalho mesmo quando o próprio diretório era um link simbólico. A limpeza genérica podia remover arquivos antigos no destino do link, e a limpeza de análises podia apagar arquivos `analise_*.json` fora do storage configurado.
+**Risco/Impacto**: Remoção de arquivos externos ao armazenamento esperado durante uma rotina de manutenção agendada ou manual.
+**Correção**: Os dois comandos agora recusam diretórios de trabalho que sejam links simbólicos. Testes de regressão confirmam que arquivos nos destinos permanecem intactos.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### SYNC-001 - Resolver conflito não aplicava campo vazio sobre valor nulo
 **Arquivo**: `app/Sync/ConflictResolver.php` (`camposAlterados`)
 **Severidade**: 🟡 MÉDIO
