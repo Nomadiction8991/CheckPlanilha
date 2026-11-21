@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Sync;
 
 use Illuminate\Support\Facades\DB;
+use JsonException;
 use RuntimeException;
 
 /**
@@ -20,8 +21,7 @@ final class CopyImporter
     public function __construct(
         private readonly SyncState $estado,
         private readonly SensitiveFields $camposCifrados,
-    ) {
-    }
+    ) {}
 
     /**
      * @param  iterable<int, string>  $linhas  Linhas NDJSON geradas por CopyExporter.
@@ -35,25 +35,61 @@ final class CopyImporter
 
             try {
                 $this->esvaziarTabelas();
+                $cabecalhoRecebido = false;
                 $terminou = false;
+                $linhasRecebidas = 0;
 
                 foreach ($linhas as $linha) {
-                    $registro = json_decode(trim($linha), true);
-
-                    if (! is_array($registro)) {
-                        continue;
+                    try {
+                        $registro = json_decode(trim($linha), true, 512, JSON_THROW_ON_ERROR);
+                    } catch (JsonException $exception) {
+                        throw new RuntimeException('A cópia contém uma linha NDJSON inválida.', previous: $exception);
                     }
 
-                    if (($registro['tipo'] ?? null) === 'cabecalho') {
-                        $cursor = (int) ($registro['cursor'] ?? 0);
-                    } elseif (($registro['tipo'] ?? null) === 'linha') {
-                        $this->gravar((string) $registro['tabela'], (array) $registro['dados']);
-                    } elseif (($registro['tipo'] ?? null) === 'fim') {
-                        $terminou = true;
+                    if (! is_array($registro)) {
+                        throw new RuntimeException('A cópia contém uma linha NDJSON inválida.');
+                    }
+
+                    if ($terminou) {
+                        throw new RuntimeException('A cópia contém dados depois da marca de fim.');
+                    }
+
+                    switch ($registro['tipo'] ?? null) {
+                        case 'cabecalho':
+                            if ($cabecalhoRecebido || $linhasRecebidas > 0 || ! is_numeric($registro['cursor'] ?? null) || (int) $registro['cursor'] < 0) {
+                                throw new RuntimeException('O cabeçalho da cópia é inválido.');
+                            }
+
+                            $cursor = (int) $registro['cursor'];
+                            $cabecalhoRecebido = true;
+
+                            break;
+
+                        case 'linha':
+                            if (! $cabecalhoRecebido || ! is_string($registro['tabela'] ?? null) || ! is_array($registro['dados'] ?? null)) {
+                                throw new RuntimeException('A cópia contém um registro inválido.');
+                            }
+
+                            $this->gravar($registro['tabela'], $registro['dados']);
+                            $linhasRecebidas++;
+
+                            break;
+
+                        case 'fim':
+                            if (! $cabecalhoRecebido || ! is_numeric($registro['linhas'] ?? null) || (int) $registro['linhas'] !== $linhasRecebidas) {
+                                throw new RuntimeException('A cópia está incompleta: a quantidade de registros não confere.');
+                            }
+
+                            $terminou = true;
+
+                            break;
+
+                        default:
+                            throw new RuntimeException('A cópia contém um tipo de linha desconhecido.');
                     }
                 }
 
-                if (! $terminou) {
+                if (! $cabecalhoRecebido || ! $terminou) {
                     throw new RuntimeException('A cópia chegou incompleta. Nada foi alterado neste computador.');
                 }
             } finally {
@@ -103,7 +139,7 @@ final class CopyImporter
     private function gravar(string $tabela, array $dados): void
     {
         if (! in_array($tabela, (array) config('sincronizacao.tabelas'), true)) {
-            return;
+            throw new RuntimeException('A cópia contém uma tabela desconhecida.');
         }
 
         DB::table($tabela)->insert($this->camposCifrados->cifrar($tabela, $dados));
@@ -112,7 +148,7 @@ final class CopyImporter
     private function suprimirRegistro(bool $ligar): void
     {
         if (DB::getDriverName() === 'mysql') {
-            DB::statement('SET @sincronizacao_aplicando = ' . ($ligar ? '1' : 'NULL'));
+            DB::statement('SET @sincronizacao_aplicando = '.($ligar ? '1' : 'NULL'));
         }
     }
 }
