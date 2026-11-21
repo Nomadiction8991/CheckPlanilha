@@ -15,6 +15,27 @@ use Tests\TestCase;
 #[AllowMockObjectsWithoutExpectations]
 final class CsvParserServiceTest extends TestCase
 {
+    public function testEncontrarInicioDadosReconheceCabecalhoCodigoComAcento(): void
+    {
+        $service = new CsvParserService(new PDO('sqlite::memory:'));
+        $method = new ReflectionMethod($service, 'encontrarInicioDados');
+
+        self::assertSame(1, $method->invoke($service, [
+            ['Código', 'Descrição'],
+            ['09-0002 / 0001', '4 - CADEIRA METÁLICA'],
+        ], 1, ['codigo' => 0]));
+    }
+
+    public function testLinhaMetadadosEmCaixaAltaComAcentosEIgnorada(): void
+    {
+        $service = new CsvParserService(new PDO('sqlite::memory:'));
+        $method = new ReflectionMethod($service, 'isLinhaMetadados');
+
+        self::assertTrue($method->invoke($service, 'RELATÓRIO DE INVENTÁRIO'));
+        self::assertTrue($method->invoke($service, 'DEPENDÊNCIA: SALÃO'));
+        self::assertTrue($method->invoke($service, 'CONGREGAÇÃO CENTRAL'));
+    }
+
     public function testDetectarComunsNoCsvRestringeMesmoCodigoAoEscopoAdministrativo(): void
     {
         $pdo = new PDO('sqlite::memory:');

@@ -796,3 +796,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Um usuário comum podia consultar igrejas, dependências, bens e opções de relatórios de administrações alheias.
 **Correção**: Preservar o acesso global de administradores e de chamadas sem usuário autenticado; uma sessão de usuário comum sem administração passa a receber escopo vazio. Testes cobrem as listagens, contagens e opções nos quatro serviços.
 **Prioridade de Correção**: ✅ Resolvido
+
+### IMP-027 - Acentos em caixa alta faziam o parser pular o cabeçalho e aceitar metadados
+**Arquivo**: `app/Services/CsvParserService.php` (`encontrarInicioDados`, `isLinhaMetadados`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Importação de planilhas
+**Status**: Corrigido nesta rodada.
+**Descrição**: A detecção do cabeçalho convertia texto com `strtolower` e transliterava acentos por `iconv`; neste runtime, “Código” virava `c'odigo` e não era reconhecido. O fallback pulava mais uma linha e descartava o primeiro registro. A mesma normalização não reconhecia metadados em caixa alta com acentos, como “RELATÓRIO” e “DEPENDÊNCIA”.
+**Risco/Impacto**: CSVs com cabeçalho de código perdiam silenciosamente o primeiro bem e linhas de metadados podiam virar registros importáveis.
+**Correção**: Normalizar textos de comparação em minúsculas UTF-8 e remover pontuação residual da transliteração nos dois caminhos. Testes cobrem cabeçalho acentuado, metadados acentuados em caixa alta e a importação com arquivo CSV de fixture.
+**Prioridade de Correção**: ✅ Resolvido

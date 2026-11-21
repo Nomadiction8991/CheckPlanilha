@@ -767,7 +767,7 @@ class CsvParserService
         // Procura por uma linha cujo primeiro campo não-vazio contenha "Código" ou "codigo"
         for ($i = 0; $i < min($totalLinhas, $puloLinhas + 10); $i++) {
             $primeiraCol = trim((string) ($linhas[$i][0] ?? ''));
-            $primeiraColNorm = $this->removerAcentos(strtolower($primeiraCol));
+            $primeiraColNorm = $this->normalizarTextoDeComparacao($primeiraCol);
 
             if ($primeiraColNorm === 'codigo') {
                 // Encontrou a linha de cabeçalho → dados começam na próxima
@@ -786,7 +786,7 @@ class CsvParserService
     private function isLinhaMetadados(string $codigo): bool
     {
         // Linhas de subtotal, totais, nomes de grupo etc.
-        $codigoNorm = strtolower(trim($codigo));
+        $codigoNorm = $this->normalizarTextoDeComparacao($codigo);
 
         $palavrasMetadados = [
             'total',
@@ -1400,6 +1400,15 @@ class CsvParserService
     {
         $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $str);
         return $converted !== false ? $converted : $str;
+    }
+
+    private function normalizarTextoDeComparacao(string $texto): string
+    {
+        return (string) preg_replace(
+            '/[^a-z0-9]/',
+            '',
+            $this->removerAcentos(mb_strtolower($texto, 'UTF-8')),
+        );
     }
 
     /**
