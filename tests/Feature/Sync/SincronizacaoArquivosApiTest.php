@@ -60,6 +60,40 @@ class SincronizacaoArquivosApiTest extends SincronizacaoTestCase
             ->assertHeader('X-Sha256', hash('sha256', 'linha 1'));
     }
 
+    public function test_nao_lista_nem_baixa_arquivo_externo_por_link_simbolico(): void
+    {
+        mkdir($this->pasta . '/planilhas', 0775, true);
+        $arquivoExterno = $this->pasta . '/privado.txt';
+        file_put_contents($arquivoExterno, 'conteudo privado');
+        symlink($arquivoExterno, $this->pasta . '/planilhas/alias.csv');
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson('/api/sincronizacao/planilhas')
+            ->assertOk()
+            ->assertJsonPath('arquivos', []);
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->get('/api/sincronizacao/planilhas/alias.csv')
+            ->assertNotFound();
+    }
+
+    public function test_nao_expoe_conteudo_quando_a_pasta_de_planilhas_e_link_simbolico(): void
+    {
+        $pastaExterna = $this->pasta . '/externa';
+        mkdir($pastaExterna, 0775, true);
+        file_put_contents($pastaExterna . '/fora.csv', 'conteudo externo');
+        symlink($pastaExterna, $this->pasta . '/planilhas');
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson('/api/sincronizacao/planilhas')
+            ->assertOk()
+            ->assertJsonPath('arquivos', []);
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->get('/api/sincronizacao/planilhas/fora.csv')
+            ->assertNotFound();
+    }
+
     public function test_auditoria_so_responde_para_aparelho_autorizado(): void
     {
         $this->getJson('/api/sincronizacao/auditoria')->assertUnauthorized();

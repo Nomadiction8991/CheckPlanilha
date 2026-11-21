@@ -140,4 +140,47 @@ class SpreadsheetStoreTest extends TestCase
 
         $loja->gravar('../fora.csv', 'x', hash('sha256', 'x'));
     }
+
+    public function test_nao_lista_nem_le_arquivo_que_seja_link_simbolico(): void
+    {
+        mkdir($this->pasta, 0775, true);
+        $arquivoExterno = $this->pasta . '-privado.txt';
+        file_put_contents($arquivoExterno, 'conteudo privado');
+        symlink($arquivoExterno, $this->pasta . '/alias.csv');
+
+        $loja = new SpreadsheetStore($this->pasta);
+
+        $this->assertSame([], $loja->listar());
+        $this->expectException(\RuntimeException::class);
+        $loja->ler('alias.csv');
+    }
+
+    public function test_nao_lista_planilhas_quando_a_pasta_configurada_e_link_simbolico(): void
+    {
+        $pastaExterna = $this->pasta . '-externa';
+        mkdir($pastaExterna, 0775, true);
+        file_put_contents($pastaExterna . '/planilha.csv', 'conteudo externo');
+        symlink($pastaExterna, $this->pasta);
+
+        $this->assertSame([], (new SpreadsheetStore($this->pasta))->listar());
+    }
+
+    public function test_nao_grava_sobre_arquivo_que_seja_link_simbolico(): void
+    {
+        mkdir($this->pasta, 0775, true);
+        $arquivoExterno = $this->pasta . '-privado.txt';
+        file_put_contents($arquivoExterno, 'conteudo privado');
+        symlink($arquivoExterno, $this->pasta . '/alias.csv');
+
+        try {
+            (new SpreadsheetStore($this->pasta))->gravar(
+                'alias.csv',
+                'novo conteudo',
+                hash('sha256', 'novo conteudo'),
+            );
+            $this->fail('O destino simbólico deveria ser recusado.');
+        } catch (\RuntimeException $erro) {
+            $this->assertSame('conteudo privado', file_get_contents($arquivoExterno));
+        }
+    }
 }
