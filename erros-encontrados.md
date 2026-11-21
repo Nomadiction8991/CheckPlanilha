@@ -816,3 +816,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Bens com descrição longa não podiam ser transferidos, apesar de seus dados serem aceitos pelo cadastro.
 **Correção**: Ampliar a coluna do histórico para `TEXT` por migração incremental. O rollback verifica se há registros longos e interrompe a redução para evitar perda de dados. Testes cobrem o tipo da coluna e a preservação da descrição combinada acima de 255 caracteres.
 **Prioridade de Correção**: ✅ Resolvido
+
+### TRANS-002 - ID parcialmente numérico transferia o bem de outro identificador
+**Arquivo**: `app/Services/LegacyTransferService.php` (`normalizarIds`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Transferências / Integridade de dados
+**Status**: Corrigido nesta rodada.
+**Descrição**: A conversão direta de cada ID para inteiro aceitava um prefixo numérico. Por exemplo, `1001abc` era convertido em `1001` e podia transferir esse bem.
+**Risco/Impacto**: Uma lista de IDs malformada podia mover um bem diferente do indicado pelo valor recebido pelo serviço.
+**Correção**: Aceitar somente inteiros positivos ou strings compostas por dígitos; rejeitar a lista inteira antes da transação quando qualquer ID for inválido. Teste de regressão confirma que o bem não muda de igreja.
+**Prioridade de Correção**: ✅ Resolvido

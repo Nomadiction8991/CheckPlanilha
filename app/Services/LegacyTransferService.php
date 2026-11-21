@@ -267,10 +267,23 @@ final class LegacyTransferService implements LegacyTransferServiceInterface
      */
     private function normalizarIds(array $produtoIds): array
     {
-        $ids = array_filter(
-            array_map(static fn (mixed $valor): int => (int) $valor, $produtoIds),
-            static fn (int $id): bool => $id > 0,
-        );
+        $ids = [];
+
+        foreach ($produtoIds as $valor) {
+            if (is_int($valor)) {
+                $id = $valor;
+            } elseif (is_string($valor) && preg_match('/^[0-9]+$/D', $valor) === 1) {
+                $id = filter_var($valor, FILTER_VALIDATE_INT);
+            } else {
+                throw new RuntimeException('Identificador de bem inválido.');
+            }
+
+            if (!is_int($id) || $id <= 0) {
+                throw new RuntimeException('Identificador de bem inválido.');
+            }
+
+            $ids[] = $id;
+        }
 
         return array_values(array_unique($ids));
     }

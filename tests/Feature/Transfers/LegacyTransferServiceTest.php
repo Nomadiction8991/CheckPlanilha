@@ -130,6 +130,19 @@ final class LegacyTransferServiceTest extends TransferenciasTestCase
         $this->servico->transferir(7, 8, 80, [], 9);
     }
 
+    public function testRecusaIdentificadorParcialSemTransferirOBemCorrespondente(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Identificador de bem inválido.');
+
+        try {
+            $this->servico->transferir(7, 8, 80, ['1001abc'], 9);
+        } finally {
+            $this->assertSame(0, Transferencia::query()->count());
+            $this->assertSame(7, (int) Produto::query()->findOrFail(1001)->comum_id);
+        }
+    }
+
     public function testRecusaIgrejaForaDoEscopoDoUsuario(): void
     {
         $this->criarAdministracao(2, 'Outra administração');
