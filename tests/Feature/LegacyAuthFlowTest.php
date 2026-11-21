@@ -90,6 +90,34 @@ final class LegacyAuthFlowTest extends TestCase
         ]);
     }
 
+    public function testLoginRegeneratesSessionIdentifierAfterAuthentication(): void
+    {
+        $this->mock(LegacyAuthSessionServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('attempt')->once()->andReturn([
+                'id' => 9,
+                'nome' => 'Maria Silva',
+                'email' => 'maria@example.com',
+                'comum_id' => null,
+                'administracao_id' => 4,
+                'administracoes_permitidas' => [4],
+                'is_admin' => false,
+                'legacy_permissions' => [],
+            ]);
+        });
+
+        $this->withSession(['valor_pre_autenticacao' => 'preservado']);
+        $sessionIdBeforeLogin = session()->getId();
+
+        $this->withCookie((string) config('session.cookie'), $sessionIdBeforeLogin)
+            ->post(route('migration.login.store'), [
+                'email' => 'maria@example.com',
+                'senha' => 'segredo',
+            ])->assertRedirect(route('migration.dashboard'));
+
+        self::assertNotSame($sessionIdBeforeLogin, session()->getId());
+        self::assertSame('preservado', session('valor_pre_autenticacao'));
+    }
+
     public function testForgotPasswordFlowQueuesNewPasswordDelivery(): void
     {
         $this->mock(LegacyPasswordRecoveryServiceInterface::class, function (MockInterface $mock): void {

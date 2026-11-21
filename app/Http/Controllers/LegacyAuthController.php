@@ -66,6 +66,7 @@ class LegacyAuthController extends Controller
             'is_admin' => (bool) $authenticatedUser['is_admin'],
             'legacy_permissions' => $authenticatedUser['legacy_permissions'] ?? $request->session()->get('legacy_permissions', []),
         ]);
+        $request->session()->regenerate();
 
         $redirectTarget = (string) $request->session()->pull('redirect_after_login', '');
         if (InternalRedirect::isSafePath($redirectTarget)) {
