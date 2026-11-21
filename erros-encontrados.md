@@ -676,3 +676,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Um endereço podia enviar tentativas de senha sem restrição na aplicação.
 **Correção**: Aplicar `throttle:5,1` à rota de login, com teste de regressão que confirma o HTTP 429 quando o limite já foi atingido.
 **Prioridade de Correção**: ✅ Resolvido
+
+### ADM-001 - Cadastro de administração podia ficar parcialmente salvo
+**Arquivos**: `app/Services/LegacyAdministrationManagementService.php` e `tests/Feature/LegacyAdministrationMutationAtomicityTest.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Estabilidade / Integridade de dados
+**Status**: Corrigido nesta rodada.
+**Descrição**: Criar ou editar uma administração salvava primeiro o cadastro e depois sincronizava as administrações permitidas dos usuários administradores. Se a sincronização falhasse, a operação retornava erro, mas o cadastro já permanecia gravado.
+**Risco/Impacto**: A tela indicava falha mesmo que a administração tivesse sido criada ou alterada, deixando o estado parcialmente aplicado.
+**Correção**: Executar a gravação e a sincronização na mesma transação. Os testes provocam falha na segunda gravação e confirmam rollback tanto na criação quanto na edição.
+**Prioridade de Correção**: ✅ Resolvido

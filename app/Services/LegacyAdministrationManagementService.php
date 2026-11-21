@@ -22,15 +22,17 @@ class LegacyAdministrationManagementService implements LegacyAdministrationManag
             throw new RuntimeException('CNPJ inválido: ' . $exception->getMessage());
         }
 
-        $administration = Administracao::query()->create([
-            'descricao' => $this->normalizeDescription($data->description),
-            'cnpj' => $cnpj,
-            'estado' => strtoupper(trim($data->state)),
-            'cidade' => mb_strtoupper(trim($data->city), 'UTF-8'),
-        ]);
-        $this->syncAdministratorAccess();
+        return DB::transaction(function () use ($data, $cnpj): Administracao {
+            $administration = Administracao::query()->create([
+                'descricao' => $this->normalizeDescription($data->description),
+                'cnpj' => $cnpj,
+                'estado' => strtoupper(trim($data->state)),
+                'cidade' => mb_strtoupper(trim($data->city), 'UTF-8'),
+            ]);
+            $this->syncAdministratorAccess();
 
-        return $administration;
+            return $administration;
+        });
     }
 
     public function update(Administracao $administration, AdministrationMutationData $data): Administracao
@@ -41,16 +43,18 @@ class LegacyAdministrationManagementService implements LegacyAdministrationManag
             throw new RuntimeException('CNPJ inválido: ' . $exception->getMessage());
         }
 
-        $administration->fill([
-            'descricao' => $this->normalizeDescription($data->description),
-            'cnpj' => $cnpj,
-            'estado' => strtoupper(trim($data->state)),
-            'cidade' => mb_strtoupper(trim($data->city), 'UTF-8'),
-        ]);
-        $administration->save();
-        $this->syncAdministratorAccess();
+        return DB::transaction(function () use ($administration, $data, $cnpj): Administracao {
+            $administration->fill([
+                'descricao' => $this->normalizeDescription($data->description),
+                'cnpj' => $cnpj,
+                'estado' => strtoupper(trim($data->state)),
+                'cidade' => mb_strtoupper(trim($data->city), 'UTF-8'),
+            ]);
+            $administration->save();
+            $this->syncAdministratorAccess();
 
-        return $administration->refresh();
+            return $administration->refresh();
+        });
     }
 
     public function delete(Administracao $administration): void
