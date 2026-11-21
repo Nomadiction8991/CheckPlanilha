@@ -11,6 +11,7 @@ use App\Models\Legacy\Usuario;
 use App\Services\LegacyUserManagementService;
 use Tests\TestCase;
 use ReflectionMethod;
+use RuntimeException;
 
 final class LegacyUserManagementServiceTest extends TestCase
 {
@@ -35,6 +36,17 @@ final class LegacyUserManagementServiceTest extends TestCase
         $method = new ReflectionMethod($service, 'normalizeAdministrationScopeIds');
 
         self::assertSame([7, 8], $method->invoke($service, [7, 8], 7));
+    }
+
+    public function testNormalizeAdministrationScopeIdsRejectsUnknownAdministrations(): void
+    {
+        $service = $this->makeService(true);
+        $method = new ReflectionMethod($service, 'normalizeAdministrationScopeIds');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Uma ou mais administrações selecionadas não estão mais disponíveis.');
+
+        $method->invoke($service, [7, 999], 7);
     }
 
     public function testNormalizePayloadForAdministratorForcesAllAccessAndPreservesType(): void

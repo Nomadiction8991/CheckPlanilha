@@ -245,6 +245,10 @@ class LegacyUserManagementService implements LegacyUserManagementServiceInterfac
             return [$currentAdministrationId];
         }
 
+        if (array_diff($selectedIds, $this->allAdministrationIds()) !== []) {
+            throw new RuntimeException('Uma ou mais administrações selecionadas não estão mais disponíveis.');
+        }
+
         return array_values(array_unique($selectedIds));
     }
 

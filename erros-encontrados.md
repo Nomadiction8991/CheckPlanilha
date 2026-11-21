@@ -3,16 +3,26 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 15
+- Médios: 16
 - Baixos: 0
 
 ## Erros por Categoria
-### Segurança (3)
-### Lógica (24)
+### Segurança (4)
+### Lógica (25)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### AUTH-004 - Escopo de usuário podia guardar administrações inexistentes
+**Arquivo**: `app/Services/LegacyUserManagementService.php` (`normalizeAdministrationScopeIds`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Segurança (escopo de acesso) / integridade de dados
+**Status**: Corrigido nesta rodada.
+**Descrição**: Usuários autorizados a gerenciar mais de uma administração podiam salvar IDs positivos que não correspondiam a nenhum cadastro. O escopo órfão ficava persistido e poderia passar a liberar acesso caso aquele ID fosse criado posteriormente.
+**Risco/Impacto**: A sessão de um usuário poderia incluir administrações que não existiam quando o escopo foi salvo, além de manter referências inválidas no cadastro.
+**Correção**: Rejeitar a seleção quando qualquer administração extra não existir; a alteração foi coberta por teste unitário de regressão.
+**Prioridade de Correção**: Alta
 
 ### CNPJ-001 - Máscara e consulta rejeitavam CNPJ alfanumérico
 **Arquivo**: `public/assets/forms/input-mask.js`, `app/Http/Requests/LookupCnpjRequest.php`
