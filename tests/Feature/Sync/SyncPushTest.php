@@ -323,6 +323,23 @@ class SyncPushTest extends SincronizacaoTestCase
             ->assertUnprocessable();
     }
 
+    public function test_envio_recusa_uuid_malformado_sem_aplicar_a_alteracao(): void
+    {
+        $this->enviar([
+            $this->alteracao(str_repeat('g', 36), 'produtos', '75', 'insert', null, [
+                'id_produto' => 75,
+                'codigo' => 'P-75',
+                'comum_id' => 1,
+                'bem' => 'Mesa',
+                'checado' => false,
+            ]),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('alteracoes.0.uuid');
+
+        $this->assertFalse(DB::table('produtos')->where('id_produto', 75)->exists());
+    }
+
     /**
      * @param  array<string, mixed>|null  $antes
      * @param  array<string, mixed>|null  $depois

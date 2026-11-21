@@ -27,7 +27,7 @@ final class SyncController extends Controller
     {
         $dados = $request->validate([
             'alteracoes' => ['required', 'array', 'min:1', 'max:' . SyncService::LIMITE_POR_ENVIO],
-            'alteracoes.*.uuid' => ['required', 'string', 'size:36'],
+            'alteracoes.*.uuid' => ['required', 'string', 'uuid'],
             'alteracoes.*.tabela' => ['required', 'string', 'max:64'],
             'alteracoes.*.chave' => ['required', 'string', 'max:255'],
             'alteracoes.*.operacao' => ['required', 'in:insert,update,delete'],
