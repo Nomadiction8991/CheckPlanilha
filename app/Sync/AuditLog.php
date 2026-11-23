@@ -105,7 +105,12 @@ final class AuditLog
                 return 0;
             }
 
-            $conteudo = implode(PHP_EOL, $novas) . PHP_EOL;
+            $separadorInicial = $conteudoExistente !== ''
+                && ! str_ends_with($conteudoExistente, "\n")
+                && ! str_ends_with($conteudoExistente, "\r")
+                ? PHP_EOL
+                : '';
+            $conteudo = $separadorInicial . implode(PHP_EOL, $novas) . PHP_EOL;
 
             if (fseek($arquivo, 0, SEEK_END) !== 0) {
                 throw new RuntimeException('Não foi possível posicionar o histórico de auditoria para gravação.');

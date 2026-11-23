@@ -43,6 +43,19 @@ class AuditLogTest extends TestCase
         $this->assertSame([$a, $b], array_map(fn (array $e): string => $e['linha'], $log->linhas()));
     }
 
+    public function test_acrescenta_em_arquivo_existente_sem_quebra_de_linha_final(): void
+    {
+        mkdir(dirname($this->arquivo), 0777, true);
+        $a = '{"acao":"legado"}';
+        $b = '{"acao":"novo"}';
+        file_put_contents($this->arquivo, $a);
+
+        $log = new AuditLog($this->arquivo);
+        $this->assertSame(1, $log->acrescentar([$this->entrada($b)]));
+
+        $this->assertSame([$a, $b], array_map(fn (array $e): string => $e['linha'], $log->linhas()));
+    }
+
     public function test_recusa_o_lote_inteiro_se_uma_linha_nao_confere_com_o_sha256(): void
     {
         $log = new AuditLog($this->arquivo);
