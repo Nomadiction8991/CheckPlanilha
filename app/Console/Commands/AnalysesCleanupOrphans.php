@@ -117,6 +117,7 @@ class AnalysesCleanupOrphans extends Command
 
         $deletedFiles = 0;
         $deletedDb = 0;
+        $failedFileDeletions = 0;
 
         foreach ($orphans as $orphan) {
             $filePath = $this->storageDir . '/' . $orphan['file'];
@@ -142,8 +143,12 @@ class AnalysesCleanupOrphans extends Command
             }
 
             if (is_file($filePath)) {
-                @unlink($filePath);
-                $deletedFiles++;
+                if ($this->removeFile($filePath)) {
+                    $deletedFiles++;
+                } else {
+                    $failedFileDeletions++;
+                    $this->error('Falha ao remover arquivo de análise: ' . $orphan['file']);
+                }
             }
         }
 
@@ -160,7 +165,12 @@ class AnalysesCleanupOrphans extends Command
         $this->info($deletedFiles . ' orphan analysis file(s) removido(s).');
         $this->line('Cleanup complete.');
 
-        return 0;
+        return $failedFileDeletions > 0 ? 1 : 0;
+    }
+
+    protected function removeFile(string $filePath): bool
+    {
+        return @unlink($filePath);
     }
 
     /**

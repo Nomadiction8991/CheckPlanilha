@@ -50,6 +50,7 @@ class SystemStorageCleanupCommand extends Command
         $totalDeleted = 0;
         $bytesFreed = 0;
         $skippedActive = 0;
+        $failedDeletions = 0;
 
         foreach ($directories as $dir) {
             if (is_link($dir) || ! is_dir($dir)) {
@@ -83,7 +84,12 @@ class SystemStorageCleanupCommand extends Command
 
                 $size = (int) @filesize($filePath);
                 if (!$dryRun) {
-                    @unlink($filePath);
+                    if (! $this->removeFile($filePath)) {
+                        $failedDeletions++;
+                        $this->error('Falha ao remover arquivo temporário: ' . $item);
+
+                        continue;
+                    }
                 }
                 $totalDeleted++;
                 $bytesFreed += $size;
@@ -102,7 +108,12 @@ class SystemStorageCleanupCommand extends Command
             $this->line(sprintf('%d arquivo(s) de análise preservado(s) por importação ainda ativa.', $skippedActive));
         }
 
-        return Command::SUCCESS;
+        return $failedDeletions > 0 ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    protected function removeFile(string $filePath): bool
+    {
+        return @unlink($filePath);
     }
 
     /**

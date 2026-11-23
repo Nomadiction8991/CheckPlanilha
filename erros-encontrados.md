@@ -745,6 +745,16 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Correção**: Os dois comandos agora recusam diretórios de trabalho que sejam links simbólicos. Testes de regressão confirmam que arquivos nos destinos permanecem intactos.
 **Prioridade de Correção**: ✅ Resolvido
 
+### OPS-002 - Limpeza informava sucesso quando não conseguia remover arquivos
+**Arquivo**: `app/Console/Commands/SystemStorageCleanupCommand.php` e `app/Console/Commands/AnalysesCleanupOrphans.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Estabilidade / Limpeza de arquivos
+**Status**: Corrigido nesta rodada.
+**Descrição**: Os comandos ignoravam o resultado de `unlink()` e contabilizavam o arquivo como removido mesmo quando uma falha de permissão ou do sistema de arquivos o mantinha no storage.
+**Risco/Impacto**: A saída confirmava espaço liberado sem que isso tivesse ocorrido, ocultando falhas operacionais e dificultando a investigação de armazenamento acumulado.
+**Correção**: A contagem agora inclui somente remoções confirmadas; falhas são exibidas e fazem o comando terminar com status de erro. Testes cobrem falha de remoção nos dois comandos.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### SYNC-001 - Resolver conflito não aplicava campo vazio sobre valor nulo
 **Arquivo**: `app/Sync/ConflictResolver.php` (`camposAlterados`)
 **Severidade**: 🟡 MÉDIO

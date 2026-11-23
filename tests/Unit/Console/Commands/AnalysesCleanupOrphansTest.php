@@ -189,6 +189,28 @@ final class AnalysesCleanupOrphansTest extends TestCase
     }
 
     /** @test */
+    public function test_reports_failure_when_orphan_file_cannot_be_removed(): void
+    {
+        $this->bindCommandWithTempDir();
+        $path = $this->criarArquivoAnalise(98);
+        $command = new class extends AnalysesCleanupOrphans
+        {
+            protected function removeFile(string $filePath): bool
+            {
+                return false;
+            }
+        };
+        $command->setStorageDir($this->tempDir);
+        $this->app->instance(AnalysesCleanupOrphans::class, $command);
+
+        $this->artisan('analyses:cleanup-orphans')
+            ->expectsOutputToContain('Falha ao remover arquivo de análise')
+            ->assertExitCode(1);
+
+        $this->assertFileExists($path);
+    }
+
+    /** @test */
     public function test_default_storage_dir_matches_application_storage_path(): void
     {
         $this->app->useStoragePath($this->tempDir);

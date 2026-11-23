@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Console\Commands;
 
+use App\Console\Commands\SystemStorageCleanupCommand;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -208,6 +209,30 @@ final class SystemStorageCleanupCommandTest extends TestCase
 
         $this->assertFileDoesNotExist($oldFile, 'Arquivo temporário antigo deve continuar sendo removido.');
         $this->assertFileExists($recentFile, 'Arquivo dentro da janela de retenção deve ser preservado.');
+    }
+
+    /** @test */
+    public function test_cleanup_reports_only_files_that_were_actually_removed(): void
+    {
+        $oldFile = $this->tempDir . '/tmp/arquivo_sem_permissao.tmp';
+        file_put_contents($oldFile, 'conteudo que não pode ser removido');
+        touch($oldFile, time() - (10 * 86400));
+
+        $command = new class extends SystemStorageCleanupCommand
+        {
+            protected function removeFile(string $filePath): bool
+            {
+                return false;
+            }
+        };
+        $this->app->instance(SystemStorageCleanupCommand::class, $command);
+
+        $this->artisan('system:storage-cleanup', ['--days' => 7])
+            ->expectsOutputToContain('Limpeza concluída: 0 arquivos removidos')
+            ->expectsOutputToContain('Falha ao remover arquivo temporário')
+            ->assertExitCode(1);
+
+        $this->assertFileExists($oldFile, 'O arquivo deve permanecer quando a remoção falha.');
     }
 
     /** @test */
