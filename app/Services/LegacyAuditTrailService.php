@@ -166,8 +166,9 @@ final class LegacyAuditTrailService implements LegacyAuditTrailServiceInterface
             ->sortByDesc(static fn (LegacyAuditEntryData $entry): string => $entry->occurredAt)
             ->values();
 
-        $page = max(1, $page);
         $perPage = max(5, min(100, $perPage));
+        $maxPage = intdiv(PHP_INT_MAX, $perPage) + 1;
+        $page = min(max(1, $page), $maxPage);
         $items = $entries->forPage($page, $perPage)->values()->all();
 
         return new LengthAwarePaginator(

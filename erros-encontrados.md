@@ -151,13 +151,13 @@
 **Prioridade de Correção**: ✅ Resolvido
 
 ### PAG-001 - Número de página extremo fazia a listagem retornar a primeira página
-**Arquivo**: `app/Support/QueryParameter.php` e DTOs de filtros de listagem
+**Arquivo**: `app/Support/QueryParameter.php`, DTOs de filtros de listagem e `app/Services/LegacyAuditTrailService.php`
 **Severidade**: 🟡 MÉDIO
 **Categoria**: Lógica
 **Status**: Corrigido nesta rodada.
-**Descrição**: Os seis filtros de listagem convertiam `pagina` para inteiro e limitavam apenas o mínimo. Um valor decimal muito maior que o limite inteiro era convertido para `PHP_INT_MAX`; o cálculo do offset transbordava e o SQLite podia retornar a primeira página em vez de uma página sem resultados.
-**Risco/Impacto**: Uma URL com número de página extremo mostrava registros errados e podia quebrar a consulta em outros bancos.
-**Correção**: Limitar a página ao maior valor cujo offset ainda cabe em um inteiro, nos filtros de administrações, tipos de bem, igrejas, dependências, produtos e usuários. Coberto por `testPaginateHandlesExtremelyLargePageNumbers` e `test_list_filters_cap_page_numbers_before_offset_overflow`.
+**Descrição**: Os seis filtros de listagem limitavam a página, mas a tela de auditoria ainda passava valores extremos para `Collection::forPage()`. O cálculo do offset podia virar `float` e lançar `TypeError` em `array_slice()`.
+**Risco/Impacto**: Uma URL com número de página extremo podia derrubar a tela de auditoria com erro HTTP 500.
+**Correção**: Limitar a página ao maior valor cujo offset ainda cabe em um inteiro nos filtros de administrações, tipos de bem, igrejas, dependências, produtos, usuários e no serviço de auditoria. Coberto por `testPaginateHandlesExtremelyLargePageNumbers`, `test_list_filters_cap_page_numbers_before_offset_overflow` e `testPaginateCapsExtremelyLargePageNumbersBeforeSlicing`.
 **Prioridade de Correção**: ✅ Resolvido
 
 ### IMP-002 - Acentos corrompidos quando a amostra de encoding corta um caractere UTF-8

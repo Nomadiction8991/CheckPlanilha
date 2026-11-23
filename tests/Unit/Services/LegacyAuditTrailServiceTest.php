@@ -93,6 +93,27 @@ final class LegacyAuditTrailServiceTest extends TestCase
         self::assertSame('Produto atualizado com sucesso.', $items[0]->description);
     }
 
+    public function testPaginateCapsExtremelyLargePageNumbersBeforeSlicing(): void
+    {
+        $service = new LegacyAuditTrailService($this->storageFile);
+        $service->record($this->makeEntry(userId: 1, administrationId: 9));
+
+        $paginator = $service->paginate(
+            [],
+            1,
+            9,
+            null,
+            false,
+            '/audits',
+            [],
+            PHP_INT_MAX,
+            20,
+        );
+
+        self::assertSame(1, $paginator->total());
+        self::assertSame([], $paginator->items());
+    }
+
     public function testRecordCreatesAuditFileWithOwnerOnlyPermissions(): void
     {
         $directory = sys_get_temp_dir() . '/audit_private_' . bin2hex(random_bytes(8));
