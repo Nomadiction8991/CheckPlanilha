@@ -1088,23 +1088,15 @@ class LegacyReportService implements LegacyReportServiceInterface
             ->where('p.comum_id', $churchId);
 
         if ($dependencyId !== null) {
-            $query->where(static function ($innerQuery) use ($dependencyId): void {
-                $innerQuery
-                    ->where(static function ($editedQuery) use ($dependencyId): void {
-                        $editedQuery
-                            ->where('p.editado', 1)
-                            ->where('p.editado_dependencia_id', $dependencyId);
-                    })
-                    ->orWhere(static function ($originalQuery) use ($dependencyId): void {
-                        $originalQuery
-                            ->where(static function ($notEditedQuery): void {
-                                $notEditedQuery
-                                    ->whereNull('p.editado')
-                                    ->orWhere('p.editado', 0);
-                            })
-                            ->where('p.dependencia_id', $dependencyId);
-                    });
-            });
+            $query->whereRaw(
+                "CASE WHEN COALESCE(p.editado, 0) = 1
+                    AND d_edit.descricao IS NOT NULL
+                    AND TRIM(d_edit.descricao) <> ''
+                    THEN p.editado_dependencia_id
+                    ELSE p.dependencia_id
+                END = ?",
+                [$dependencyId],
+            );
         }
 
         return $query

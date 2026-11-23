@@ -9,6 +9,7 @@ use App\Contracts\LegacyPermissionServiceInterface;
 use App\Services\LegacyReportService;
 use App\Services\LegacyReportTemplateService;
 use App\Services\LegacyTransferService;
+use Illuminate\Support\Facades\DB;
 use Mockery;
 
 final class RelatorioAlteracoesTransferenciasTest extends TransferenciasTestCase
@@ -49,6 +50,43 @@ final class RelatorioAlteracoesTransferenciasTest extends TransferenciasTestCase
         $this->assertStringContainsString('12-3456 - Central Cuiabá', $html);
         $this->assertStringContainsString('A-100', $html);
         $this->assertStringContainsString('Pendente', $html);
+    }
+
+    public function testFiltroDeDependenciaMantemBemEditadoSemDependenciaEditada(): void
+    {
+        $this->criarBem(1002, 7, 'A-101', 'Mesa', 70, 150.0);
+        DB::table('produtos')->where('id_produto', 1002)->update([
+            'editado' => 1,
+            'editado_bem' => 'Mesa atualizada',
+            'editado_dependencia_id' => null,
+        ]);
+
+        $auth = Mockery::mock(LegacyAuthSessionServiceInterface::class)->shouldIgnoreMissing();
+        $permissions = Mockery::mock(LegacyPermissionServiceInterface::class)->shouldIgnoreMissing();
+        $service = new LegacyReportService(new LegacyReportTemplateService(), $auth, $permissions);
+
+        $report = $service->buildChangeHistory(7, ['dependencia' => 70]);
+
+        $this->assertSame(1, $report['resumo']['total_geral']);
+        $this->assertSame('A-101', $report['secoes']['alteracoes']['itens'][0]['codigo']);
+    }
+
+    public function testFiltroDeDependenciaUsaLocalEditadoQuandoEleExiste(): void
+    {
+        $this->criarDependencia(71, 7, 'Sala nova');
+        $this->criarBem(1002, 7, 'A-101', 'Mesa', 70, 150.0);
+        DB::table('produtos')->where('id_produto', 1002)->update([
+            'editado' => 1,
+            'editado_bem' => 'Mesa atualizada',
+            'editado_dependencia_id' => 71,
+        ]);
+
+        $auth = Mockery::mock(LegacyAuthSessionServiceInterface::class)->shouldIgnoreMissing();
+        $permissions = Mockery::mock(LegacyPermissionServiceInterface::class)->shouldIgnoreMissing();
+        $service = new LegacyReportService(new LegacyReportTemplateService(), $auth, $permissions);
+
+        $this->assertSame(0, $service->buildChangeHistory(7, ['dependencia' => 70])['resumo']['total_geral']);
+        $this->assertSame(1, $service->buildChangeHistory(7, ['dependencia' => 71])['resumo']['total_geral']);
     }
 
     /**

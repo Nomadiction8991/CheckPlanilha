@@ -693,6 +693,16 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Padrão Recorrente**: Sim — uma atualização sem campos válidos não deve emitir SQL de escrita; o caminho específico de atualização de produto já aplica essa guarda.
 **Prioridade de Correção**: ✅ Resolvido
 
+### REP-002 - Filtro de dependência ocultava bens editados sem local editado válido
+**Arquivo**: `app/Services/LegacyReportService.php` (`loadChangeHistoryProducts`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / Relatórios
+**Status**: Corrigido nesta rodada.
+**Descrição**: O histórico de alterações filtrava todo bem com `editado = 1` somente por `editado_dependencia_id`. Em registros legados sem dependência editada válida, a tela exibia a dependência original, mas o filtro por esse local não retornava o bem.
+**Risco/Impacto**: Relatórios filtrados por dependência omitiam bens editados que ainda estavam no local original.
+**Correção**: O filtro agora usa a dependência editada somente quando ela existe e tem descrição válida, seguindo a mesma regra usada para exibir o local. Testes cobrem o fallback ao local original e a seleção do local editado.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### IMP-021 - Download de erros de importação ignorava o escopo quando recebia o id da importação
 **Arquivo**: `app/Services/LegacySpreadsheetImportService.php` (`downloadImportErrorsCsv`)
 **Severidade**: 🟠 ALTO
