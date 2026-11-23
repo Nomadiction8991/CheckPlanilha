@@ -94,6 +94,17 @@ final class ProductFiltersTest extends TestCase
         self::assertSame(1, $filters->activeCriteriaCount());
     }
 
+    public function testFromRequestIgnoresUnknownProductStatus(): void
+    {
+        $filters = ProductFilters::fromRequest(Request::create('/products', 'GET', [
+            'status' => 'status-inexistente',
+        ]));
+
+        self::assertSame('', $filters->status);
+        self::assertSame([], $filters->toQuery());
+        self::assertSame(0, $filters->activeCriteriaCount());
+    }
+
     public function testActiveCriteriaCountTreatsOnlyNewAliasAsOneCriterion(): void
     {
         $filters = ProductFilters::fromRequest(Request::create('/products', 'GET', [

@@ -41,6 +41,12 @@ final readonly class ProductFilters
             $search = trim(QueryParameter::string($request, 'codigo'));
         }
 
+        $status = trim(QueryParameter::string($request, 'status'));
+
+        if (! in_array($status, ['com_nota', 'com_14_1', 'novos', 'sem_status'], true)) {
+            $status = '';
+        }
+
         return new self(
             administrationId: $administrationId > 0 ? $administrationId : null,
             comumId: $comumId > 0 ? $comumId : null,
@@ -48,7 +54,7 @@ final readonly class ProductFilters
             dependencyId: $dependencyId > 0 ? $dependencyId : null,
             assetTypeId: $assetTypeId > 0 ? $assetTypeId : null,
             state: $state,
-            status: trim(QueryParameter::string($request, 'status')),
+            status: $status,
             onlyNew: QueryParameter::boolean($request, 'somente_novos') || QueryParameter::string($request, 'status') === 'novos',
             page: QueryParameter::page($request, 'pagina', 20),
             perPage: 20,

@@ -14,6 +14,16 @@
 
 ## Detalhes dos Erros
 
+### FILTRO-001 - Status desconhecido aparecia como filtro ativo sem filtrar produtos
+**Arquivo**: `app/DTO/ProductFilters.php` (`fromRequest`)
+**Severidade**: 🟢 BAIXO
+**Categoria**: Lógica / filtros de produtos
+**Status**: Corrigido nesta rodada.
+**Descrição**: O parâmetro `status` aceitava qualquer texto da URL, mas a consulta só aplicava quatro status conhecidos. Um valor inválido deixava a listagem sem filtro enquanto era mantido nos links e exibido como critério ativo.
+**Risco/Impacto**: Uma URL desatualizada ou digitada incorretamente podia sugerir que a listagem estava filtrada quando todos os produtos continuavam visíveis.
+**Correção**: Descartar valores fora das opções oferecidas pelo serviço de produtos. Teste de regressão confirma que o valor inválido não é mantido nem contado como critério.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### AUTH-007 - Sessão Laravel mantinha administrações revogadas
 **Arquivo**: `app/Http/Middleware/RequireLegacySession.php` (`handle`)
 **Severidade**: 🟠 ALTO
