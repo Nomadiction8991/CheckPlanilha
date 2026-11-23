@@ -58,6 +58,13 @@ class LegacyTransferController extends Controller
                 ->with('status_type', 'error');
         }
 
+        if ((int) $product->ativo !== 1) {
+            return redirect()
+                ->route('migration.products.index')
+                ->with('status', 'Este bem está desativado e não pode ser transferido.')
+                ->with('status_type', 'error');
+        }
+
         $igrejasDeDestino = $this->reports->churchOptions()
             ->reject(static fn (object $igreja): bool => (int) $igreja->id === (int) $product->comum_id)
             ->values();

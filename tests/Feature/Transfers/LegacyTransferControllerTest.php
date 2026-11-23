@@ -72,6 +72,17 @@ final class LegacyTransferControllerTest extends TransferenciasTestCase
         $response->assertSee('Continuar');
     }
 
+    public function testBemDesativadoNaoEApresentadoComoTransferivel(): void
+    {
+        DB::table('produtos')->where('id_produto', 1001)->update(['ativo' => 0]);
+
+        $response = $this->get(route('migration.products.transfer', ['product' => 1001]));
+
+        $response->assertRedirect(route('migration.products.index'));
+        $response->assertSessionHas('status', 'Este bem está desativado e não pode ser transferido.');
+        $response->assertSessionHas('status_type', 'error');
+    }
+
     public function testEscolherIgrejaDeDestinoMostraOsLocaisDela(): void
     {
         $response = $this->get(route('migration.products.transfer', ['product' => 1001, 'comum_destino_id' => 8]));

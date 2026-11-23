@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 20
+- Médios: 21
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (4)
-### Lógica (29)
+### Lógica (30)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -905,6 +905,16 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Descrição**: A conversão direta de cada ID para inteiro aceitava um prefixo numérico. Por exemplo, `1001abc` era convertido em `1001` e podia transferir esse bem.
 **Risco/Impacto**: Uma lista de IDs malformada podia mover um bem diferente do indicado pelo valor recebido pelo serviço.
 **Correção**: Aceitar somente inteiros positivos ou strings compostas por dígitos; rejeitar a lista inteira antes da transação quando qualquer ID for inválido. Teste de regressão confirma que o bem não muda de igreja.
+**Prioridade de Correção**: ✅ Resolvido
+
+### TRANS-003 - Tela de transferência oferecia bens desativados
+**Arquivo**: `app/Http/Controllers/LegacyTransferController.php` (`produto`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / Transferências
+**Status**: Corrigido nesta rodada.
+**Descrição**: A tela GET aceitava bens desativados e ainda exibia os destinos e o botão de transferência, embora o serviço recusasse esses bens no envio.
+**Risco/Impacto**: O usuário iniciava um fluxo que não poderia concluir e recebia uma mensagem genérica de que o bem não estava mais na igreja.
+**Correção**: A tela agora redireciona para a listagem com uma mensagem clara antes de apresentar o formulário. O teste de feature reproduz o acesso a um bem desativado.
 **Prioridade de Correção**: ✅ Resolvido
 
 ### SYNC-004 - Planilha sem permissão de leitura era sincronizada como arquivo vazio
