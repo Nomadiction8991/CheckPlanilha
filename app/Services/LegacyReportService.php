@@ -565,6 +565,11 @@ class LegacyReportService implements LegacyReportServiceInterface
         $imprimirEtiqueta = (int) ($product['imprimir'] ?? 0) === 1;
         $editado = (int) ($product['editado'] ?? 0) === 1;
         $novo = (int) ($product['novo'] ?? 0) === 1;
+        $dependenciaEditada = trim((string) ($product['editado_dependencia_desc'] ?? ''));
+        $dependenciaOriginal = trim((string) ($product['dependencia_desc'] ?? ''));
+        $dependencia = $editado && $dependenciaEditada !== ''
+            ? $dependenciaEditada
+            : $dependenciaOriginal;
         [$statusKey, $statusLabel] = $this->resolveVerificationPositionStatus($checado, $observacoes !== '', $imprimirEtiqueta, $editado, $novo);
 
         return [
@@ -572,7 +577,7 @@ class LegacyReportService implements LegacyReportServiceInterface
             'codigo' => (string) ($product['codigo'] ?? ''),
             'nome_original' => (string) ($product['nome_original'] ?? ''),
             'nome_atual' => (string) ($product['nome_atual'] ?? ''),
-            'dependencia' => trim((string) ($product['dependencia_desc'] ?? $product['editado_dependencia_desc'] ?? '')),
+            'dependencia' => $dependencia,
             'observacoes' => $observacoes,
             'checado' => $checado,
             'imprimir_etiqueta' => $imprimirEtiqueta,

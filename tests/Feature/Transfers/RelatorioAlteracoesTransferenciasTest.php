@@ -89,6 +89,30 @@ final class RelatorioAlteracoesTransferenciasTest extends TransferenciasTestCase
         $this->assertSame(1, $service->buildChangeHistory(7, ['dependencia' => 71])['resumo']['total_geral']);
     }
 
+    public function testPosicaoDeEstoqueMostraDependenciaEditadaEUsaOriginalComoFallback(): void
+    {
+        $this->criarDependencia(71, 7, 'Sala nova');
+        $this->criarBem(1002, 7, 'A-101', 'Mesa', 70, 150.0);
+        DB::table('produtos')->where('id_produto', 1002)->update([
+            'editado' => 1,
+            'editado_bem' => 'Mesa atualizada',
+            'editado_dependencia_id' => 71,
+        ]);
+
+        $relatorio = $this->relatorioDaIgreja(7);
+        $itemEditado = collect($relatorio['itens'])->firstWhere('codigo', 'A-101');
+
+        $this->assertSame('Sala nova', $itemEditado['dependencia']);
+        $this->assertStringContainsString('Sala nova', $relatorio['backup']['content']);
+
+        DB::table('produtos')->where('id_produto', 1002)->update(['editado' => 0]);
+
+        $relatorioSemEdicao = $this->relatorioDaIgreja(7);
+        $itemOriginal = collect($relatorioSemEdicao['itens'])->firstWhere('codigo', 'A-101');
+
+        $this->assertSame('Salão', $itemOriginal['dependencia']);
+    }
+
     /**
      * @return array<string, mixed>
      */
