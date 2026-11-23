@@ -47,4 +47,17 @@ class HotspotCredentialsTest extends TestCase
 
         $this->assertSame(0600, fileperms($this->pasta . '/rede.senha') & 0777);
     }
+
+    public function test_corrige_permissao_ampla_em_arquivo_de_senha_existente(): void
+    {
+        mkdir($this->pasta, 0700, true);
+        $caminho = $this->pasta . '/rede.senha';
+        file_put_contents($caminho, 'SenhaExistente123');
+        chmod($caminho, 0644);
+
+        $senha = (new HotspotCredentials($caminho))->senha();
+
+        $this->assertSame('SenhaExistente123', $senha);
+        $this->assertSame(0600, fileperms($caminho) & 0777);
+    }
 }

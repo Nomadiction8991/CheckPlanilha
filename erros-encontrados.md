@@ -916,3 +916,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Um notebook podia receber uma planilha vazia como se a transferência tivesse sido íntegra, enquanto a falha de permissão ficava oculta.
 **Correção**: Interromper a listagem ou leitura quando o sistema não consegue acessar os dados e informar qual planilha falhou. Testes com arquivo sem permissão cobrem os dois caminhos.
 **Prioridade de Correção**: ✅ Resolvido
+
+### CON-001 - Arquivo existente da senha Wi-Fi mantinha permissões abertas
+**Arquivo**: `app/Support/Connection/HotspotCredentials.php` (`senha`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Segurança / conectividade local
+**Status**: Corrigido nesta rodada.
+**Descrição**: A senha do ponto de acesso tinha modo `0600` somente quando o arquivo era criado. Se uma restauração ou alteração posterior deixasse o arquivo legível por grupo ou outros usuários, o serviço lia e devolvia a senha sem reaplicar a proteção.
+**Risco/Impacto**: Outros usuários do sistema operacional poderiam ler a credencial da rede local.
+**Correção**: Reaplicar `0600` antes de ler um arquivo existente e interromper a operação quando não for possível proteger as permissões. Teste de regressão cobre um arquivo existente em `0644`.
+**Prioridade de Correção**: ✅ Resolvido

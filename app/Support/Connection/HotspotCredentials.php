@@ -22,6 +22,7 @@ final class HotspotCredentials
     public function senha(): string
     {
         if (is_file($this->arquivo)) {
+            $this->restringirPermissoes();
             $senha = trim((string) file_get_contents($this->arquivo));
 
             if ($senha !== '') {
@@ -47,6 +48,13 @@ final class HotspotCredentials
             throw new RuntimeException('Não foi possível guardar a senha da rede. Confira as permissões da pasta de dados.');
         }
 
-        chmod($this->arquivo, 0600);
+        $this->restringirPermissoes();
+    }
+
+    private function restringirPermissoes(): void
+    {
+        if (! @chmod($this->arquivo, 0600)) {
+            throw new RuntimeException('Não foi possível proteger a senha da rede. Confira as permissões da pasta de dados.');
+        }
     }
 }
