@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Contracts\CommandRunnerInterface;
+use App\Support\Connection\HotspotCredentials;
 use App\Support\Connection\OfflineModeService;
 use App\Support\Modo\EstadoModo;
 use App\Support\Modo\RedeAutomatica;
@@ -23,6 +24,10 @@ class RedeAutomaticaTest extends TestCase
         $this->arquivo = sys_get_temp_dir().'/rede-automatica-'.uniqid().'/rede.json';
         $this->estadoModo = new EstadoModo(dirname($this->arquivo).'/modo.json');
         $this->app->instance(EstadoModo::class, $this->estadoModo);
+        $this->app->instance(
+            HotspotCredentials::class,
+            new HotspotCredentials(dirname($this->arquivo).'/rede.senha'),
+        );
         $this->comandos = new ComandosRedeFalsos();
         $this->app->instance(CommandRunnerInterface::class, $this->comandos);
         config(['modo_igreja.ativo' => true]);
@@ -127,6 +132,16 @@ class RedeAutomaticaTest extends TestCase
         self::assertSame('nada', $this->rede()->verificar());
         self::assertSame('nada', $this->rede()->verificar());
         self::assertSame('ligar', $this->rede()->verificar());
+    }
+
+    public function test_credencial_da_rede_fica_isolada_no_diretorio_temporario_do_teste(): void
+    {
+        $rede = $this->rede();
+        $rede->verificar();
+        $rede->verificar();
+        $rede->verificar();
+
+        self::assertFileExists(dirname($this->arquivo).'/rede.senha');
     }
 }
 
