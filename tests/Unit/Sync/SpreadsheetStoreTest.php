@@ -155,6 +155,38 @@ class SpreadsheetStoreTest extends TestCase
         $loja->ler('alias.csv');
     }
 
+    public function test_recusa_listar_e_ler_planilha_sem_permissao_de_leitura(): void
+    {
+        mkdir($this->pasta, 0775, true);
+        $caminho = $this->pasta . '/privada.csv';
+        file_put_contents($caminho, 'codigo;bem');
+        chmod($caminho, 0000);
+
+        try {
+            $loja = new SpreadsheetStore($this->pasta);
+
+            $this->expectException(\RuntimeException::class);
+            $loja->listar();
+        } finally {
+            chmod($caminho, 0644);
+        }
+    }
+
+    public function test_nao_entrega_conteudo_vazio_quando_a_planilha_nao_pode_ser_lida(): void
+    {
+        mkdir($this->pasta, 0775, true);
+        $caminho = $this->pasta . '/privada.csv';
+        file_put_contents($caminho, 'codigo;bem');
+        chmod($caminho, 0000);
+
+        try {
+            $this->expectException(\RuntimeException::class);
+            (new SpreadsheetStore($this->pasta))->ler('privada.csv');
+        } finally {
+            chmod($caminho, 0644);
+        }
+    }
+
     public function test_nao_lista_planilhas_quando_a_pasta_configurada_e_link_simbolico(): void
     {
         $pastaExterna = $this->pasta . '-externa';
