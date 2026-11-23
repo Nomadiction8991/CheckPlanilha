@@ -14,6 +14,16 @@
 
 ## Detalhes dos Erros
 
+### AUTH-007 - Sessão Laravel mantinha administrações revogadas
+**Arquivo**: `app/Http/Middleware/RequireLegacySession.php` (`handle`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança / escopo entre administrações
+**Status**: Corrigido nesta rodada.
+**Descrição**: A ponte da sessão nativa recarregava as administrações permitidas do cadastro, mas as sessões Laravel comuns mantinham os valores e o sinalizador de administrador gravados no login. Ao revogar uma administração ou rebaixar uma conta, os serviços protegidos por `legacy.auth` continuavam usando o escopo antigo.
+**Risco/Impacto**: Uma sessão ainda ativa podia consultar ou operar em administrações cujo acesso já havia sido removido.
+**Correção**: O middleware recarrega a administração, a lista permitida, o estado de administrador e as permissões do usuário ativo em cada requisição autenticada. Se esses dados não puderem ser confirmados em produção, limpa os privilégios da sessão e nega a requisição. O teste de regressão reproduz uma sessão com escopo e permissões obsoletos.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### PROD-003 - Busca não encontrava o nome editado do bem
 **Arquivo**: `app/Services/LegacyProductBrowserService.php` (`paginate`)
 **Severidade**: 🟡 MÉDIO

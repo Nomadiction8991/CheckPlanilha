@@ -233,6 +233,7 @@ final class SpreadsheetImportScopeControllerTest extends TestCase
             'nome' => 'Usuário Alfa',
             'email' => 'alfa@exemplo.com',
             'ativo' => 1,
+            'administracao_id' => self::ADMIN_A_ID,
         ]);
 
         $response = $this->withSession([

@@ -19,7 +19,7 @@ class RequireLegacySession
         }
 
         $userId = (int) $request->session()->get('usuario_id', 0);
-        if ($userId > 0 && $this->legacyUserIsActive($userId)) {
+        if ($userId > 0 && $this->refreshLegacyAuthorizationScope($request, $userId)) {
             return $next($request);
         }
 
@@ -37,21 +37,67 @@ class RequireLegacySession
     }
 
     /**
-     * Em produção, a sessão só permanece válida enquanto o usuário existir e
-     * estiver ativo. Testes podem montar apenas parte do schema legado ou usar
-     * IDs sem persistência; esse comportamento permissivo fica restrito ao
-     * ambiente de teste.
+     * A sessão permanece válida enquanto a conta estiver ativa. O escopo é
+     * recarregado em cada requisição para aplicar revogações sem exigir novo login.
      */
-    private function legacyUserIsActive(int $userId): bool
+    private function refreshLegacyAuthorizationScope(Request $request, int $userId): bool
     {
         try {
-            $user = Usuario::query()->whereKey($userId)->first(['ativo']);
+            $user = Usuario::query()->whereKey($userId)->first([
+                'id',
+                'ativo',
+                'administracao_id',
+                'administracoes_permitidas',
+                'email',
+                'permissions',
+                'tipo',
+            ]);
 
-            return $user === null
-                ? app()->environment('testing')
-                : (int) $user->ativo === 1;
+            if ($user === null) {
+                return app()->environment('testing');
+            }
+
+            if ((int) $user->ativo !== 1) {
+                return false;
+            }
+
+            $administrationIds = array_values(array_filter(array_map(
+                static fn (mixed $value): int => (int) $value,
+                (array) ($user->administracoes_permitidas ?? []),
+            ), static fn (int $value): bool => $value > 0));
+            $administrationId = (int) ($user->administracao_id ?? 0);
+
+            if ($administrationId > 0) {
+                $administrationIds[] = $administrationId;
+            }
+
+            $request->session()->put([
+                'administracao_id' => $administrationId > 0 ? $administrationId : null,
+                'administracoes_permitidas' => array_values(array_unique($administrationIds)),
+                'is_admin' => $user->isAdministrator(),
+                'legacy_permissions' => is_array($user->permissions) ? $user->permissions : [],
+            ]);
+
+            return true;
         } catch (Throwable) {
-            return app()->environment('testing');
+            // Testes legados podem usar schemas parciais; produção falha fechada.
+            if (app()->environment('testing')) {
+                return true;
+            }
+
+            $this->clearLegacyAdministrationScope($request);
+
+            return false;
         }
+    }
+
+    private function clearLegacyAdministrationScope(Request $request): void
+    {
+        $request->session()->put([
+            'administracao_id' => null,
+            'administracoes_permitidas' => [],
+            'is_admin' => false,
+            'legacy_permissions' => [],
+        ]);
     }
 }
