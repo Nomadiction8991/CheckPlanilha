@@ -37,10 +37,16 @@ final class SpreadsheetStore
                 continue;
             }
 
+            $sha256 = @hash_file('sha256', $caminho);
+            $tamanho = @filesize($caminho);
+            if ($sha256 === false || $tamanho === false) {
+                throw new RuntimeException("Não foi possível ler a planilha {$nome}.");
+            }
+
             $arquivos[] = [
                 'nome' => $nome,
-                'sha256' => (string) hash_file('sha256', $this->caminho($nome)),
-                'tamanho' => (int) filesize($this->caminho($nome)),
+                'sha256' => $sha256,
+                'tamanho' => $tamanho,
             ];
         }
 
@@ -62,7 +68,10 @@ final class SpreadsheetStore
             throw new RuntimeException("A planilha {$nome} não existe neste computador.");
         }
 
-        $conteudo = (string) file_get_contents($caminho);
+        $conteudo = @file_get_contents($caminho);
+        if ($conteudo === false) {
+            throw new RuntimeException("Não foi possível ler a planilha {$nome}.");
+        }
 
         return ['conteudo' => $conteudo, 'sha256' => hash('sha256', $conteudo)];
     }

@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 19
+- Médios: 20
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (4)
-### Lógica (28)
+### Lógica (29)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -905,4 +905,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Descrição**: A conversão direta de cada ID para inteiro aceitava um prefixo numérico. Por exemplo, `1001abc` era convertido em `1001` e podia transferir esse bem.
 **Risco/Impacto**: Uma lista de IDs malformada podia mover um bem diferente do indicado pelo valor recebido pelo serviço.
 **Correção**: Aceitar somente inteiros positivos ou strings compostas por dígitos; rejeitar a lista inteira antes da transação quando qualquer ID for inválido. Teste de regressão confirma que o bem não muda de igreja.
+**Prioridade de Correção**: ✅ Resolvido
+
+### SYNC-004 - Planilha sem permissão de leitura era sincronizada como arquivo vazio
+**Arquivo**: `app/Sync/SpreadsheetStore.php` (`listar`, `ler`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / sincronização de arquivos
+**Status**: Corrigido nesta rodada.
+**Descrição**: A listagem convertia falhas de `hash_file()` e `filesize()` em hash e tamanho vazios. A leitura também convertia `file_get_contents()` em falha para uma string vazia e calculava um hash válido desse conteúdo.
+**Risco/Impacto**: Um notebook podia receber uma planilha vazia como se a transferência tivesse sido íntegra, enquanto a falha de permissão ficava oculta.
+**Correção**: Interromper a listagem ou leitura quando o sistema não consegue acessar os dados e informar qual planilha falhou. Testes com arquivo sem permissão cobrem os dois caminhos.
 **Prioridade de Correção**: ✅ Resolvido
