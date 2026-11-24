@@ -3,16 +3,26 @@
 ## Resumo
 - Críticos: 0
 - Altos: 12
-- Médios: 22
+- Médios: 23
 - Baixos: 1
 
 ## Erros por Categoria
-### Segurança (5)
+### Segurança (6)
 ### Lógica (32)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### AUTH-009 - Listas de igrejas e administrações ignoravam o escopo do usuário
+**Arquivo**: `app/Services/LegacyAuthSessionService.php` (`availableChurches`, `availableAdministrations`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Segurança / escopo entre administrações
+**Status**: Corrigido nesta rodada.
+**Descrição**: As listas usadas pelo seletor global de igrejas, pela tela de etiquetas e pelos filtros de auditoria consultavam todas as administrações para qualquer sessão autenticada. A troca de igreja rejeitava escopos externos, mas os nomes e identificadores continuavam visíveis nas opções.
+**Risco/Impacto**: Usuários podiam visualizar referências de igrejas e administrações fora do seu acesso, além de receber opções que falhavam ao serem selecionadas.
+**Correção**: Limitar as opções às administrações vinculadas ao cadastro do usuário; quando ele não tem administração, mostrar apenas sua igreja atribuída. Administradores preservam as opções globais. Testes cobrem usuário com escopo, usuário sem administração e administrador.
+**Prioridade de Correção**: ✅ Resolvido
 
 ### FILTRO-001 - Status desconhecido aparecia como filtro ativo sem filtrar produtos
 **Arquivo**: `app/DTO/ProductFilters.php` (`fromRequest`)

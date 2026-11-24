@@ -20,10 +20,13 @@ final class LegacyAuthSessionScopeTest extends TestCase
 
         Schema::create('administracoes', function (Blueprint $table): void {
             $table->id();
+            $table->string('descricao')->nullable();
         });
         Schema::create('comums', function (Blueprint $table): void {
             $table->id();
             $table->string('codigo');
+            $table->string('descricao')->nullable();
+            $table->string('estado')->nullable();
             $table->unsignedBigInteger('administracao_id')->nullable();
         });
         Schema::create('usuarios', function (Blueprint $table): void {
@@ -101,6 +104,61 @@ final class LegacyAuthSessionScopeTest extends TestCase
         $this->expectExceptionMessage('Igreja fora do escopo permitido.');
 
         (new LegacyAuthSessionService)->switchChurch(8);
+    }
+
+    public function test_available_administrations_and_churches_are_limited_to_user_scope(): void
+    {
+        DB::table('administracoes')->insert([
+            ['id' => 2, 'descricao' => 'Administração principal'],
+            ['id' => 3, 'descricao' => 'Administração permitida'],
+            ['id' => 4, 'descricao' => 'Administração alheia'],
+        ]);
+        DB::table('comums')->insert([
+            ['id' => 7, 'codigo' => '01', 'descricao' => 'Igreja principal', 'estado' => 'MT', 'administracao_id' => 2],
+            ['id' => 8, 'codigo' => '02', 'descricao' => 'Igreja permitida', 'estado' => 'MT', 'administracao_id' => 3],
+            ['id' => 9, 'codigo' => '03', 'descricao' => 'Igreja alheia', 'estado' => 'MT', 'administracao_id' => 4],
+        ]);
+        $this->createUser(null, 2, [3]);
+        session(['usuario_id' => 9]);
+
+        $service = new LegacyAuthSessionService();
+
+        self::assertEqualsCanonicalizing([2, 3], $service->availableAdministrations()->pluck('id')->all());
+        self::assertEqualsCanonicalizing([7, 8], $service->availableChurches()->pluck('id')->all());
+        self::assertSame([], $service->availableChurches(4)->all());
+    }
+
+    public function test_user_without_administration_only_sees_its_assigned_church(): void
+    {
+        DB::table('comums')->insert([
+            ['id' => 7, 'codigo' => '01', 'descricao' => 'Igreja vinculada', 'estado' => 'MT', 'administracao_id' => null],
+            ['id' => 8, 'codigo' => '02', 'descricao' => 'Outra igreja', 'estado' => 'MT', 'administracao_id' => null],
+        ]);
+        $this->createUser(7);
+        session(['usuario_id' => 9]);
+
+        self::assertSame([7], (new LegacyAuthSessionService)->availableChurches()->pluck('id')->all());
+        self::assertSame([], (new LegacyAuthSessionService)->availableAdministrations()->all());
+    }
+
+    public function test_administrator_keeps_global_administration_and_church_options(): void
+    {
+        DB::table('administracoes')->insert([
+            ['id' => 2, 'descricao' => 'Administração principal'],
+            ['id' => 3, 'descricao' => 'Administração permitida'],
+        ]);
+        DB::table('comums')->insert([
+            ['id' => 7, 'codigo' => '01', 'descricao' => 'Igreja principal', 'estado' => 'MT', 'administracao_id' => 2],
+            ['id' => 8, 'codigo' => '02', 'descricao' => 'Igreja permitida', 'estado' => 'MT', 'administracao_id' => 3],
+        ]);
+        $this->createUser(null, 2, [2]);
+        DB::table('usuarios')->where('id', 9)->update(['tipo' => 'administrador']);
+        session(['usuario_id' => 9]);
+
+        $service = new LegacyAuthSessionService();
+
+        self::assertEqualsCanonicalizing([2, 3], $service->availableAdministrations()->pluck('id')->all());
+        self::assertEqualsCanonicalizing([7, 8], $service->availableChurches()->pluck('id')->all());
     }
 
     /** @param array<int, int> $allowedAdministrationIds */

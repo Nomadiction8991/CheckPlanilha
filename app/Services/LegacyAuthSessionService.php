@@ -180,6 +180,23 @@ class LegacyAuthSessionService implements LegacyAuthSessionServiceInterface
     {
         $query = Comum::query();
 
+        $user = $this->currentUsuario();
+        if ($user === null) {
+            return collect();
+        }
+
+        if (!$this->inferIsAdmin($user)) {
+            $administrationIds = $this->resolveAdministrationIds($user);
+
+            if ($administrationIds !== []) {
+                $query->whereIn('administracao_id', $administrationIds);
+            } elseif ((int) ($user->comum_id ?? 0) > 0) {
+                $query->whereKey((int) $user->comum_id);
+            } else {
+                return collect();
+            }
+        }
+
         if ($administrationId !== null && $administrationId > 0) {
             $query->where('administracao_id', $administrationId);
         }
@@ -195,7 +212,23 @@ class LegacyAuthSessionService implements LegacyAuthSessionServiceInterface
 
     public function availableAdministrations(): Collection
     {
-        return Administracao::query()
+        $query = Administracao::query();
+        $user = $this->currentUsuario();
+
+        if ($user === null) {
+            return collect();
+        }
+
+        if (!$this->inferIsAdmin($user)) {
+            $administrationIds = $this->resolveAdministrationIds($user);
+            if ($administrationIds === []) {
+                return collect();
+            }
+
+            $query->whereIn('id', $administrationIds);
+        }
+
+        return $query
             ->orderBy('descricao')
             ->get(['id', 'descricao']);
     }
