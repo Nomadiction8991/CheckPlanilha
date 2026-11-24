@@ -140,4 +140,50 @@ final class CopyImporterTest extends TestCase
 
         $this->assertSame(1, DB::table('comums')->where('codigo', 'C-LOCAL')->count());
     }
+
+    public function test_falha_ao_gravar_cursor_reverte_a_substituicao_da_copia(): void
+    {
+        config([
+            'sincronizacao.ordem_da_copia' => ['comums'],
+            'sincronizacao.tabelas' => ['comums'],
+        ]);
+        Schema::create('comums', static function ($table): void {
+            $table->increments('id');
+            $table->string('codigo')->nullable();
+        });
+        Schema::create('sincronizacao_estado', static function ($table): void {
+            $table->string('chave')->primary();
+            $table->text('valor')->nullable();
+        });
+        DB::table('comums')->insert(['codigo' => 'C-LOCAL']);
+        DB::table('sincronizacao_estado')->insert([
+            'chave' => 'ultimo_recebido',
+            'valor' => '4',
+        ]);
+        DB::unprepared(<<<'SQL'
+            CREATE TRIGGER falhar_ao_atualizar_cursor
+            BEFORE UPDATE ON sincronizacao_estado
+            WHEN NEW.chave = 'ultimo_recebido'
+            BEGIN
+                SELECT RAISE(ABORT, 'falha simulada ao gravar cursor');
+            END
+            SQL);
+
+        $linhas = [
+            json_encode(['tipo' => 'cabecalho', 'versao' => 1, 'cursor' => 10], JSON_THROW_ON_ERROR),
+            json_encode(['tipo' => 'linha', 'tabela' => 'comums', 'dados' => ['codigo' => 'C-SERVIDOR']], JSON_THROW_ON_ERROR),
+            json_encode(['tipo' => 'fim', 'linhas' => 1], JSON_THROW_ON_ERROR),
+        ];
+
+        try {
+            app(CopyImporter::class)->importar($linhas);
+            $this->fail('A falha de gravação do cursor precisava interromper a cópia.');
+        } catch (RuntimeException $erro) {
+            $this->assertStringContainsString('cursor', mb_strtolower($erro->getMessage(), 'UTF-8'));
+        }
+
+        $this->assertSame(1, DB::table('comums')->where('codigo', 'C-LOCAL')->count());
+        $this->assertSame(0, DB::table('comums')->where('codigo', 'C-SERVIDOR')->count());
+        $this->assertSame('4', DB::table('sincronizacao_estado')->where('chave', 'ultimo_recebido')->value('valor'));
+    }
 }

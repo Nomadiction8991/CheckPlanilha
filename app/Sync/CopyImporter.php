@@ -103,10 +103,10 @@ final class CopyImporter
             } finally {
                 $this->suprimirRegistro(false);
             }
-        });
 
-        $this->estado->definir(SyncState::ULTIMO_RECEBIDO, $cursor);
-        $this->estado->definir(SyncState::ULTIMO_ENVIADO, 0);
+            $this->estado->definir(SyncState::ULTIMO_RECEBIDO, $cursor);
+            $this->estado->definir(SyncState::ULTIMO_ENVIADO, 0);
+        });
     }
 
     /**

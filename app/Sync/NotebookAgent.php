@@ -88,10 +88,11 @@ final class NotebookAgent
             $cursorAntes = $this->estado->inteiro(SyncState::ULTIMO_RECEBIDO);
             $resposta = $transporte->receber($cursorAntes);
 
-            $this->aplicador->aplicarLote($resposta['alteracoes']);
+            DB::transaction(function () use ($resposta): void {
+                $this->aplicador->aplicarLote($resposta['alteracoes']);
+                $this->estado->definir(SyncState::ULTIMO_RECEBIDO, (int) $resposta['cursor']);
+            });
             $total += count($resposta['alteracoes']);
-
-            $this->estado->definir(SyncState::ULTIMO_RECEBIDO, (int) $resposta['cursor']);
 
             // Sem avanço no cursor, parar: evita laço infinito se o servidor repetir a página.
             $avancou = (int) $resposta['cursor'] > $cursorAntes;

@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 12
-- Médios: 24
+- Médios: 25
 - Baixos: 2
 
 ## Erros por Categoria
 ### Segurança (7)
-### Lógica (32)
+### Lógica (33)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -1055,4 +1055,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Descrição**: A validação alfanumérica conferia somente o formato das 12 primeiras posições e permitia quaisquer dois dígitos finais. A validação numérica já verificava os dígitos, mas os novos CNPJs alfanuméricos podiam seguir para consulta e cadastro sem essa conferência.
 **Risco/Impacto**: Um CNPJ alfanumérico digitado incorretamente podia ser aceito como válido nos cadastros e enviado ao provedor de consulta.
 **Correção**: Calcular os dois dígitos verificadores por módulo 11 usando o valor ASCII menos 48, conforme o manual oficial. Testes cobrem o exemplo oficial `12ABC34501DE35`, dígitos incorretos e a rejeição da consulta antes de chamar o provedor.
+**Prioridade de Correção**: ✅ Resolvido
+
+### SYNC-007 - Falha ao gravar cursor deixava dados recebidos fora de sincronia
+**Arquivos**: `app/Sync/CopyImporter.php`, `app/Sync/NotebookAgent.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / consistência da sincronização
+**Status**: Corrigido nesta rodada.
+**Descrição**: A cópia inicial e o recebimento incremental confirmavam os dados antes de persistir o cursor local. Se a gravação do cursor falhasse, a próxima execução repetia alterações sobre dados já substituídos ou aplicados.
+**Risco/Impacto**: A falha podia deixar tabelas atualizadas com um cursor antigo e causar reprocessamento de eventos.
+**Correção**: Gravar alterações e cursores dentro da mesma transação nos dois fluxos. Testes de regressão simulam a falha na gravação do cursor e confirmam o rollback dos dados recebidos.
 **Prioridade de Correção**: ✅ Resolvido

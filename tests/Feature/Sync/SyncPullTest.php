@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature\Sync;
 
 use App\Sync\DeviceRegistry;
+use App\Sync\NotebookAgent;
 use App\Sync\NotebookChangeApplier;
+use App\Sync\SyncTransport;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Str;
@@ -170,6 +172,61 @@ class SyncPullTest extends SincronizacaoTestCase
         }
 
         $this->assertSame('smtp.teste.local', DB::table('configuracoes')->value('mail_host'));
+    }
+
+    public function test_falha_ao_gravar_cursor_reverte_alteracoes_incrementais_recebidas(): void
+    {
+        Schema::create('produtos', function (Blueprint $table): void {
+            $table->unsignedInteger('id_produto')->primary();
+            $table->string('codigo')->nullable();
+            $table->string('bem')->nullable();
+        });
+        DB::table('sincronizacao_estado')->insert([
+            'chave' => 'ultimo_recebido',
+            'valor' => '0',
+        ]);
+        DB::unprepared(<<<'SQL'
+            CREATE TRIGGER falhar_ao_atualizar_cursor_incremental
+            BEFORE UPDATE ON sincronizacao_estado
+            WHEN NEW.chave = 'ultimo_recebido'
+            BEGIN
+                SELECT RAISE(ABORT, 'falha simulada ao gravar cursor');
+            END
+            SQL);
+
+        $transporte = new class implements SyncTransport
+        {
+            public function enviar(array $alteracoes): array
+            {
+                return ['erros' => []];
+            }
+
+            public function receber(int $depois): array
+            {
+                return [
+                    'alteracoes' => [[
+                        'uuid' => 'abababab-5555-4555-8555-555555555555',
+                        'tabela' => 'produtos',
+                        'chave' => '5',
+                        'operacao' => 'insert',
+                        'antes' => null,
+                        'depois' => ['id_produto' => 5, 'codigo' => 'P-5', 'bem' => 'Mesa'],
+                    ]],
+                    'cursor' => 1,
+                    'mais' => false,
+                ];
+            }
+        };
+
+        try {
+            app(NotebookAgent::class)->executar($transporte);
+            $this->fail('A falha de gravação do cursor precisava interromper o recebimento.');
+        } catch (\Throwable $erro) {
+            $this->assertStringContainsString('cursor', mb_strtolower($erro->getMessage(), 'UTF-8'));
+        }
+
+        $this->assertFalse(DB::table('produtos')->where('id_produto', 5)->exists());
+        $this->assertSame('0', DB::table('sincronizacao_estado')->where('chave', 'ultimo_recebido')->value('valor'));
     }
 
     private function registrar(string $origem, string $tabela, string $chave): int
