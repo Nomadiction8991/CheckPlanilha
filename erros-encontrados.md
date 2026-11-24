@@ -956,3 +956,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: A API de sincronização podia expor conteúdo fora do histórico configurado ou modificar um arquivo externo.
 **Correção**: Recusar caminhos que atravessem links simbólicos antes da leitura, criação de diretórios e abertura para gravação. Testes de API reproduzem a leitura e a escrita através de um link e confirmam que o destino fica protegido.
 **Prioridade de Correção**: ✅ Resolvido
+
+### SYNC-006 - Sincronização de planilhas atravessava links em diretórios ancestrais
+**Arquivo**: app/Sync/SpreadsheetStore.php
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança / sincronização de arquivos
+**Status**: Corrigido nesta rodada.
+**Descrição**: O armazenamento rejeitava links simbólicos quando eram o próprio diretório configurado ou um arquivo, mas aceitava um link em qualquer diretório ancestral. Com a pasta de planilhas configurada sob esse caminho, a API podia listar e baixar arquivos externos e gravar novos arquivos fora do armazenamento previsto.
+**Risco/Impacto**: Um caminho de armazenamento redirecionado podia expor arquivos locais ao aparelho autenticado ou permitir gravação fora da pasta de sincronização.
+**Correção**: Conferir todos os componentes do caminho antes de listar, ler, criar e gravar planilhas. Testes unitários e de API cobrem leitura e escrita com diretório ancestral simbólico.
+**Prioridade de Correção**: ✅ Resolvido

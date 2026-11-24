@@ -94,6 +94,29 @@ class SincronizacaoArquivosApiTest extends SincronizacaoTestCase
             ->assertNotFound();
     }
 
+    public function test_planilhas_nao_leem_nem_gravam_ao_atravessar_link_ancestral(): void
+    {
+        $pastaExterna = $this->pasta . '/externa/planilhas';
+        mkdir($pastaExterna, 0775, true);
+        file_put_contents($pastaExterna . '/privada.csv', 'conteudo privado');
+        symlink($this->pasta . '/externa', $this->pasta . '/atalho');
+        config(['sincronizacao.pasta_planilhas' => $this->pasta . '/atalho/planilhas']);
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson('/api/sincronizacao/planilhas')
+            ->assertOk()
+            ->assertJsonPath('arquivos', []);
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->get('/api/sincronizacao/planilhas/privada.csv')
+            ->assertNotFound();
+
+        $this->enviarPlanilha('nova.csv', 'novo conteudo', hash('sha256', 'novo conteudo'))
+            ->assertServerError();
+
+        $this->assertFileDoesNotExist($pastaExterna . '/nova.csv');
+    }
+
     public function test_auditoria_so_responde_para_aparelho_autorizado(): void
     {
         $this->getJson('/api/sincronizacao/auditoria')->assertUnauthorized();

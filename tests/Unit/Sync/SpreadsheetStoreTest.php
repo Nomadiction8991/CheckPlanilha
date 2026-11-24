@@ -197,6 +197,30 @@ class SpreadsheetStoreTest extends TestCase
         $this->assertSame([], (new SpreadsheetStore($this->pasta))->listar());
     }
 
+    public function test_nao_le_planilhas_quando_um_diretorio_ancestral_e_link_simbolico(): void
+    {
+        $pastaReal = $this->pasta . '/real/importacao';
+        mkdir($pastaReal, 0775, true);
+        file_put_contents($pastaReal . '/privada.csv', 'conteudo privado');
+        symlink($this->pasta . '/real', $this->pasta . '/atalho');
+        $loja = new SpreadsheetStore($this->pasta . '/atalho/importacao');
+
+        $this->assertSame([], $loja->listar());
+        $this->expectException(\RuntimeException::class);
+        $loja->ler('privada.csv');
+    }
+
+    public function test_nao_grava_planilhas_quando_um_diretorio_ancestral_e_link_simbolico(): void
+    {
+        $pastaReal = $this->pasta . '/real';
+        mkdir($pastaReal, 0775, true);
+        symlink($pastaReal, $this->pasta . '/atalho');
+        $loja = new SpreadsheetStore($this->pasta . '/atalho/importacao');
+
+        $this->expectException(\RuntimeException::class);
+        $loja->gravar('arquivo.csv', 'conteudo', hash('sha256', 'conteudo'));
+    }
+
     public function test_nao_grava_sobre_arquivo_que_seja_link_simbolico(): void
     {
         mkdir($this->pasta, 0775, true);

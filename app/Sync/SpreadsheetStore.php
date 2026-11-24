@@ -25,7 +25,7 @@ final class SpreadsheetStore
      */
     public function listar(): array
     {
-        if (is_link($this->pasta) || ! is_dir($this->pasta)) {
+        if ($this->caminhoContemLinkSimbolico($this->pasta) || ! is_dir($this->pasta)) {
             return [];
         }
 
@@ -33,7 +33,7 @@ final class SpreadsheetStore
 
         foreach (scandir($this->pasta) ?: [] as $nome) {
             $caminho = $this->caminho($nome);
-            if (preg_match(self::NOME_VALIDO, $nome) !== 1 || is_link($caminho) || ! is_file($caminho)) {
+            if (preg_match(self::NOME_VALIDO, $nome) !== 1 || $this->caminhoContemLinkSimbolico($caminho) || ! is_file($caminho)) {
                 continue;
             }
 
@@ -64,7 +64,7 @@ final class SpreadsheetStore
         $this->garantirDiretorioSeguro();
 
         $caminho = $this->caminho($nome);
-        if (is_link($caminho) || ! is_file($caminho)) {
+        if ($this->caminhoContemLinkSimbolico($caminho) || ! is_file($caminho)) {
             throw new RuntimeException("A planilha {$nome} não existe neste computador.");
         }
 
@@ -82,7 +82,7 @@ final class SpreadsheetStore
     public function gravar(string $nome, string $conteudo, string $sha256): string
     {
         $this->validarNome($nome);
-        if (is_link($this->pasta)) {
+        if ($this->caminhoContemLinkSimbolico($this->pasta)) {
             throw new RuntimeException('A pasta das planilhas não está disponível com segurança.');
         }
 
@@ -94,7 +94,7 @@ final class SpreadsheetStore
 
         $caminho = $this->caminho($nome);
 
-        if (is_link($caminho)) {
+        if ($this->caminhoContemLinkSimbolico($caminho)) {
             throw new RuntimeException('Não é permitido gravar sobre um link simbólico.');
         }
 
@@ -114,7 +114,7 @@ final class SpreadsheetStore
         // Serializa as decisões para este nome: rename() sozinho pode substituir o destino
         // quando duas instâncias passam juntas pela verificação de existência.
         $caminhoBloqueio = $this->pasta . DIRECTORY_SEPARATOR . '.' . $nome . '.lock';
-        if (is_link($caminhoBloqueio)) {
+        if ($this->caminhoContemLinkSimbolico($caminhoBloqueio)) {
             throw new RuntimeException('Não foi possível bloquear a gravação da planilha.');
         }
         $bloqueio = @fopen($caminhoBloqueio, 'c');
@@ -132,7 +132,7 @@ final class SpreadsheetStore
         try {
             $this->garantirDiretorioSeguro();
 
-            if (is_link($caminho)) {
+            if ($this->caminhoContemLinkSimbolico($caminho)) {
                 throw new RuntimeException('Não é permitido gravar sobre um link simbólico.');
             }
 
@@ -169,8 +169,26 @@ final class SpreadsheetStore
 
     private function garantirDiretorioSeguro(): void
     {
-        if (is_link($this->pasta) || ! is_dir($this->pasta)) {
+        if ($this->caminhoContemLinkSimbolico($this->pasta) || ! is_dir($this->pasta)) {
             throw new RuntimeException('A pasta das planilhas não está disponível com segurança.');
+        }
+    }
+
+    private function caminhoContemLinkSimbolico(string $caminho): bool
+    {
+        $atual = $caminho;
+
+        while (true) {
+            if (is_link($atual)) {
+                return true;
+            }
+
+            $pai = dirname($atual);
+            if ($pai === $atual) {
+                return false;
+            }
+
+            $atual = $pai;
         }
     }
 
