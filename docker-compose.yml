@@ -35,6 +35,9 @@ services:
       MYSQL_DATABASE: "${DB_DATABASE}"
       MYSQL_USER: "${DB_USERNAME}"
       MYSQL_PASSWORD: "${DB_PASSWORD}"
+    # Binlog está ligado por padrão; sem SUPER o usuário da aplicação não cria
+    # gatilhos (erro 1419) e a migração create_transferencia_sync_triggers falha.
+    command: ["--log-bin-trust-function-creators=1"]
     ports:
       - "${DB_HOST_PORT:-3307}:3306"
     volumes:
