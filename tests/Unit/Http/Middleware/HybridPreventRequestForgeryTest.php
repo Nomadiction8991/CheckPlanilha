@@ -280,19 +280,17 @@ final class HybridPreventRequestForgeryTest extends TestCase
         $this->assertSame('OK', $response->getContent());
     }
 
-    public function test_handle_passes_excluded_path_without_csrf(): void
+    public function test_handle_rejects_spreadsheet_action_without_csrf(): void
     {
         $this->enableFullCsrf();
         $middleware = $this->createMiddleware();
 
-        // This path matches the $except array: /spreadsheets/preview/*/actions
         $request = $this->makePostRequest('/spreadsheets/preview/42/actions');
 
-        $response = $this->callHandle($middleware, $request);
+        $this->expectException(\Illuminate\Session\TokenMismatchException::class);
+        $this->expectExceptionMessage('CSRF token mismatch.');
 
-        // inExceptArray should return true, so the request passes
-        $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('OK', $response->getContent());
+        $this->callHandle($middleware, $request);
     }
 
     public function test_handle_rejects_post_without_csrf_in_production(): void

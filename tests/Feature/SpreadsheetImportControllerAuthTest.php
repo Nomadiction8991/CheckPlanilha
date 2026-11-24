@@ -21,8 +21,7 @@ use Tests\TestCase;
  *   - savePreviewActions                POST /spreadsheets/preview/{importacao}/actions
  *   - startProcessing                   POST /spreadsheets/process/{importacao}/start
  *
- * The last two routes are exempt from CSRF protection (see
- * HybridPreventRequestForgery::$except).
+ * The AJAX routes retain CSRF protection through the X-CSRF-TOKEN header.
  */
 final class SpreadsheetImportControllerAuthTest extends TestCase
 {

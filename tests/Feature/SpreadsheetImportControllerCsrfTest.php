@@ -8,8 +8,7 @@ use Tests\TestCase;
 
 /**
  * Tests that POST endpoints on SpreadsheetImportController reject requests
- * without a valid CSRF token (returning 419), and that routes listed in the
- * middleware's $except array are correctly exempted.
+ * without a valid CSRF token (returning 419), including AJAX endpoints.
  *
  * Laravel's PreventRequestForgery::runningUnitTests() bypasses CSRF when
  * APP_ENV=testing. We temporarily set the env to 'production' to verify the
@@ -34,8 +33,8 @@ final class SpreadsheetImportControllerCsrfTest extends TestCase
     }
 
     /**
-     * Temporarily set the app environment so that runningUnitTests() returns
-     * false and the CSRF middleware runs its full verification logic.
+     * Temporarily set the app environment so that the CSRF middleware runs
+     * its full verification logic.
      */
     private function enableCsrfProtection(): void
     {
@@ -83,48 +82,64 @@ final class SpreadsheetImportControllerCsrfTest extends TestCase
         $response->assertStatus(419);
     }
 
-    // ─── CSRF-exempt POST endpoints (should NOT return 419) ─────────────
+    // ─── AJAX POST endpoints must still validate their CSRF header ──────
 
-    public function test_save_preview_actions_is_exempt_from_csrf(): void
+    public function test_save_preview_actions_rejects_without_csrf_token(): void
     {
         $this->enableCsrfProtection();
 
-        // The $except array contains '/spreadsheets/preview/*/actions'.
-        // We test a route whose URL matches this pattern.
         $response = $this->postJson(route('migration.spreadsheets.preview.actions', [
             'importacao' => 999,
         ]), ['acoes' => []]);
 
-        $this->assertNotSame(419, $response->getStatusCode(), 'Exempt route should not return 419');
+        $response->assertStatus(419);
     }
 
-    public function test_start_processing_is_exempt_from_csrf(): void
+    public function test_bulk_preview_action_rejects_without_csrf_token(): void
     {
         $this->enableCsrfProtection();
 
-        // The $except array contains '/spreadsheets/process/*/start'.
-        // We test a route whose URL matches this pattern.
+        $response = $this->postJson(route('migration.spreadsheets.preview.bulk', [
+            'importacao' => 999,
+        ]), ['acao' => 'ignorar']);
+
+        $response->assertStatus(419);
+    }
+
+    public function test_start_processing_rejects_without_csrf_token(): void
+    {
+        $this->enableCsrfProtection();
+
         $response = $this->postJson(route('migration.spreadsheets.start', [
             'importacao' => 999,
         ]));
 
-        $this->assertNotSame(419, $response->getStatusCode(), 'Exempt route should not return 419');
+        $response->assertStatus(419);
     }
 
-    // ─── CSRF-exempt compat routes (also NOT in $except) should be 419 ──
+    public function test_ajax_preview_action_accepts_a_valid_csrf_header(): void
+    {
+        $this->enableCsrfProtection();
+        $token = str_repeat('a', 40);
+
+        $response = $this->withSession(['_token' => $token])
+            ->postJson(route('migration.spreadsheets.preview.actions', [
+                'importacao' => 999,
+            ]), ['acoes' => []], ['X-CSRF-TOKEN' => $token]);
+
+        $this->assertNotSame(419, $response->getStatusCode());
+    }
+
+    // ─── Compatibility routes also reject requests without a token ────
 
     public function test_legacy_save_preview_actions_not_exempt(): void
     {
         $this->enableCsrfProtection();
 
-        // The $except pattern '/spreadsheets/preview/*/actions' does NOT
-        // match the compat route '/spreadsheets/preview/save-actions'.
         $response = $this->postJson(route('migration.compat.spreadsheets.preview.save-actions'), [
             'importacao_id' => 1,
         ]);
 
-        // Legacy compat route has no {importacao} segment, so the
-        // $except wildcard pattern does NOT match → CSRF blocks with 419.
         $response->assertStatus(419);
     }
 
@@ -132,9 +147,6 @@ final class SpreadsheetImportControllerCsrfTest extends TestCase
     {
         $this->enableCsrfProtection();
 
-        // The $except has '/spreadsheets/preview/*/actions' and
-        // '/spreadsheets/preview/*/bulk-action' but NOT 'confirm'.
-        // The compat route '/spreadsheets/confirm' is NOT in $except.
         $response = $this->postJson(route('migration.compat.spreadsheets.confirm'), [
             'importacao_id' => 1,
         ]);
