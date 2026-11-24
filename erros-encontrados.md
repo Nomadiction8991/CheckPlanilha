@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 11
-- Médios: 21
+- Médios: 22
 - Baixos: 0
 
 ## Erros por Categoria
 ### Segurança (4)
-### Lógica (30)
+### Lógica (31)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -936,3 +936,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Outros usuários do sistema operacional poderiam ler a credencial da rede local.
 **Correção**: Reaplicar `0600` antes de ler um arquivo existente e interromper a operação quando não for possível proteger as permissões. Teste de regressão cobre um arquivo existente em `0644`.
 **Prioridade de Correção**: ✅ Resolvido
+
+### ADMIN-001 - Vínculo criado durante exclusão escapava como erro interno
+**Arquivos**: `app/Services/LegacyAdministrationManagementService.php`, `tests/Feature/LegacyAdministrationDeletionTest.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / concorrência em cadastros
+**Status**: Corrigido nesta rodada.
+**Descrição**: A exclusão verificava vínculos antes de apagar a administração, sem transação nem bloqueio. Um vínculo gravado nesse intervalo podia fazer a chave estrangeira rejeitar o `DELETE`; a exceção do banco não era convertida para o erro de regra esperado pelo controller, causando resposta 500.
+**Risco/Impacto**: Exclusões concorrentes podiam terminar em erro interno e deixar o usuário sem orientação, mesmo com a administração preservada pela chave estrangeira.
+**Correção**: Executar a checagem e a exclusão em transação, bloquear a administração durante o fluxo e converter violações de chave estrangeira em uma mensagem de vínculo tratável. Teste de regressão injeta um vínculo no intervalo entre a checagem e a exclusão.
+**Prioridade de Correção**: Média

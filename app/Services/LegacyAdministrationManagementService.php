@@ -9,6 +9,7 @@ use App\DTO\AdministrationMutationData;
 use App\Models\Legacy\Administracao;
 use App\Models\Legacy\Usuario;
 use App\Support\LegacyCnpjValidator;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -19,7 +20,7 @@ class LegacyAdministrationManagementService implements LegacyAdministrationManag
         try {
             $cnpj = LegacyCnpjValidator::validate($data->cnpj);
         } catch (\InvalidArgumentException $exception) {
-            throw new RuntimeException('CNPJ inválido: ' . $exception->getMessage());
+            throw new RuntimeException('CNPJ inválido: '.$exception->getMessage());
         }
 
         return DB::transaction(function () use ($data, $cnpj): Administracao {
@@ -40,7 +41,7 @@ class LegacyAdministrationManagementService implements LegacyAdministrationManag
         try {
             $cnpj = LegacyCnpjValidator::validate($data->cnpj);
         } catch (\InvalidArgumentException $exception) {
-            throw new RuntimeException('CNPJ inválido: ' . $exception->getMessage());
+            throw new RuntimeException('CNPJ inválido: '.$exception->getMessage());
         }
 
         return DB::transaction(function () use ($administration, $data, $cnpj): Administracao {
@@ -59,23 +60,43 @@ class LegacyAdministrationManagementService implements LegacyAdministrationManag
 
     public function delete(Administracao $administration): void
     {
-        if (DB::table('comums')->where('administracao_id', (int) $administration->getKey())->exists()) {
-            throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a igrejas.');
-        }
+        try {
+            DB::transaction(function () use ($administration): void {
+                $lockedAdministration = Administracao::query()
+                    ->whereKey($administration->getKey())
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-        if (DB::table('usuarios')->where('administracao_id', (int) $administration->getKey())->exists()) {
-            throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a usuários.');
-        }
+                $administrationId = (int) $lockedAdministration->getKey();
 
-        if (DB::table('importacoes')->where('administracao_id', (int) $administration->getKey())->exists()) {
-            throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a importações.');
-        }
+                if (DB::table('comums')->where('administracao_id', $administrationId)->exists()) {
+                    throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a igrejas.');
+                }
 
-        if (DB::table('tipos_bens')->where('administracao_id', (int) $administration->getKey())->exists()) {
-            throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a tipos de bens.');
-        }
+                if (DB::table('usuarios')->where('administracao_id', $administrationId)->exists()) {
+                    throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a usuários.');
+                }
 
-        $administration->delete();
+                if (DB::table('importacoes')->where('administracao_id', $administrationId)->exists()) {
+                    throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a importações.');
+                }
+
+                if (DB::table('tipos_bens')->where('administracao_id', $administrationId)->exists()) {
+                    throw new RuntimeException('Esta administração não pode ser excluída porque já está vinculada a tipos de bens.');
+                }
+
+                $lockedAdministration->delete();
+            });
+        } catch (QueryException $exception) {
+            if (! str_contains(strtolower($exception->getMessage()), 'foreign key constraint')) {
+                throw $exception;
+            }
+
+            throw new RuntimeException(
+                'Esta administração não pode ser excluída porque há registros vinculados.',
+                previous: $exception,
+            );
+        }
     }
 
     private function normalizeDescription(string $description): string
