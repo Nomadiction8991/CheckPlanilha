@@ -121,10 +121,23 @@ class AnalysesCleanupOrphans extends Command
 
         foreach ($orphans as $orphan) {
             $filePath = $this->storageDir . '/' . $orphan['file'];
+            $backupPath = null;
 
             if ($forceDelete && ($orphan['removable'] ?? false) && $orphan['status'] !== 'sem registro') {
+                if (is_file($filePath)) {
+                    $backupPath = $filePath . '.cleanup-' . bin2hex(random_bytes(8));
+
+                    if (! @rename($filePath, $backupPath)) {
+                        $failedFileDeletions++;
+                        $this->error('Falha ao preparar arquivo de análise para remoção: ' . $orphan['file']);
+                        continue;
+                    }
+                }
+
+                $fileRemovalFailed = false;
+
                 try {
-                    DB::connection()->transaction(function () use ($orphan): void {
+                    DB::connection()->transaction(function () use ($orphan, $backupPath, &$fileRemovalFailed): void {
                         DB::connection()->table('import_erros')
                             ->where('importacao_id', $orphan['id'])
                             ->delete();
@@ -132,17 +145,37 @@ class AnalysesCleanupOrphans extends Command
                         DB::connection()->table('importacoes')
                             ->where('id', $orphan['id'])
                             ->delete();
+
+                        if ($backupPath !== null && ! $this->removeFile($backupPath)) {
+                            $fileRemovalFailed = true;
+                            throw new \RuntimeException('Falha ao remover arquivo de análise.');
+                        }
                     });
 
                     $deletedDb++;
+                    if ($backupPath !== null) {
+                        $deletedFiles++;
+                    }
                 } catch (Throwable $e) {
+                    if ($backupPath !== null && is_file($backupPath)) {
+                        if (! @rename($backupPath, $filePath)) {
+                            $this->error('Falha ao restaurar arquivo de análise; arquivo preservado em: ' . $backupPath);
+
+                            return 1;
+                        }
+                    }
+
+                    if ($fileRemovalFailed) {
+                        $failedFileDeletions++;
+                        $this->error('Falha ao remover arquivo de análise: ' . $orphan['file']);
+                        continue;
+                    }
+
                     $this->error('Failed to delete DB records para importação ' . $orphan['id'] . ': ' . $e->getMessage());
 
                     return 1;
                 }
-            }
-
-            if (is_file($filePath)) {
+            } elseif (is_file($filePath)) {
                 if ($this->removeFile($filePath)) {
                     $deletedFiles++;
                 } else {

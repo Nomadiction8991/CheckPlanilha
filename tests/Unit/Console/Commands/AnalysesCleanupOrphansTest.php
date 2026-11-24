@@ -211,6 +211,31 @@ final class AnalysesCleanupOrphansTest extends TestCase
     }
 
     /** @test */
+    public function test_force_delete_preserves_database_records_when_file_removal_fails(): void
+    {
+        $this->criarImportacao(97, 'concluida');
+        $this->criarErroImportacao(97);
+        $path = $this->criarArquivoAnalise(97);
+        $command = new class extends AnalysesCleanupOrphans
+        {
+            protected function removeFile(string $filePath): bool
+            {
+                return false;
+            }
+        };
+        $command->setStorageDir($this->tempDir);
+        $this->app->instance(AnalysesCleanupOrphans::class, $command);
+
+        $this->artisan('analyses:cleanup-orphans', ['--force-delete' => true])
+            ->expectsOutputToContain('Falha ao remover arquivo de análise')
+            ->assertExitCode(1);
+
+        $this->assertFileExists($path);
+        $this->assertSame(1, DB::connection()->table('importacoes')->where('id', 97)->count());
+        $this->assertSame(1, DB::connection()->table('import_erros')->where('importacao_id', 97)->count());
+    }
+
+    /** @test */
     public function test_default_storage_dir_matches_application_storage_path(): void
     {
         $this->app->useStoragePath($this->tempDir);

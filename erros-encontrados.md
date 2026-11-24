@@ -755,6 +755,16 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Correção**: A contagem agora inclui somente remoções confirmadas; falhas são exibidas e fazem o comando terminar com status de erro. Testes cobrem falha de remoção nos dois comandos.
 **Prioridade de Correção**: ✅ Resolvido
 
+### OPS-003 - Limpeza forçada apagava os registros antes de confirmar a remoção da análise
+**Arquivo**: `app/Console/Commands/AnalysesCleanupOrphans.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Estabilidade / Integridade de dados
+**Status**: Corrigido nesta rodada.
+**Descrição**: Com `--force-delete`, os registros da importação e seus erros eram excluídos antes da tentativa de remover o arquivo de análise. Se o sistema de arquivos recusasse a remoção, o comando retornava erro, mas deixava o arquivo sem os registros que permitiam identificá-lo.
+**Risco/Impacto**: O estado do banco e o arquivo de análise ficavam inconsistentes após uma falha de permissão ou do sistema de arquivos.
+**Correção**: O arquivo é renomeado temporariamente e removido dentro da transação; se a remoção ou a transação falhar, o nome original é restaurado e os registros permanecem. Testes cobrem falha de remoção e falha na transação.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### SYNC-001 - Resolver conflito não aplicava campo vazio sobre valor nulo
 **Arquivo**: `app/Sync/ConflictResolver.php` (`camposAlterados`)
 **Severidade**: 🟡 MÉDIO
