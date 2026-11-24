@@ -25,6 +25,10 @@ final class AuditLog
      */
     public function linhas(): array
     {
+        if ($this->caminhoContemLinkSimbolico($this->arquivo)) {
+            return [];
+        }
+
         if (! is_file($this->arquivo)) {
             return [];
         }
@@ -62,10 +66,18 @@ final class AuditLog
             return 0;
         }
 
+        if ($this->caminhoContemLinkSimbolico($this->arquivo)) {
+            throw new RuntimeException('O histórico de auditoria não está disponível com segurança.');
+        }
+
         $pasta = dirname($this->arquivo);
 
         if (! is_dir($pasta) && ! mkdir($pasta, 0775, true) && ! is_dir($pasta)) {
             throw new InvalidArgumentException('Não foi possível criar a pasta da auditoria.');
+        }
+
+        if ($this->caminhoContemLinkSimbolico($this->arquivo)) {
+            throw new RuntimeException('O histórico de auditoria não está disponível com segurança.');
         }
 
         $arquivo = @fopen($this->arquivo, 'c+');
@@ -145,5 +157,23 @@ final class AuditLog
         }
 
         return count($novas);
+    }
+
+    private function caminhoContemLinkSimbolico(string $caminho): bool
+    {
+        $atual = $caminho;
+
+        while (true) {
+            if (is_link($atual)) {
+                return true;
+            }
+
+            $pai = dirname($atual);
+            if ($pai === $atual) {
+                return false;
+            }
+
+            $atual = $pai;
+        }
     }
 }

@@ -99,6 +99,66 @@ class SincronizacaoArquivosApiTest extends SincronizacaoTestCase
         $this->getJson('/api/sincronizacao/auditoria')->assertUnauthorized();
     }
 
+    public function test_auditoria_nao_le_arquivo_externo_por_link_simbolico(): void
+    {
+        mkdir($this->pasta, 0775, true);
+        $arquivoExterno = $this->pasta . '/privado.jsonl';
+        file_put_contents($arquivoExterno, '{"segredo":"nao-expor"}' . PHP_EOL);
+        symlink($arquivoExterno, $this->pasta . '/audit-log.jsonl');
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson('/api/sincronizacao/auditoria')
+            ->assertOk()
+            ->assertJsonPath('linhas', []);
+    }
+
+    public function test_auditoria_nao_grava_em_arquivo_externo_por_link_simbolico(): void
+    {
+        mkdir($this->pasta, 0775, true);
+        $arquivoExterno = $this->pasta . '/privado.jsonl';
+        file_put_contents($arquivoExterno, 'conteudo original' . PHP_EOL);
+        symlink($arquivoExterno, $this->pasta . '/audit-log.jsonl');
+        $linha = '{"acao":"teste"}';
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->postJson('/api/sincronizacao/auditoria', [
+                'linhas' => [[
+                    'sha256' => hash('sha256', $linha),
+                    'linha' => $linha,
+                ]],
+            ])
+            ->assertServerError();
+
+        $this->assertSame('conteudo original' . PHP_EOL, file_get_contents($arquivoExterno));
+    }
+
+    public function test_auditoria_nao_acessa_arquivo_por_diretorio_simbolico(): void
+    {
+        mkdir($this->pasta, 0775, true);
+        $diretorioExterno = $this->pasta . '/externo';
+        mkdir($diretorioExterno);
+        file_put_contents($diretorioExterno . '/audit-log.jsonl', '{"segredo":"nao-expor"}' . PHP_EOL);
+        symlink($diretorioExterno, $this->pasta . '/atalho');
+        config(['sincronizacao.arquivo_auditoria' => $this->pasta . '/atalho/audit-log.jsonl']);
+        $linha = '{"acao":"teste"}';
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->getJson('/api/sincronizacao/auditoria')
+            ->assertOk()
+            ->assertJsonPath('linhas', []);
+
+        $this->withHeader('Authorization', 'Bearer ' . $this->token)
+            ->postJson('/api/sincronizacao/auditoria', [
+                'linhas' => [[
+                    'sha256' => hash('sha256', $linha),
+                    'linha' => $linha,
+                ]],
+            ])
+            ->assertServerError();
+
+        $this->assertSame('{"segredo":"nao-expor"}' . PHP_EOL, file_get_contents($diretorioExterno . '/audit-log.jsonl'));
+    }
+
     public function test_auditoria_nao_confirma_eventos_quando_o_arquivo_nao_pode_ser_escrito(): void
     {
         $arquivo = $this->pasta . '/audit-log.jsonl';

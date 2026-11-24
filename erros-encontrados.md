@@ -946,3 +946,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Exclusões concorrentes podiam terminar em erro interno e deixar o usuário sem orientação, mesmo com a administração preservada pela chave estrangeira.
 **Correção**: Executar a checagem e a exclusão em transação, bloquear a administração durante o fluxo e converter violações de chave estrangeira em uma mensagem de vínculo tratável. Teste de regressão injeta um vínculo no intervalo entre a checagem e a exclusão.
 **Prioridade de Correção**: Média
+
+### SYNC-005 - Auditoria seguia links simbólicos ao ler e gravar o histórico
+**Arquivos**: `app/Sync/AuditLog.php`, `tests/Feature/Sync/SincronizacaoArquivosApiTest.php`
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança / sincronização de arquivos
+**Status**: Corrigido nesta rodada.
+**Descrição**: O serviço lia o histórico com `file()` e o abria para gravação com `fopen()` sem rejeitar links simbólicos no arquivo ou nos diretórios do caminho. Um aparelho autenticado podia, nessas condições, receber conteúdo de outro arquivo pela API ou acrescentar eventos ao destino do link.
+**Risco/Impacto**: A API de sincronização podia expor conteúdo fora do histórico configurado ou modificar um arquivo externo.
+**Correção**: Recusar caminhos que atravessem links simbólicos antes da leitura, criação de diretórios e abertura para gravação. Testes de API reproduzem a leitura e a escrita através de um link e confirmam que o destino fica protegido.
+**Prioridade de Correção**: ✅ Resolvido
