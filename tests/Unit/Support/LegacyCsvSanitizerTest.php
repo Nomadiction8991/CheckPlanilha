@@ -21,6 +21,13 @@ final class LegacyCsvSanitizerTest extends TestCase
         $this->assertSame('12345', LegacyCsvSanitizer::sanitizeText('12345'));
     }
 
+    public function testSanitizeTextStillDetectsFormulaPrefixWhenTrailingBytesAreInvalidUtf8(): void
+    {
+        $value = '=1+1' . hex2bin('ff');
+
+        $this->assertSame("'=1+1" . hex2bin('ff'), LegacyCsvSanitizer::sanitizeText($value));
+    }
+
     #[DataProvider('formulaCharactersProvider')]
     public function testSanitizeTextPrefixesSingleQuoteOnFormulaTriggers(string $prefix, string $input, string $expected): void
     {

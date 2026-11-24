@@ -10,7 +10,13 @@ final class LegacyCsvSanitizer
     {
         $value ??= '';
 
-        if ($value !== '' && preg_match('/^(?:[=+\-@\t\r\n]|[\p{Z}\x00-\x20]*[=+\-@＝＋－＠])/u', $value) === 1) {
+        // Detect formula prefixes with a byte-safe check first. A malformed UTF-8
+        // byte later in legacy text must not disable protection for its first cell.
+        if ($value !== '' && preg_match('/^(?:[=+\-@\t\r\n]|[\x00-\x20]*(?:[=+\-@]|＝|＋|－|＠))/', $value) === 1) {
+            return "'" . $value;
+        }
+
+        if ($value !== '' && preg_match('/^[\p{Z}\x00-\x20]*[=+\-@＝＋－＠]/u', $value) === 1) {
             return "'" . $value;
         }
 

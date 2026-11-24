@@ -3,16 +3,26 @@
 ## Resumo
 - Críticos: 0
 - Altos: 12
-- Médios: 23
+- Médios: 24
 - Baixos: 1
 
 ## Erros por Categoria
-### Segurança (6)
+### Segurança (7)
 ### Lógica (32)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### CSV-001 - Bytes UTF-8 inválidos podiam contornar a proteção contra fórmulas
+**Arquivo**: `app/Support/LegacyCsvSanitizer.php` (`sanitizeText`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Segurança / injeção de fórmula em CSV
+**Status**: Corrigido nesta rodada.
+**Descrição**: A expressão Unicode validava a célula inteira. Quando um texto legado começava com `=` (ou outro prefixo de fórmula) e continha um byte UTF-8 inválido depois, a expressão falhava e o prefixo perigoso era exportado sem escape.
+**Risco/Impacto**: Relatórios e exportações que usam o sanitizador compartilhado podiam entregar uma célula executável ao abrir o CSV em uma planilha.
+**Correção**: Detectar prefixos de fórmula com uma verificação byte-safe antes da validação de espaços Unicode. Teste de regressão usa `=1+1` seguido por um byte inválido e confirma a aspa de neutralização.
+**Prioridade de Correção**: ✅ Resolvido
 
 ### AUTH-009 - Listas de igrejas e administrações ignoravam o escopo do usuário
 **Arquivo**: `app/Services/LegacyAuthSessionService.php` (`availableChurches`, `availableAdministrations`)
