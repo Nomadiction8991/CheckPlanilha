@@ -3,12 +3,12 @@
 ## Resumo
 - Críticos: 0
 - Altos: 12
-- Médios: 25
+- Médios: 26
 - Baixos: 3
 
 ## Erros por Categoria
 ### Segurança (7)
-### Lógica (34)
+### Lógica (35)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -1075,4 +1075,15 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Descrição**: A cópia inicial e o recebimento incremental confirmavam os dados antes de persistir o cursor local. Se a gravação do cursor falhasse, a próxima execução repetia alterações sobre dados já substituídos ou aplicados.
 **Risco/Impacto**: A falha podia deixar tabelas atualizadas com um cursor antigo e causar reprocessamento de eventos.
 **Correção**: Gravar alterações e cursores dentro da mesma transação nos dois fluxos. Testes de regressão simulam a falha na gravação do cursor e confirmam o rollback dos dados recebidos.
+**Prioridade de Correção**: ✅ Resolvido
+
+### TIPOBEM-001 - Administração local podia alterar ou excluir tipo compartilhado
+
+**Arquivo**: `app/Services/LegacyAssetTypeManagementService.php` (`assertAssetTypeWithinScope`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / isolamento administrativo
+**Status**: Corrigido nesta rodada.
+**Descrição**: Tipos sem administração vinculada são compartilhados e aparecem nas opções de todas as administrações. A verificação de edição e exclusão só bloqueava tipos associados a outra administração, permitindo que um administrador local alterasse ou apagasse um registro compartilhado.
+**Risco/Impacto**: Uma ação local podia mudar ou remover uma opção usada por outras administrações.
+**Correção**: Exigir que o tipo pertença à administração atual antes de permitir edição ou exclusão por usuário não global. Testes reproduzem ambos os caminhos com a sessão de um administrador rebaixado.
 **Prioridade de Correção**: ✅ Resolvido

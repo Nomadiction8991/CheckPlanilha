@@ -131,7 +131,7 @@ class LegacyAssetTypeManagementService implements LegacyAssetTypeManagementServi
         $currentAdministrationId = $this->currentAdministrationId();
         $assetAdministrationId = (int) ($assetType->administracao_id ?? 0);
 
-        if ($currentAdministrationId === null || $assetAdministrationId > 0 && $assetAdministrationId !== $currentAdministrationId) {
+        if ($currentAdministrationId === null || $assetAdministrationId !== $currentAdministrationId) {
             throw new RuntimeException('Você só pode gerenciar tipos de bem da sua própria administração.');
         }
     }

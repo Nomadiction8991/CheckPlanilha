@@ -117,6 +117,31 @@ final class LegacyAssetTypeDeleteEditedLinkTest extends TestCase
         (new LegacyAssetTypeManagementService())->delete(TipoBem::query()->findOrFail(4));
     }
 
+    public function testDemotedAdministratorCannotDeleteSharedType(): void
+    {
+        $this->createAssetType(5, null);
+        $this->startDemotedAdministratorSession();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Você só pode gerenciar tipos de bem da sua própria administração.');
+
+        (new LegacyAssetTypeManagementService())->delete(TipoBem::query()->findOrFail(5));
+    }
+
+    public function testDemotedAdministratorCannotUpdateSharedType(): void
+    {
+        $this->createAssetType(6, null);
+        $this->startDemotedAdministratorSession();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Você só pode gerenciar tipos de bem da sua própria administração.');
+
+        (new LegacyAssetTypeManagementService())->update(
+            TipoBem::query()->findOrFail(6),
+            new AssetTypeMutationData(10, 'TIPO ALTERADO'),
+        );
+    }
+
     public function testDemotedAdministratorCannotCreateTypeInAnotherAdministration(): void
     {
         $this->startDemotedAdministratorSession();
@@ -156,7 +181,7 @@ final class LegacyAssetTypeDeleteEditedLinkTest extends TestCase
         ]);
     }
 
-    private function createAssetType(int $id, int $administrationId): void
+    private function createAssetType(int $id, ?int $administrationId): void
     {
         $type = new TipoBem();
         $type->forceFill([
