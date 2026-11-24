@@ -9,6 +9,7 @@ use App\Contracts\LegacyNavigationServiceInterface;
 use App\Contracts\LegacyProductUtilityServiceInterface;
 use App\Models\Legacy\Produto;
 use Mockery\MockInterface;
+use RuntimeException;
 use Tests\TestCase;
 
 final class LegacyProductUtilityCompatibilityTest extends TestCase
@@ -538,5 +539,31 @@ final class LegacyProductUtilityCompatibilityTest extends TestCase
 
         $response->assertRedirect('/products?comum_id=7&pagina=2&busca=CADEIRA');
         $response->assertSessionHas('status', 'Edições limpas com sucesso!');
+    }
+
+    public function testClearEditsReportsWhenProductDoesNotBelongToSelectedChurch(): void
+    {
+        $this->mock(LegacyProductUtilityServiceInterface::class, function (MockInterface $mock): void {
+            $mock->shouldReceive('clearEdits')
+                ->once()
+                ->with(19, 7)
+                ->andThrow(new RuntimeException('Produto não encontrado para a igreja selecionada.'));
+        });
+
+        $response = $this->withSession([
+            '_enforce_legacy_auth' => true,
+            'usuario_id' => 9,
+            'usuario_nome' => 'Maria Silva',
+            'usuario_email' => 'MARIA@EXEMPLO.COM',
+            'comum_id' => 7,
+            'is_admin' => false,
+        ])->post('/products/clear-edits', [
+            'id_PRODUTO' => 19,
+            'comum_id' => 7,
+        ]);
+
+        $response->assertRedirect('/products?comum_id=7');
+        $response->assertSessionHas('status', 'Produto não encontrado para a igreja selecionada.');
+        $response->assertSessionHas('status_type', 'error');
     }
 }

@@ -246,7 +246,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
     {
         $this->assertChurchWithinProductScope($churchId);
 
-        Produto::query()
+        $updated = Produto::query()
             ->whereKey($productId)
             ->where('comum_id', $churchId)
             ->update([
@@ -264,5 +264,12 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
                 'nota_fornecedor' => '',
                 'editado' => 0,
             ]);
+
+        if ($updated === 0 && !Produto::query()
+            ->whereKey($productId)
+            ->where('comum_id', $churchId)
+            ->exists()) {
+            throw new RuntimeException('Produto não encontrado para a igreja selecionada.');
+        }
     }
 }

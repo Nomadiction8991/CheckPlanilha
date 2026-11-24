@@ -4,15 +4,25 @@
 - Críticos: 0
 - Altos: 12
 - Médios: 25
-- Baixos: 2
+- Baixos: 3
 
 ## Erros por Categoria
 ### Segurança (7)
-### Lógica (33)
+### Lógica (34)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### PROD-011 - Limpeza de edições confirmava sucesso sem atualizar um bem
+**Arquivo**: `app/Services/LegacyProductUtilityService.php` (`clearEdits`)
+**Severidade**: 🟢 BAIXO
+**Categoria**: Lógica / feedback de operação
+**Status**: Corrigido nesta rodada.
+**Descrição**: O endpoint legado informava que as edições foram limpas mesmo quando o identificador não existia ou o bem pertencia a outra igreja. A atualização filtrada pelo escopo afetava zero linhas, mas o serviço não verificava o resultado.
+**Risco/Impacto**: O usuário recebia uma confirmação falsa e podia acreditar que alterações persistidas haviam sido removidas.
+**Correção**: O serviço agora lança erro acionável quando nenhuma linha é atualizada; o controller apresenta o erro no fluxo existente. Testes cobrem o identificador ausente e a resposta do endpoint.
+**Prioridade de Correção**: ✅ Resolvido
 
 ### FILTRO-UF-001 - UF desconhecida era mantida como filtro ativo
 **Arquivo**: `app/DTO/*Filters.php` (filtros de administração, tipo de bem, igreja, dependência, produto e usuário)

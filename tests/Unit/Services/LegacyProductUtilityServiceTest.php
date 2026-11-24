@@ -37,9 +37,18 @@ final class LegacyProductUtilityServiceTest extends TestCase
             $table->unsignedBigInteger('comum_id')->nullable();
             $table->unsignedBigInteger('dependencia_id')->nullable();
             $table->unsignedBigInteger('editado_dependencia_id')->nullable();
+            $table->unsignedBigInteger('editado_tipo_bem_id')->nullable();
             $table->string('codigo')->nullable();
+            $table->string('editado_bem')->nullable();
+            $table->string('editado_complemento')->nullable();
             $table->integer('editado')->nullable();
             $table->integer('imprimir_etiqueta')->nullable();
+            $table->integer('imprimir_14_1')->nullable();
+            $table->string('condicao_14_1')->nullable();
+            $table->string('nota_numero')->nullable();
+            $table->string('nota_data')->nullable();
+            $table->decimal('nota_valor', 10, 2)->nullable();
+            $table->string('nota_fornecedor')->nullable();
             $table->integer('ativo')->default(1);
             $table->integer('checado')->nullable();
             $table->string('observacao')->nullable();
@@ -228,6 +237,41 @@ final class LegacyProductUtilityServiceTest extends TestCase
         ]);
 
         $this->assertSame(1, $processed);
+    }
+
+    public function testClearEditsRejectsMissingProduct(): void
+    {
+        session(['is_admin' => true]);
+        DB::table('comums')->insert([
+            'id' => 7,
+            'administracao_id' => 4,
+            'descricao' => 'Central Cuiabá',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Produto não encontrado para a igreja selecionada.');
+
+        (new LegacyProductUtilityService())->clearEdits(999, 7);
+    }
+
+    public function testClearEditsRejectsProductFromAnotherChurch(): void
+    {
+        session(['is_admin' => true]);
+        DB::table('comums')->insert([
+            ['id' => 7, 'administracao_id' => 4, 'descricao' => 'Central Cuiabá'],
+            ['id' => 8, 'administracao_id' => 4, 'descricao' => 'Igreja vizinha'],
+        ]);
+        DB::table('produtos')->insert([
+            'id_produto' => 1001,
+            'comum_id' => 8,
+            'editado' => 1,
+            'editado_bem' => 'Descrição original',
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Produto não encontrado para a igreja selecionada.');
+
+        (new LegacyProductUtilityService())->clearEdits(1001, 7);
     }
 
     public function testChecklistRejectsProductsOutsideTheSelectedChurchWithoutSavingPartialChanges(): void
