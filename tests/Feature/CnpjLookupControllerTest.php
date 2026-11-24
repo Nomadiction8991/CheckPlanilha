@@ -67,6 +67,23 @@ final class CnpjLookupControllerTest extends TestCase
         ));
     }
 
+    public function testAlphanumericCnpjWithInvalidCheckDigitsIsRejectedBeforeCallingProvider(): void
+    {
+        Http::fake();
+
+        $response = $this->withSession(self::AUTH_SESSION)
+            ->postJson(route('migration.api.cnpj.lookup'), [
+                'cnpj' => '12ABC34501DE36',
+            ]);
+
+        $response->assertStatus(400);
+        $response->assertExactJson([
+            'success' => false,
+            'error' => 'CNPJ inválido',
+        ]);
+        Http::assertNothingSent();
+    }
+
     public function testInvalidCnpjLookup(): void
     {
         $response = $this->withSession(self::AUTH_SESSION)

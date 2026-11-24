@@ -81,5 +81,33 @@ final class LegacyCnpjValidator
         if (!preg_match('/^[0-9A-Z]{12}\d{2}$/', $cnpj)) {
             throw new InvalidArgumentException('Formato do CNPJ alfanumérico é inválido.');
         }
+
+        $base = substr($cnpj, 0, 12);
+        $firstDigit = self::calculateAlphanumericCheckDigit($base);
+
+        if ((int) $cnpj[12] !== $firstDigit) {
+            throw new InvalidArgumentException('Primeiro dígito verificador do CNPJ alfanumérico é inválido.');
+        }
+
+        $secondDigit = self::calculateAlphanumericCheckDigit($base . $firstDigit);
+
+        if ((int) $cnpj[13] !== $secondDigit) {
+            throw new InvalidArgumentException('Segundo dígito verificador do CNPJ alfanumérico é inválido.');
+        }
+    }
+
+    private static function calculateAlphanumericCheckDigit(string $base): int
+    {
+        $weight = 2;
+        $sum = 0;
+
+        for ($index = strlen($base) - 1; $index >= 0; $index--) {
+            $sum += (ord($base[$index]) - 48) * $weight;
+            $weight = $weight === 9 ? 2 : $weight + 1;
+        }
+
+        $remainder = $sum % 11;
+
+        return $remainder < 2 ? 0 : 11 - $remainder;
     }
 }

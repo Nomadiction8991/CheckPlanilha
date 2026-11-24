@@ -1026,3 +1026,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Dados inconsistentes de um provedor podiam remover opções válidas ou levar a uma resposta 502 quando a fonte alternativa estivesse indisponível.
 **Correção**: Ignorar registros que não sejam objetos associativos com os campos textuais esperados. Testes de feature cobrem respostas parciais malformadas para estados e cidades.
 **Prioridade de Correção**: ✅ Resolvido
+
+### CNPJ-003 - CNPJ alfanumérico aceitava dígitos verificadores inválidos
+**Arquivo**: `app/Support/LegacyCnpjValidator.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Validação / integridade cadastral
+**Status**: Corrigido nesta rodada.
+**Descrição**: A validação alfanumérica conferia somente o formato das 12 primeiras posições e permitia quaisquer dois dígitos finais. A validação numérica já verificava os dígitos, mas os novos CNPJs alfanuméricos podiam seguir para consulta e cadastro sem essa conferência.
+**Risco/Impacto**: Um CNPJ alfanumérico digitado incorretamente podia ser aceito como válido nos cadastros e enviado ao provedor de consulta.
+**Correção**: Calcular os dois dígitos verificadores por módulo 11 usando o valor ASCII menos 48, conforme o manual oficial. Testes cobrem o exemplo oficial `12ABC34501DE35`, dígitos incorretos e a rejeição da consulta antes de chamar o provedor.
+**Prioridade de Correção**: ✅ Resolvido
