@@ -52,6 +52,7 @@ final class LegacyPasswordRecoveryService implements LegacyPasswordRecoveryServi
         $user->forceFill([
             'senha' => Hash::make($temporaryPassword),
         ])->save();
+        $temporaryPasswordHash = (string) $user->senha;
 
         try {
             $this->mailConfiguration->configureRuntimeMailer();
@@ -62,7 +63,10 @@ final class LegacyPasswordRecoveryService implements LegacyPasswordRecoveryServi
                 )
             );
         } catch (Throwable $exception) {
-            $user->forceFill(['senha' => $originalPassword])->save();
+            Usuario::query()
+                ->whereKey($user->getKey())
+                ->where('senha', $temporaryPasswordHash)
+                ->update(['senha' => $originalPassword]);
 
             throw new RuntimeException(
                 'Não foi possível enviar a nova senha agora. Tente novamente mais tarde.',
