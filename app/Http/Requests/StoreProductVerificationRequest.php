@@ -30,7 +30,7 @@ class StoreProductVerificationRequest extends FormRequest
             'status' => ['nullable', 'string', 'max:50'],
             'somente_novos' => ['nullable', 'boolean'],
             'itens' => ['required', 'array', 'min:1'],
-            'itens.*.produto_id' => ['required', 'integer', 'min:1', 'distinct:strict'],
+            'itens.*.produto_id' => ['required', 'integer', 'min:1', 'distinct'],
             'itens.*.imprimir_etiqueta' => ['nullable', 'boolean'],
             'itens.*.verificado' => ['nullable', 'boolean'],
             'itens.*.observacao' => ['nullable', 'string', 'max:255'],
