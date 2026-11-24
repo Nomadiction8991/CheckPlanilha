@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Unit\Http\Middleware;
 
 use App\Http\Middleware\RequireLegacySession;
+use App\Services\LegacyAuthSessionService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -99,6 +100,7 @@ final class RequireLegacySessionTest extends TestCase
             $table->string('email')->nullable();
             $table->json('permissions')->nullable();
             $table->string('tipo')->nullable();
+            $table->unsignedBigInteger('comum_id')->nullable();
         });
         DB::table('usuarios')->insert([
             'id' => 41,
@@ -135,5 +137,63 @@ final class RequireLegacySessionTest extends TestCase
         self::assertSame([3], $session->get('administracoes_permitidas'));
         self::assertFalse($session->get('is_admin'));
         self::assertSame(['products.view' => false], $session->get('legacy_permissions'));
+    }
+
+    public function test_clears_selected_church_when_its_administration_was_revoked(): void
+    {
+        Schema::create('usuarios', function (Blueprint $table): void {
+            $table->id();
+            $table->integer('ativo')->default(1);
+            $table->unsignedBigInteger('administracao_id')->nullable();
+            $table->json('administracoes_permitidas')->nullable();
+            $table->string('email')->nullable();
+            $table->json('permissions')->nullable();
+            $table->string('tipo')->nullable();
+            $table->unsignedBigInteger('comum_id')->nullable();
+        });
+        Schema::create('comums', function (Blueprint $table): void {
+            $table->id();
+            $table->string('codigo');
+            $table->string('descricao')->nullable();
+            $table->unsignedBigInteger('administracao_id')->nullable();
+        });
+        DB::table('usuarios')->insert([
+            'id' => 41,
+            'ativo' => 1,
+            'administracao_id' => 4,
+            'administracoes_permitidas' => json_encode([4]),
+            'email' => 'operador@example.test',
+            'permissions' => json_encode([]),
+            'tipo' => 'operador',
+        ]);
+        DB::table('comums')->insert([
+            'id' => 70,
+            'codigo' => 'IG-70',
+            'descricao' => 'Igreja revogada',
+            'administracao_id' => 3,
+        ]);
+
+        $this->app->detectEnvironment(static fn (): string => 'local');
+
+        $request = Request::create('/protected', 'GET');
+        $session = $this->app->make('session')->driver();
+        $session->setId('revoked-church-scope-test');
+        $session->put([
+            '_enforce_legacy_auth' => true,
+            'usuario_id' => 41,
+            'administracao_id' => 3,
+            'administracoes_permitidas' => [3],
+            'comum_id' => 70,
+        ]);
+        $request->setLaravelSession($session);
+
+        $response = (new RequireLegacySession)->handle(
+            $request,
+            static fn (): Response => new Response('protected content', 200),
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertNull($session->get('comum_id'));
+        self::assertNull((new LegacyAuthSessionService)->currentChurchId());
     }
 }

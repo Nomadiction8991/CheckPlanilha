@@ -2,12 +2,12 @@
 
 ## Resumo
 - Críticos: 0
-- Altos: 11
+- Altos: 12
 - Médios: 22
 - Baixos: 0
 
 ## Erros por Categoria
-### Segurança (4)
+### Segurança (5)
 ### Lógica (31)
 ### Performance (0)
 ### Code Smell (0)
@@ -32,6 +32,16 @@
 **Descrição**: A ponte da sessão nativa recarregava as administrações permitidas do cadastro, mas as sessões Laravel comuns mantinham os valores e o sinalizador de administrador gravados no login. Ao revogar uma administração ou rebaixar uma conta, os serviços protegidos por `legacy.auth` continuavam usando o escopo antigo.
 **Risco/Impacto**: Uma sessão ainda ativa podia consultar ou operar em administrações cujo acesso já havia sido removido.
 **Correção**: O middleware recarrega a administração, a lista permitida, o estado de administrador e as permissões do usuário ativo em cada requisição autenticada. Se esses dados não puderem ser confirmados em produção, limpa os privilégios da sessão e nega a requisição. O teste de regressão reproduz uma sessão com escopo e permissões obsoletos.
+**Prioridade de Correção**: ✅ Resolvido
+
+### AUTH-008 - Sessão conservava a igreja selecionada após revogação do escopo
+**Arquivo**: `app/Http/Middleware/RequireLegacySession.php` (`refreshLegacyAuthorizationScope`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Segurança / escopo entre administrações
+**Status**: Corrigido nesta rodada.
+**Descrição**: O middleware renovava as administrações permitidas, mas mantinha o `comum_id` selecionado anteriormente na sessão. Após a remoção do acesso à administração daquela igreja, serviços que leem a igreja atual ainda podiam usar o identificador antigo.
+**Risco/Impacto**: Uma sessão ativa podia continuar consultando ou operando na igreja depois que o acesso à administração correspondente fosse revogado.
+**Correção**: Validar a igreja selecionada contra as permissões carregadas do cadastro em cada requisição e limpar a seleção inválida. Usuários vinculados diretamente a uma igreja continuam limitados à igreja atribuída; administradores mantêm o acesso global às igrejas existentes. Teste de regressão cobre a revogação.
 **Prioridade de Correção**: ✅ Resolvido
 
 ### PROD-003 - Busca não encontrava o nome editado do bem

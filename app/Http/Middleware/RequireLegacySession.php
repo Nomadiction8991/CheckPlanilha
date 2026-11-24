@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Models\Legacy\Comum;
 use App\Models\Legacy\Usuario;
 use Closure;
 use Illuminate\Http\Request;
@@ -51,6 +52,7 @@ class RequireLegacySession
                 'email',
                 'permissions',
                 'tipo',
+                'comum_id',
             ]);
 
             if ($user === null) {
@@ -77,6 +79,20 @@ class RequireLegacySession
                 'is_admin' => $user->isAdministrator(),
                 'legacy_permissions' => is_array($user->permissions) ? $user->permissions : [],
             ]);
+
+            $selectedChurchId = (int) $request->session()->get('comum_id', 0);
+            if ($selectedChurchId > 0) {
+                /** @var Comum|null $selectedChurch */
+                $selectedChurch = Comum::query()->find($selectedChurchId);
+                $hasChurchAccess = $selectedChurch !== null
+                    && ($user->isAdministrator() || ($administrationIds !== []
+                        ? in_array((int) $selectedChurch->administracao_id, $administrationIds, true)
+                        : (int) ($user->comum_id ?? 0) === $selectedChurchId));
+
+                if (!$hasChurchAccess) {
+                    $request->session()->forget('comum_id');
+                }
+            }
 
             return true;
         } catch (Throwable) {
