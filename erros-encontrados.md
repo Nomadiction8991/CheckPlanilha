@@ -4,7 +4,7 @@
 - Críticos: 0
 - Altos: 12
 - Médios: 24
-- Baixos: 1
+- Baixos: 2
 
 ## Erros por Categoria
 ### Segurança (7)
@@ -13,6 +13,16 @@
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### FILTRO-UF-001 - UF desconhecida era mantida como filtro ativo
+**Arquivo**: `app/DTO/*Filters.php` (filtros de administração, tipo de bem, igreja, dependência, produto e usuário)
+**Severidade**: 🟢 BAIXO
+**Categoria**: Lógica / filtros de listagem
+**Status**: Corrigido nesta rodada.
+**Descrição**: Os filtros cortavam os dois primeiros caracteres de qualquer valor e os usavam como UF. Um parâmetro como `estado=XYZ` virava `XY`, permanecia nos critérios ativos e fazia a listagem parecer vazia.
+**Risco/Impacto**: Links inválidos ou desatualizados podiam ocultar registros sem deixar claro que o filtro não correspondia a uma UF existente.
+**Correção**: Normalizar o prefixo preservando a compatibilidade existente e descartá-lo quando não corresponder a uma UF configurada. Testes cobrem os seis DTOs, UFs válidas e valores desconhecidos.
+**Prioridade de Correção**: ✅ Resolvido
 
 ### CSV-001 - Bytes UTF-8 inválidos podiam contornar a proteção contra fórmulas
 **Arquivo**: `app/Support/LegacyCsvSanitizer.php` (`sanitizeText`)

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\DTO;
 
+use App\Support\BrazilStateCode;
 use App\Support\QueryParameter;
 use Illuminate\Http\Request;
 
@@ -19,8 +20,7 @@ final readonly class AdministrationFilters
 
     public static function fromRequest(Request $request): self
     {
-        $rawState = trim(QueryParameter::string($request, 'estado'));
-        $state = $rawState !== '' ? mb_strtoupper(mb_substr($rawState, 0, 2, 'UTF-8'), 'UTF-8') : null;
+        $state = BrazilStateCode::normalizePrefix(QueryParameter::string($request, 'estado'));
 
         return new self(
             search: trim(QueryParameter::string($request, 'busca')),

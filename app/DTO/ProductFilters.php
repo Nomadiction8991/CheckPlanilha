@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\DTO;
 
+use App\Support\BrazilStateCode;
 use App\Support\QueryParameter;
 use Illuminate\Http\Request;
 
@@ -30,8 +31,7 @@ final readonly class ProductFilters
         $dependencyId = QueryParameter::integer($request, 'dependencia_id');
         $assetTypeId = QueryParameter::integer($request, 'tipo_bem_id');
         $search = trim(QueryParameter::string($request, 'busca'));
-        $rawState = trim(QueryParameter::string($request, 'estado'));
-        $state = $rawState !== '' ? mb_strtoupper(mb_substr($rawState, 0, 2, 'UTF-8'), 'UTF-8') : null;
+        $state = BrazilStateCode::normalizePrefix(QueryParameter::string($request, 'estado'));
 
         if ($search === '') {
             $search = trim(QueryParameter::string($request, 'nome'));
