@@ -49,6 +49,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
             ->leftJoin('dependencias as d_orig', 'p.dependencia_id', '=', 'd_orig.id')
             ->leftJoin('dependencias as d_edit', 'p.editado_dependencia_id', '=', 'd_edit.id')
             ->where('p.comum_id', $churchId)
+            ->where('p.ativo', 1)
             ->whereRaw('COALESCE(p.imprimir_etiqueta, 0) = 1')
             ->whereRaw("{$currentDependencyDescription} IS NOT NULL")
             ->whereRaw("TRIM({$currentDependencyDescription}) <> ''")
@@ -69,6 +70,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
             ->leftJoin('dependencias as d_orig', 'p.dependencia_id', '=', 'd_orig.id')
             ->leftJoin('dependencias as d_edit', 'p.editado_dependencia_id', '=', 'd_edit.id')
             ->where('p.comum_id', $churchId)
+            ->where('p.ativo', 1)
             ->whereRaw('COALESCE(p.imprimir_etiqueta, 0) = 1');
 
         if ($dependencyId !== null) {

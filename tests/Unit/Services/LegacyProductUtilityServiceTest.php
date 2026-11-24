@@ -40,6 +40,7 @@ final class LegacyProductUtilityServiceTest extends TestCase
             $table->string('codigo')->nullable();
             $table->integer('editado')->nullable();
             $table->integer('imprimir_etiqueta')->nullable();
+            $table->integer('ativo')->default(1);
             $table->integer('checado')->nullable();
             $table->string('observacao')->nullable();
             $table->unsignedBigInteger('administrador_acessor_id')->nullable();
@@ -111,6 +112,7 @@ final class LegacyProductUtilityServiceTest extends TestCase
                 'codigo' => 'A-101',
                 'editado' => 1,
                 'imprimir_etiqueta' => 1,
+                'ativo' => 1,
             ],
             [
                 'id_produto' => 102,
@@ -120,6 +122,7 @@ final class LegacyProductUtilityServiceTest extends TestCase
                 'codigo' => 'A-102',
                 'editado' => 0,
                 'imprimir_etiqueta' => 1,
+                'ativo' => 1,
             ],
             [
                 'id_produto' => 103,
@@ -129,6 +132,7 @@ final class LegacyProductUtilityServiceTest extends TestCase
                 'codigo' => 'A-103',
                 'editado' => 1,
                 'imprimir_etiqueta' => 1,
+                'ativo' => 1,
             ],
             [
                 'id_produto' => 104,
@@ -138,6 +142,7 @@ final class LegacyProductUtilityServiceTest extends TestCase
                 'codigo' => 'A-104',
                 'editado' => 1,
                 'imprimir_etiqueta' => 1,
+                'ativo' => 1,
             ],
             [
                 'id_produto' => 105,
@@ -147,8 +152,35 @@ final class LegacyProductUtilityServiceTest extends TestCase
                 'codigo' => 'A-105',
                 'editado' => 1,
                 'imprimir_etiqueta' => 0,
+                'ativo' => 1,
+            ],
+            [
+                'id_produto' => 106,
+                'comum_id' => 7,
+                'dependencia_id' => 2,
+                'editado_dependencia_id' => 3,
+                'codigo' => 'A-106',
+                'editado' => 1,
+                'imprimir_etiqueta' => 1,
+                'ativo' => 0,
             ],
         ]);
+    }
+
+    public function testLabelCopyDataExcludesInactiveProductsFromCodesAndDependencies(): void
+    {
+        session(['is_admin' => true]);
+        $this->seedLabelCopyFixture();
+
+        $data = (new LegacyProductUtilityService())->labelCopyData(7, null);
+
+        self::assertSame(['A-101', 'A-102', 'A-103', 'A-104'], array_column($data['products'], 'codigo'));
+        self::assertSame(4, $data['total_products']);
+        self::assertNotContains('A-106', explode(',', $data['codes']));
+        self::assertSame([
+            ['id' => 2, 'descricao' => 'SALAO'],
+            ['id' => 3, 'descricao' => 'SECRETARIA'],
+        ], $data['dependencies']);
     }
 
     public function testPrintLabelMarksProductAsCheckedWhenSavingVerificationChecklist(): void
