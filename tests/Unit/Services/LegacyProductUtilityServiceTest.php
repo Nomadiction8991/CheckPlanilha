@@ -42,6 +42,7 @@ final class LegacyProductUtilityServiceTest extends TestCase
             $table->integer('imprimir_etiqueta')->nullable();
             $table->integer('checado')->nullable();
             $table->string('observacao')->nullable();
+            $table->unsignedBigInteger('administrador_acessor_id')->nullable();
         });
     }
 
@@ -238,5 +239,52 @@ final class LegacyProductUtilityServiceTest extends TestCase
         $this->assertSame(0, (int) DB::table('produtos')->where('id_produto', 19)->value('imprimir_etiqueta'));
         $this->assertSame(0, (int) DB::table('produtos')->where('id_produto', 19)->value('checado'));
         $this->assertSame('', DB::table('produtos')->where('id_produto', 19)->value('observacao'));
+    }
+
+    public function testSigningRejectsProductsOutsideTheSelectedChurchWithoutPartialUpdates(): void
+    {
+        session(['is_admin' => true]);
+        DB::table('comums')->insert([
+            ['id' => 7, 'administracao_id' => 4, 'descricao' => 'Central Cuiabá'],
+            ['id' => 8, 'administracao_id' => 4, 'descricao' => 'Igreja vizinha'],
+        ]);
+        DB::table('produtos')->insert([
+            ['id_produto' => 19, 'comum_id' => 7, 'administrador_acessor_id' => null],
+            ['id_produto' => 20, 'comum_id' => 8, 'administrador_acessor_id' => null],
+        ]);
+
+        try {
+            (new LegacyProductUtilityService())->signProducts([19, 20], 7, 9, 'assinar');
+            self::fail('A assinatura deve rejeitar a lista inteira quando um produto está fora da igreja.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('O produto informado não pertence à igreja selecionada.', $exception->getMessage());
+        }
+
+        $this->assertNull(DB::table('produtos')->where('id_produto', 19)->value('administrador_acessor_id'));
+        $this->assertNull(DB::table('produtos')->where('id_produto', 20)->value('administrador_acessor_id'));
+    }
+
+    public function testSigningRejectsMissingProductsWithoutPartialUpdates(): void
+    {
+        session(['is_admin' => true]);
+        DB::table('comums')->insert([
+            'id' => 7,
+            'administracao_id' => 4,
+            'descricao' => 'Central Cuiabá',
+        ]);
+        DB::table('produtos')->insert([
+            'id_produto' => 19,
+            'comum_id' => 7,
+            'administrador_acessor_id' => null,
+        ]);
+
+        try {
+            (new LegacyProductUtilityService())->signProducts([19, 999], 7, 9, 'assinar');
+            self::fail('A assinatura deve rejeitar a lista inteira quando um produto não existe.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('O produto informado não pertence à igreja selecionada.', $exception->getMessage());
+        }
+
+        $this->assertNull(DB::table('produtos')->where('id_produto', 19)->value('administrador_acessor_id'));
     }
 }

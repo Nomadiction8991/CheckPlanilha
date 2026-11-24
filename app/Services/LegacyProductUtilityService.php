@@ -203,12 +203,41 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
             throw new RuntimeException('Selecione ao menos um produto.');
         }
 
-        return Produto::query()
-            ->where('comum_id', $churchId)
-            ->whereIn('id_produto', $normalizedIds)
-            ->update([
-                'administrador_acessor_id' => $action === 'assinar' ? $userId : null,
-            ]);
+        $normalizedIds = array_values(array_unique($normalizedIds));
+        sort($normalizedIds);
+
+        return DB::transaction(function () use ($normalizedIds, $churchId, $userId, $action): int {
+            $existingIds = Produto::query()
+                ->whereIn('id_produto', $normalizedIds)
+                ->lockForUpdate()
+                ->pluck('id_produto')
+                ->map(static fn (mixed $id): int => (int) $id)
+                ->all();
+            sort($existingIds);
+
+            if ($existingIds !== $normalizedIds) {
+                throw new RuntimeException('O produto informado não pertence à igreja selecionada.');
+            }
+
+            $churchProductIds = Produto::query()
+                ->where('comum_id', $churchId)
+                ->whereIn('id_produto', $normalizedIds)
+                ->pluck('id_produto')
+                ->map(static fn (mixed $id): int => (int) $id)
+                ->all();
+            sort($churchProductIds);
+
+            if ($churchProductIds !== $normalizedIds) {
+                throw new RuntimeException('O produto informado não pertence à igreja selecionada.');
+            }
+
+            return Produto::query()
+                ->where('comum_id', $churchId)
+                ->whereIn('id_produto', $normalizedIds)
+                ->update([
+                    'administrador_acessor_id' => $action === 'assinar' ? $userId : null,
+                ]);
+        });
     }
 
     public function clearEdits(int $productId, int $churchId): void
