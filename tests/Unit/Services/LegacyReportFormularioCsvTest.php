@@ -188,6 +188,31 @@ final class LegacyReportFormularioCsvTest extends TestCase
         $this->assertSame('COZINHA', $linha[6]);
     }
 
+    public function testFormulario146PreservaMarcaNaDescricaoOriginal(): void
+    {
+        $this->seedChurch();
+        $this->seedTipoBem(4, '4', 'CADEIRA');
+        $this->seedDependencia(2, 'SALAO', 7);
+        $this->seedProdutoEditado([
+            'codigo' => '12-3456 / 0012',
+            'bem' => 'CADEIRA',
+            'complemento' => 'ESTOFADA',
+            'marca' => 'Marca antiga',
+            'tipo_bem_id' => 4,
+            'dependencia_id' => 2,
+            'editado_bem' => 'CADEIRA',
+            'editado_complemento' => 'ESTOFADA',
+            'editado_marca' => 'Marca nova',
+            'editado_dependencia_id' => 2,
+        ]);
+
+        $file = $this->service->downloadFormularioCsv(7, '14.6');
+        $linhas = $this->parseCsv($file['content']);
+
+        $this->assertSame('CADEIRA ESTOFADA Marca antiga', $linhas[1][1]);
+        $this->assertSame('CADEIRA ESTOFADA Marca nova', $linhas[1][2]);
+    }
+
     public function testRejeitaFormularioInvalido(): void
     {
         $this->expectException(RuntimeException::class);

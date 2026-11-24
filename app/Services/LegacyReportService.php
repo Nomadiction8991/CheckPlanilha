@@ -980,6 +980,7 @@ class LegacyReportService implements LegacyReportServiceInterface
                 'p.imprimir_etiqueta',
                 'p.bem',
                 'p.complemento',
+                'p.marca',
                 'p.editado_marca',
                 'p.altura_m',
                 'p.largura_m',
