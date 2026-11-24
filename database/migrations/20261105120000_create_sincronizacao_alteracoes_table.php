@@ -30,7 +30,8 @@ return new class extends Migration
         if (DB::getDriverName() === 'mysql') {
             /** @var list<string> $tabelas */
             $tabelas = config('sincronizacao.tabelas');
-            app(TriggerGenerator::class)->generateFor($tabelas);
+            $tabelasExistentes = array_values(array_filter($tabelas, static fn (string $tabela): bool => Schema::hasTable($tabela)));
+            app(TriggerGenerator::class)->generateFor($tabelasExistentes);
         }
     }
 

@@ -46,6 +46,18 @@ class ChangeTriggersTest extends TestCase
         $this->assertSame('Cadeira', json_decode((string) $registros[0]->depois, true)['bem']);
     }
 
+    public function test_todas_as_tabelas_configuradas_tem_gatilhos_depois_das_migracoes(): void
+    {
+        foreach ((array) config('sincronizacao.tabelas') as $tabela) {
+            $quantidade = DB::table('information_schema.TRIGGERS')
+                ->where('TRIGGER_SCHEMA', DB::getDatabaseName())
+                ->where('EVENT_OBJECT_TABLE', $tabela)
+                ->count();
+
+            self::assertGreaterThanOrEqual(3, $quantidade, "Faltam gatilhos de sincronização para {$tabela}.");
+        }
+    }
+
     public function test_registra_alteracao_com_valores_antes_e_depois(): void
     {
         $comum = $this->criarComum();

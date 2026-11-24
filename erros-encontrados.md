@@ -2,17 +2,38 @@
 
 ## Resumo
 - Críticos: 0
-- Altos: 12
+- Altos: 14
 - Médios: 27
 - Baixos: 3
 
 ## Erros por Categoria
 ### Segurança (7)
-### Lógica (36)
+### Lógica (38)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### SYNC-004 - Migração de sincronização falhava antes das tabelas de transferência
+**Arquivo**: `database/migrations/20261105120000_create_sincronizacao_alteracoes_table.php`, `database/migrations/20261124120000_create_transferencia_sync_triggers.php`
+**Severidade**: 🟠 ALTO
+**Categoria**: Lógica / migração e estabilidade
+**Status**: Corrigido nesta rodada.
+**Descrição**: A migração inicial tentava criar gatilhos para todas as tabelas configuradas, embora `transferencias` e `transferencia_itens` só fossem criadas três dias depois. Uma instalação MySQL limpa falhava antes de concluir as migrações.
+**Risco/Impacto**: Uma instalação ou ambiente de teste MySQL recém-criado não conseguia terminar a configuração do banco nem ativar a sincronização.
+**Correção**: A migração inicial cria gatilhos apenas para tabelas já existentes; uma migração posterior instala os gatilhos das tabelas de transferência depois que elas são criadas. Teste de integração confere se todas as tabelas configuradas têm gatilhos.
+**Prioridade de Correção**: ✅ Resolvido
+
+### SYNC-005 - Cursor incremental podia pular alterações de transações concorrentes
+**Arquivo**: `app/Sync/TriggerGenerator.php`, `app/Sync/SyncService.php` (`receber`)
+**Severidade**: 🟠 ALTO
+**Categoria**: Lógica / sincronização
+**Status**: Pendente; investigação reproduziu a janela de perda.
+**Descrição**: O cursor incremental usa o ID auto incremental do log. No MySQL, transações podem reservar IDs em uma ordem e confirmar em outra; depois de avançar pelo ID maior, uma alteração ainda não confirmada com ID menor ficava invisível para as próximas consultas.
+**Risco/Impacto**: Alterações de dados podiam nunca chegar aos outros computadores, sem erro visível.
+**Investigação**: Um teste na API simulou um evento de ID menor que só ficou visível depois do avanço do cursor e confirmou que a consulta incremental o ignora. A documentação do MySQL confirma que locks de `AUTO_INCREMENT` podem terminar no fim da instrução, antes do commit.
+**Bloqueio técnico**: Uma trava global nos gatilhos poderia gerar deadlocks porque a trigger executa depois que a transação já bloqueou registros de negócio. A correção precisa preservar a ordem de commit sem introduzir falhas concorrentes nas operações de escrita.
+**Prioridade de Correção**: Alta
 
 ### REDE-002 - Falha ao consultar o estado da rede era tratada como hotspot desligado
 **Arquivo**: `app/Support/Connection/NetworkManagerAccessPoint.php` (`desligar`)
