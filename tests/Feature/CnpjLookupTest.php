@@ -12,7 +12,7 @@ final class CnpjLookupTest extends TestCase
     public function testLookupReturnsCompanyData(): void
     {
         Http::fake([
-            'https://www.cnpj.dev/api/v1/cnpj/12345678000190' => Http::response([
+            'https://www.cnpj.dev/api/v1/cnpj/12345678000195' => Http::response([
                 'razao_social' => 'Igreja Central',
                 'municipio' => 'Cuiabá',
             ], 200),
@@ -26,7 +26,7 @@ final class CnpjLookupTest extends TestCase
             'comum_id' => 7,
             'is_admin' => true,
         ])->postJson(route('migration.api.cnpj.lookup'), [
-            'cnpj' => '12345678000190',
+            'cnpj' => '12345678000195',
         ]);
 
         $response->assertOk();
@@ -43,7 +43,7 @@ final class CnpjLookupTest extends TestCase
     public function test_lookup_falls_back_to_trade_name_when_legal_name_is_empty(): void
     {
         Http::fake([
-            'https://www.cnpj.dev/api/v1/cnpj/12345678000190' => Http::response([
+            'https://www.cnpj.dev/api/v1/cnpj/12345678000195' => Http::response([
                 'razao_social' => '',
                 'nome_fantasia' => 'Igreja Central',
                 'municipio' => 'Cuiabá',
@@ -58,7 +58,7 @@ final class CnpjLookupTest extends TestCase
             'comum_id' => 7,
             'is_admin' => true,
         ])->postJson(route('migration.api.cnpj.lookup'), [
-            'cnpj' => '12345678000190',
+            'cnpj' => '12345678000195',
         ]);
 
         $response->assertOk();
@@ -68,7 +68,7 @@ final class CnpjLookupTest extends TestCase
     public function test_lookup_ignores_malformed_external_fields_and_falls_back_to_trade_name(): void
     {
         Http::fake([
-            'https://www.cnpj.dev/api/v1/cnpj/12345678000190' => Http::response([
+            'https://www.cnpj.dev/api/v1/cnpj/12345678000195' => Http::response([
                 'razao_social' => ['valor inesperado'],
                 'nome_fantasia' => 'Igreja Central',
                 'municipio' => ['Cuiabá'],
@@ -83,7 +83,7 @@ final class CnpjLookupTest extends TestCase
             'comum_id' => 7,
             'is_admin' => true,
         ])->postJson(route('migration.api.cnpj.lookup'), [
-            'cnpj' => '12345678000190',
+            'cnpj' => '12345678000195',
         ]);
 
         $response->assertOk();
@@ -120,7 +120,7 @@ final class CnpjLookupTest extends TestCase
     public function testLookupReturnsNotFoundWhenExternalApiDoesNotFindCompany(): void
     {
         Http::fake([
-            'https://www.cnpj.dev/api/v1/cnpj/12345678000190' => Http::response([], 404),
+            'https://www.cnpj.dev/api/v1/cnpj/12345678000195' => Http::response([], 404),
         ]);
 
         $response = $this->withSession([
@@ -131,7 +131,7 @@ final class CnpjLookupTest extends TestCase
             'comum_id' => 7,
             'is_admin' => true,
         ])->postJson(route('migration.api.cnpj.lookup'), [
-            'cnpj' => '12345678000190',
+            'cnpj' => '12345678000195',
         ]);
 
         $response->assertNotFound();

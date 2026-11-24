@@ -180,6 +180,16 @@
 **Correção**: Somente o 404 do provedor continua significando cadastro inexistente. Falhas de conexão, respostas HTTP não exitosas e payloads inválidos agora retornam erro 502 com mensagem acionável e sem detalhes externos. Testes cobrem resposta 500, timeout e a resposta 404 legítima.
 **Prioridade de Correção**: ✅ Resolvido
 
+### CNPJ-002 - Consulta enviava CNPJ numérico com dígitos verificadores inválidos
+**Arquivo**: `app/Http/Requests/LookupCnpjRequest.php`
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Validação / consulta externa
+**Status**: Corrigido nesta rodada.
+**Descrição**: O endpoint verificava apenas o formato de 14 caracteres e enviava CNPJs numéricos com dígitos verificadores incorretos ao provedor. A resposta podia ser apresentada como “CNPJ não encontrado”, embora a entrada fosse inválida.
+**Risco/Impacto**: Consultas inválidas consumiam chamadas externas e confundiam erro de digitação com ausência de cadastro.
+**Correção**: Reutilizar `LegacyCnpjValidator` antes da chamada externa, mantendo o formato alfanumérico já aceito. O teste de regressão confirma HTTP 400 e nenhuma chamada ao provedor para um CNPJ numérico com dígito verificador incorreto.
+**Prioridade de Correção**: ✅ Resolvido
+
 ### PAG-001 - Número de página extremo fazia a listagem retornar a primeira página
 **Arquivo**: `app/Support/QueryParameter.php`, DTOs de filtros de listagem e `app/Services/LegacyAuditTrailService.php`
 **Severidade**: 🟡 MÉDIO

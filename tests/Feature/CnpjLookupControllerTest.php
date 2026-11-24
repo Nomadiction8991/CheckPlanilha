@@ -9,7 +9,7 @@ use Tests\TestCase;
 
 final class CnpjLookupControllerTest extends TestCase
 {
-    private const string VALID_CNPJ = '12345678000190';
+    private const string VALID_CNPJ = '12345678000195';
 
     private const array AUTH_SESSION = [
         '_enforce_legacy_auth' => true,
@@ -79,6 +79,23 @@ final class CnpjLookupControllerTest extends TestCase
             'success' => false,
             'error' => 'CNPJ inválido',
         ]);
+    }
+
+    public function testNumericCnpjWithInvalidCheckDigitsIsRejectedBeforeCallingProvider(): void
+    {
+        Http::fake();
+
+        $response = $this->withSession(self::AUTH_SESSION)
+            ->postJson(route('migration.api.cnpj.lookup'), [
+                'cnpj' => '12345678000191',
+            ]);
+
+        $response->assertStatus(400);
+        $response->assertExactJson([
+            'success' => false,
+            'error' => 'CNPJ inválido',
+        ]);
+        Http::assertNothingSent();
     }
 
     public function testExternalApiFailureIsNotReportedAsMissingCompany(): void

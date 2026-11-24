@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\DTO\CnpjLookupData;
+use App\Support\LegacyCnpjValidator;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use InvalidArgumentException;
 
 class LookupCnpjRequest extends FormRequest
 {
@@ -35,6 +37,23 @@ class LookupCnpjRequest extends FormRequest
             'cnpj.required' => 'O CNPJ é obrigatório.',
             'cnpj.regex' => 'O CNPJ deve conter 14 caracteres e terminar com dois dígitos.',
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $cnpj = $this->input('cnpj');
+
+            if (! is_string($cnpj)) {
+                return;
+            }
+
+            try {
+                LegacyCnpjValidator::validate($cnpj);
+            } catch (InvalidArgumentException) {
+                $validator->errors()->add('cnpj', 'CNPJ inválido.');
+            }
+        });
     }
 
     protected function failedValidation(Validator $validator): void
