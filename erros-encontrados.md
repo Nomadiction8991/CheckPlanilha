@@ -996,3 +996,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Um caminho de armazenamento redirecionado podia expor arquivos locais ao aparelho autenticado ou permitir gravação fora da pasta de sincronização.
 **Correção**: Conferir todos os componentes do caminho antes de listar, ler, criar e gravar planilhas. Testes unitários e de API cobrem leitura e escrita com diretório ancestral simbólico.
 **Prioridade de Correção**: ✅ Resolvido
+
+### TRANS-004 - Bem pendente de código podia ser transferido novamente
+**Arquivo**: `app/Services/LegacyTransferService.php` (`transferir`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Transferências / integridade do histórico
+**Status**: Corrigido nesta rodada.
+**Descrição**: A igreja de destino podia transferir um bem antes de informar seu novo código. Isso deixava o item da transferência anterior sem `codigo_novo` para sempre, embora o bem já tivesse saído daquela igreja.
+**Risco/Impacto**: O histórico mantinha uma entrada pendente que a igreja já não podia resolver, e o próximo registro perdia a continuidade do código patrimonial.
+**Correção**: A transferência agora verifica, dentro da transação e após bloquear os bens, se algum item ainda aguarda código. O fluxo recusa a operação com orientação para informar o código primeiro. Regressões cobrem a recusa sem gravação parcial e a transferência após resolver a pendência.
+**Prioridade de Correção**: ✅ Resolvido

@@ -270,6 +270,56 @@ final class LegacyTransferServiceTest extends TransferenciasTestCase
         $this->assertCount(0, $this->servico->pendentesDeCodigo(8));
     }
 
+    public function testRecusaNovaTransferenciaEnquantoOBemAindaAguardaCodigo(): void
+    {
+        $this->criarIgreja(9, '40-0002', 'Central Sinop');
+        $this->criarDependencia(90, 9, 'Templo');
+        $primeira = $this->servico->transferir(7, 8, 80, [1001], 9);
+
+        $erro = null;
+
+        try {
+            $this->servico->transferir(8, 9, 90, [1001], 9);
+        } catch (RuntimeException $exception) {
+            $erro = $exception;
+        }
+
+        $this->assertInstanceOf(RuntimeException::class, $erro);
+        $this->assertSame(
+            'Algum bem ainda aguarda um novo código nesta igreja. Informe o código antes de transferi-lo.',
+            $erro->getMessage(),
+        );
+
+        $this->assertSame(1, Transferencia::query()->count());
+        $this->assertSame(1, TransferenciaItem::query()->count());
+        $this->assertSame(8, (int) Produto::query()->findOrFail(1001)->comum_id);
+        $this->assertSame($primeira->id, TransferenciaItem::query()->value('transferencia_id'));
+        $this->assertNull(TransferenciaItem::query()->value('codigo_novo'));
+    }
+
+    public function testPermiteNovaTransferenciaDepoisDeInformarOCodigoNovo(): void
+    {
+        $this->criarIgreja(9, '40-0002', 'Central Sinop');
+        $this->criarDependencia(90, 9, 'Templo');
+        $primeira = $this->servico->transferir(7, 8, 80, [1001], 9);
+
+        $this->servico->informarCodigo(1001, 8, 'B-200');
+        $segunda = $this->servico->transferir(8, 9, 90, [1001], 9);
+
+        $this->assertSame(2, Transferencia::query()->count());
+        $this->assertSame(2, TransferenciaItem::query()->count());
+        $this->assertSame('B-200', TransferenciaItem::query()
+            ->where('transferencia_id', $primeira->id)
+            ->value('codigo_novo'));
+        $this->assertSame(9, (int) Produto::query()->findOrFail(1001)->comum_id);
+        $this->assertSame('B-200', TransferenciaItem::query()
+            ->where('transferencia_id', $segunda->id)
+            ->value('codigo_anterior'));
+        $this->assertNull(TransferenciaItem::query()
+            ->where('transferencia_id', $segunda->id)
+            ->value('codigo_novo'));
+    }
+
     public function testHistoricoDaIgrejaTraazSaidasEEntradas(): void
     {
         $this->servico->transferir(7, 8, 80, [1001], 9);

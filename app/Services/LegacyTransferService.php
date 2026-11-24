@@ -67,6 +67,17 @@ final class LegacyTransferService implements LegacyTransferServiceInterface
                 throw new RuntimeException('Algum bem não está mais nesta igreja. Atualize a lista e tente de novo.');
             }
 
+            $aguardandoCodigo = TransferenciaItem::query()
+                ->whereIn('produto_id', $ids)
+                ->whereNull('codigo_novo')
+                ->exists();
+
+            if ($aguardandoCodigo) {
+                throw new RuntimeException(
+                    'Algum bem ainda aguarda um novo código nesta igreja. Informe o código antes de transferi-lo.'
+                );
+            }
+
             $transferencia = Transferencia::query()->create([
                 'comum_origem_id' => $origem->id,
                 'comum_destino_id' => $destino->id,
