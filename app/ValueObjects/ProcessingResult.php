@@ -104,6 +104,7 @@ class ProcessingResult
     {
         $this->sucesso += $outro->sucesso;
         $this->erro += $outro->erro;
+        $this->pulados += $outro->pulados;
         $this->excluidos += $outro->excluidos;
         $this->erros = array_merge($this->erros, $outro->erros);
         return $this;
