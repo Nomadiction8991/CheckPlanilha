@@ -46,7 +46,17 @@ final class NetworkManagerAccessPoint implements AccessPointInterface
 
     public function desligar(): void
     {
-        if (! $this->estaLigado()) {
+        $estado = $this->comandos->executar([
+            'nmcli', '-t', '-f', 'NAME', 'connection', 'show', '--active',
+        ]);
+
+        if ($estado['codigo'] !== 0) {
+            throw new RuntimeException(
+                'Não foi possível verificar o estado do ponto de acesso. ' . $estado['saida'],
+            );
+        }
+
+        if (! in_array($this->nomeDaConexao, $this->linhas($estado['saida']), true)) {
             return;
         }
 

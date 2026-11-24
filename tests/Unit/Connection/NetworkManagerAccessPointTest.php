@@ -110,6 +110,18 @@ class NetworkManagerAccessPointTest extends TestCase
         );
     }
 
+    public function test_desligar_nao_trata_falha_ao_consultar_estado_como_ja_desligado(): void
+    {
+        $executor = new FakeCommandRunner([
+            'nmcli -t -f NAME connection show --active' => ['codigo' => 1, 'saida' => 'NetworkManager indisponível'],
+        ]);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Não foi possível verificar o estado do ponto de acesso.');
+
+        (new NetworkManagerAccessPoint($executor))->desligar();
+    }
+
     public function test_endereco_da_rede_sai_do_adaptador_sem_a_mascara(): void
     {
         $executor = new FakeCommandRunner([

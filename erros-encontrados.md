@@ -3,16 +3,26 @@
 ## Resumo
 - Críticos: 0
 - Altos: 12
-- Médios: 26
+- Médios: 27
 - Baixos: 3
 
 ## Erros por Categoria
 ### Segurança (7)
-### Lógica (35)
+### Lógica (36)
 ### Performance (0)
 ### Code Smell (0)
 
 ## Detalhes dos Erros
+
+### REDE-002 - Falha ao consultar o estado da rede era tratada como hotspot desligado
+**Arquivo**: `app/Support/Connection/NetworkManagerAccessPoint.php` (`desligar`)
+**Severidade**: 🟡 MÉDIO
+**Categoria**: Lógica / modo offline
+**Status**: Corrigido nesta rodada.
+**Descrição**: O desligamento usava `estaLigado()`, que retorna `false` tanto quando a conexão está desligada quanto quando o `nmcli` falha. Nesse segundo caso, o serviço terminava sem tentar desligar o hotspot e a tela confirmava sucesso.
+**Risco/Impacto**: O usuário podia acreditar que a rede local estava desligada enquanto o ponto de acesso continuava ativo.
+**Correção**: Consultar o estado uma vez e retornar erro acionável quando o NetworkManager não responder; só ignorar o comando de desligamento quando a consulta concluir que a conexão não está ativa. Teste simula falha do `nmcli` e confirma que o desligamento não é informado como concluído.
+**Prioridade de Correção**: ✅ Resolvido
 
 ### PROD-011 - Limpeza de edições confirmava sucesso sem atualizar um bem
 **Arquivo**: `app/Services/LegacyProductUtilityService.php` (`clearEdits`)
