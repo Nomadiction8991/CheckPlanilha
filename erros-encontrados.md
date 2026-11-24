@@ -1097,3 +1097,13 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Risco/Impacto**: Uma ação local podia mudar ou remover uma opção usada por outras administrações.
 **Correção**: Exigir que o tipo pertença à administração atual antes de permitir edição ou exclusão por usuário não global. Testes reproduzem ambos os caminhos com a sessão de um administrador rebaixado.
 **Prioridade de Correção**: ✅ Resolvido
+
+### LOC-010 - Provedor de localidades podia oferecer código de UF desconhecido
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`extractStates`)
+**Severidade**: 🟢 BAIXO
+**Categoria**: Integração / localidades
+**Status**: Corrigido nesta rodada.
+**Descrição**: A resposta de estados validava somente se `sigla` e `nome` eram textos não vazios. Um código desconhecido, como `ZZ`, aparecia nas opções, embora o endpoint de cidades e os formulários só aceitassem UFs de `config/brazil.php`.
+**Risco/Impacto**: O usuário podia selecionar uma UF que não possui cidades válidas no sistema.
+**Correção**: Ignorar códigos de UF ausentes da configuração oficial e tentar o próximo provedor quando todos os registros forem inválidos. Testes de feature cobrem resposta mista e fallback.
+**Prioridade de Correção**: ✅ Resolvido

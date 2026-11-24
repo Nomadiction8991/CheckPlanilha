@@ -114,11 +114,42 @@ final class BrazilLocalityControllerTest extends TestCase
         $response = $this->get(route('migration.api.localidades.states'));
 
         $response->assertOk();
-        $response->assertJson([
-            'success' => true,
-            'data' => [['sigla' => 'MT', 'nome' => 'Mato Grosso']],
-            'source' => 'IBGE',
+        self::assertSame([['sigla' => 'MT', 'nome' => 'Mato Grosso']], $response->json('data'));
+        self::assertSame('IBGE', $response->json('source'));
+    }
+
+    public function testStatesSkipsUnknownStateCodesFromProvider(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados' => Http::response([
+                ['sigla' => 'MT', 'nome' => 'Mato Grosso'],
+                ['sigla' => 'ZZ', 'nome' => 'Estado inexistente'],
+            ]),
         ]);
+
+        $response = $this->get(route('migration.api.localidades.states'));
+
+        $response->assertOk();
+        self::assertSame([['sigla' => 'MT', 'nome' => 'Mato Grosso']], $response->json('data'));
+        self::assertSame('IBGE', $response->json('source'));
+    }
+
+    public function testStatesFallsBackWhenProviderOnlyReturnsUnknownCodes(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados' => Http::response([
+                ['sigla' => 'ZZ', 'nome' => 'Estado inexistente'],
+            ]),
+            'https://brasilapi.com.br/api/ibge/uf/v1' => Http::response([
+                ['sigla' => 'MT', 'nome' => 'Mato Grosso'],
+            ]),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.states'));
+
+        $response->assertOk();
+        self::assertSame([['sigla' => 'MT', 'nome' => 'Mato Grosso']], $response->json('data'));
+        self::assertSame('BrasilAPI', $response->json('source'));
     }
 
     public function testCitiesFallsBackToBrasilApiWhenIbgeFails(): void

@@ -111,6 +111,7 @@ final class BrazilLocalityController extends Controller
     private function extractStates(array $payload): array
     {
         $states = [];
+        $knownStateCodes = (array) config('brazil.states', []);
 
         foreach ($payload as $item) {
             if (! is_array($item)
@@ -122,7 +123,7 @@ final class BrazilLocalityController extends Controller
             $sigla = strtoupper(trim($item['sigla']));
             $nome = $this->normalizeCityName($item['nome']);
 
-            if ($sigla === '' || $nome === '') {
+            if ($sigla === '' || $nome === '' || ! array_key_exists($sigla, $knownStateCodes)) {
                 continue;
             }
 
