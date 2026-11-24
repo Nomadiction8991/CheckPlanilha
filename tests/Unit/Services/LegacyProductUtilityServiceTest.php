@@ -239,6 +239,43 @@ final class LegacyProductUtilityServiceTest extends TestCase
         $this->assertSame(1, $processed);
     }
 
+    public function testSavingVerificationChecklistRejectsInactiveProducts(): void
+    {
+        session(['is_admin' => true]);
+        DB::table('comums')->insert([
+            'id' => 7,
+            'administracao_id' => 4,
+            'descricao' => 'Central Cuiabá',
+        ]);
+        DB::table('produtos')->insert([
+            'id_produto' => 19,
+            'comum_id' => 7,
+            'ativo' => 0,
+            'imprimir_etiqueta' => 0,
+            'checado' => 0,
+            'observacao' => '',
+        ]);
+
+        try {
+            (new LegacyProductUtilityService())->saveVerificationChecklist(7, [
+                new ProductVerificationItemData(
+                    productId: 19,
+                    printLabel: true,
+                    verified: false,
+                    observation: 'Não deveria ser alterado',
+                ),
+            ]);
+            self::fail('Produtos inativos não devem aceitar alterações de checklist.');
+        } catch (RuntimeException $exception) {
+            self::assertSame('O produto informado não pertence à igreja selecionada.', $exception->getMessage());
+        }
+
+        self::assertSame(0, (int) DB::table('produtos')->where('id_produto', 19)->value('imprimir_etiqueta'));
+        self::assertSame(0, (int) DB::table('produtos')->where('id_produto', 19)->value('checado'));
+        self::assertSame('', DB::table('produtos')->where('id_produto', 19)->value('observacao'));
+        self::assertNull((new LegacyProductUtilityService())->findForChurch(19, 7));
+    }
+
     public function testClearEditsRejectsMissingProduct(): void
     {
         session(['is_admin' => true]);

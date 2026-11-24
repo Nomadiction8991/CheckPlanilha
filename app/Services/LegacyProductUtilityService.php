@@ -27,6 +27,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
             ])
             ->whereKey($productId)
             ->where('comum_id', $churchId)
+            ->where('ativo', 1)
             ->first();
     }
 
@@ -117,6 +118,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
         return Produto::query()
             ->whereKey($productId)
             ->where('comum_id', $churchId)
+            ->where('ativo', 1)
             ->update(['observacao' => mb_strtoupper(trim($observation), 'UTF-8')]) > 0;
     }
 
@@ -127,6 +129,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
         return Produto::query()
             ->whereKey($productId)
             ->where('comum_id', $churchId)
+            ->where('ativo', 1)
             ->update(['checado' => $checked ? 1 : 0]) > 0;
     }
 
@@ -137,6 +140,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
         return Produto::query()
             ->whereKey($productId)
             ->where('comum_id', $churchId)
+            ->where('ativo', 1)
             ->update(['imprimir_etiqueta' => $printLabel ? 1 : 0]) > 0;
     }
 
@@ -162,6 +166,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
 
             $churchProductIds = Produto::query()
                 ->where('comum_id', $churchId)
+                ->where('ativo', 1)
                 ->whereIn('id_produto', $requestedIds)
                 ->lockForUpdate()
                 ->pluck('id_produto')
@@ -210,6 +215,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
 
         return DB::transaction(function () use ($normalizedIds, $churchId, $userId, $action): int {
             $existingIds = Produto::query()
+                ->where('ativo', 1)
                 ->whereIn('id_produto', $normalizedIds)
                 ->lockForUpdate()
                 ->pluck('id_produto')
@@ -223,6 +229,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
 
             $churchProductIds = Produto::query()
                 ->where('comum_id', $churchId)
+                ->where('ativo', 1)
                 ->whereIn('id_produto', $normalizedIds)
                 ->pluck('id_produto')
                 ->map(static fn (mixed $id): int => (int) $id)
@@ -235,6 +242,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
 
             return Produto::query()
                 ->where('comum_id', $churchId)
+                ->where('ativo', 1)
                 ->whereIn('id_produto', $normalizedIds)
                 ->update([
                     'administrador_acessor_id' => $action === 'assinar' ? $userId : null,
@@ -249,6 +257,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
         $updated = Produto::query()
             ->whereKey($productId)
             ->where('comum_id', $churchId)
+            ->where('ativo', 1)
             ->update([
                 'editado_tipo_bem_id' => 0,
                 'editado_bem' => '',
@@ -268,6 +277,7 @@ class LegacyProductUtilityService implements LegacyProductUtilityServiceInterfac
         if ($updated === 0 && !Produto::query()
             ->whereKey($productId)
             ->where('comum_id', $churchId)
+            ->where('ativo', 1)
             ->exists()) {
             throw new RuntimeException('Produto não encontrado para a igreja selecionada.');
         }
