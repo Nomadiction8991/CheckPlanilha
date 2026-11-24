@@ -113,8 +113,14 @@ final class BrazilLocalityController extends Controller
         $states = [];
 
         foreach ($payload as $item) {
-            $sigla = strtoupper(trim((string) ($item['sigla'] ?? '')));
-            $nome = $this->normalizeCityName((string) ($item['nome'] ?? ''));
+            if (! is_array($item)
+                || ! is_string($item['sigla'] ?? null)
+                || ! is_string($item['nome'] ?? null)) {
+                continue;
+            }
+
+            $sigla = strtoupper(trim($item['sigla']));
+            $nome = $this->normalizeCityName($item['nome']);
 
             if ($sigla === '' || $nome === '') {
                 continue;
@@ -148,7 +154,11 @@ final class BrazilLocalityController extends Controller
         $cities = [];
 
         foreach ($payload as $item) {
-            $name = $this->normalizeCityName((string) ($item['nome'] ?? ''));
+            if (! is_array($item) || ! is_string($item['nome'] ?? null)) {
+                continue;
+            }
+
+            $name = $this->normalizeCityName($item['nome']);
 
             if ($name !== '') {
                 $cities[] = $name;

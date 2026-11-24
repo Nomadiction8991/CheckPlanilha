@@ -4,11 +4,11 @@
 - Críticos: 0
 - Altos: 12
 - Médios: 22
-- Baixos: 0
+- Baixos: 1
 
 ## Erros por Categoria
 ### Segurança (5)
-### Lógica (31)
+### Lógica (32)
 ### Performance (0)
 ### Code Smell (0)
 
@@ -1005,4 +1005,14 @@ Route::post('/logout-publico', [PublicAccessController::class, 'logout'])->name(
 **Descrição**: A igreja de destino podia transferir um bem antes de informar seu novo código. Isso deixava o item da transferência anterior sem `codigo_novo` para sempre, embora o bem já tivesse saído daquela igreja.
 **Risco/Impacto**: O histórico mantinha uma entrada pendente que a igreja já não podia resolver, e o próximo registro perdia a continuidade do código patrimonial.
 **Correção**: A transferência agora verifica, dentro da transação e após bloquear os bens, se algum item ainda aguarda código. O fluxo recusa a operação com orientação para informar o código primeiro. Regressões cobrem a recusa sem gravação parcial e a transferência após resolver a pendência.
+**Prioridade de Correção**: ✅ Resolvido
+
+### LOC-009 - Resposta malformada de localidades descartava registros válidos
+**Arquivo**: `app/Http/Controllers/BrazilLocalityController.php` (`extractStates`, `extractCities`)
+**Severidade**: 🟢 BAIXO
+**Categoria**: Lógica / integração de localidades
+**Status**: Corrigido nesta rodada.
+**Descrição**: Um campo `nome` ou `sigla` com tipo inesperado gerava exceção durante a conversão para texto. O controlador tratava isso como falha do provedor inteiro e tentava a próxima fonte, descartando localidades válidas da resposta parcial.
+**Risco/Impacto**: Dados inconsistentes de um provedor podiam remover opções válidas ou levar a uma resposta 502 quando a fonte alternativa estivesse indisponível.
+**Correção**: Ignorar registros que não sejam objetos associativos com os campos textuais esperados. Testes de feature cobrem respostas parciais malformadas para estados e cidades.
 **Prioridade de Correção**: ✅ Resolvido

@@ -79,6 +79,48 @@ final class BrazilLocalityControllerTest extends TestCase
         ]);
     }
 
+    public function testCitiesSkipsProviderRowsWithNonStringNames(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados/MT/municipios' => Http::response([
+                ['nome' => 'Cuiabá'],
+                ['nome' => ['unexpected' => 'value']],
+                ['nome' => null],
+            ]),
+            'https://brasilapi.com.br/api/ibge/municipios/v1/MT' => Http::response([], 503),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.cities', ['state' => 'MT']));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => ['Cuiabá'],
+            'source' => 'IBGE',
+        ]);
+    }
+
+    public function testStatesSkipsProviderRowsWithInvalidFieldTypes(): void
+    {
+        Http::fake([
+            'https://servicodados.ibge.gov.br/api/v1/localidades/estados' => Http::response([
+                ['sigla' => 'MT', 'nome' => 'Mato Grosso'],
+                ['sigla' => ['XX'], 'nome' => 'Invalid State'],
+                ['sigla' => 'ZZ', 'nome' => ['Invalid Name']],
+            ]),
+            'https://brasilapi.com.br/api/ibge/uf/v1' => Http::response([], 503),
+        ]);
+
+        $response = $this->get(route('migration.api.localidades.states'));
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'data' => [['sigla' => 'MT', 'nome' => 'Mato Grosso']],
+            'source' => 'IBGE',
+        ]);
+    }
+
     public function testCitiesFallsBackToBrasilApiWhenIbgeFails(): void
     {
         Http::fake([
