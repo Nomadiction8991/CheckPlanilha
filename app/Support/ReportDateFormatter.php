@@ -30,6 +30,6 @@ final class ReportDateFormatter
 
         $timestamp = strtotime($value);
 
-        return $timestamp ? date('d/m/Y', $timestamp) : $value;
+        return $timestamp !== false ? date('d/m/Y', $timestamp) : $value;
     }
 }
